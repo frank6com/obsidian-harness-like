@@ -6,7 +6,7 @@
  * 持久事件经 onEvent 落盘；流式增量经 onStream 直达 UI（不落盘）。
  */
 
-import type { LLMMessage, SessionEvent, ToolExecution } from './types'
+import type { LLMMessage, OpenAIToolCall, SessionEvent, ToolCall, ToolExecution } from './types'
 import { LLMClient, type LLMTool } from './llm'
 import { ToolRegistry } from './tools'
 
@@ -37,6 +37,19 @@ function safeParseArguments(raw: string): Record<string, unknown> {
   }
 }
 
+/**
+ * 内部 ToolCall → OpenAI 兼容 wire 形状（tool_calls 数组元素）。
+ * 必须带 type:'function' 与 function 包装，否则 DeepSeek 等端点报
+ * "missing field 'type'" 400。
+ */
+export function toWireToolCalls(calls: ToolCall[]): OpenAIToolCall[] {
+  return calls.map((tc) => ({
+    id: tc.id,
+    type: 'function' as const,
+    function: { name: tc.name, arguments: tc.arguments },
+  }))
+}
+
 export function buildMessages(history: SessionEvent[], system?: string): LLMMessage[] {
   const out: LLMMessage[] = []
   if (system) out.push({ role: 'system', content: system })
@@ -52,8 +65,11 @@ export function buildMessages(history: SessionEvent[], system?: string): LLMMess
         tool_calls: [
           {
             id: e.id,
-            name: e.tool,
-            arguments: typeof e.input === 'string' ? e.input : JSON.stringify(e.input),
+            type: 'function',
+            function: {
+              name: e.tool,
+              arguments: typeof e.input === 'string' ? e.input : JSON.stringify(e.input),
+            },
           },
         ],
       })
@@ -115,7 +131,7 @@ export async function runAgentLoop(ac: AgentRunContext): Promise<void> {
     messages.push({
       role: 'assistant',
       content: res.content ?? '',
-      tool_calls: res.toolCalls.map((tc) => ({ id: tc.id, name: tc.name, arguments: tc.arguments })),
+      tool_calls: toWireToolCalls(res.toolCalls),
     })
 
     for (const tc of res.toolCalls) {

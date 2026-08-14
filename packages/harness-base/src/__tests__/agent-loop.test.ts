@@ -42,7 +42,16 @@ describe('buildMessages', () => {
     const msgs = buildMessages(history, 'SYSTEM')
     expect(msgs[0]).toMatchObject({ role: 'system', content: 'SYSTEM' })
     expect(msgs[1]).toMatchObject({ role: 'user', content: '读笔记' })
-    expect(msgs[2]).toMatchObject({ role: 'assistant', tool_calls: [{ id: 'c1', name: 'read_note' }] })
+    expect(msgs[2]).toMatchObject({
+      role: 'assistant',
+      tool_calls: [
+        {
+          id: 'c1',
+          type: 'function',
+          function: { name: 'read_note', arguments: '{"path":"a"}' },
+        },
+      ],
+    })
     expect(msgs[3]).toMatchObject({ role: 'tool', tool_call_id: 'c1', content: '{"content":"x"}' })
     expect(msgs[4]).toMatchObject({ role: 'assistant', content: '完成了' })
   })
@@ -106,6 +115,15 @@ describe('runAgentLoop', () => {
       history: [{ type: 'user/message', ts: 1, sessionId: 's1', content: '几篇?' }],
     })
     expect(executed).toEqual(['count_notes'])
+    // 回归：发给 API 的请求体必须含 OpenAI 兼容的 tool_calls 形状
+    const [, init] = fetchMock.mock.calls[1] as [string, RequestInit]
+    const body = JSON.parse(init.body as string) as { messages: Array<{ tool_calls?: unknown[] }> }
+    const withCalls = body.messages.find((m) => m.tool_calls)
+    expect(withCalls?.tool_calls?.[0]).toMatchObject({
+      id: 't1',
+      type: 'function',
+      function: { name: 'count_notes', arguments: '{}' },
+    })
     const types = events.map((e) => e.type)
     expect(types).toContain('tool/call')
     expect(types).toContain('tool/result')

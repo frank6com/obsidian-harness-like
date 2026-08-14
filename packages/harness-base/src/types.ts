@@ -12,6 +12,13 @@ export interface ToolCall {
   arguments: string
 }
 
+/** OpenAI 兼容 wire 形状（发送给 API 的 tool_calls 元素） */
+export interface OpenAIToolCall {
+  id: string
+  type: 'function'
+  function: { name: string; arguments: string }
+}
+
 export type SessionEvent =
   | { type: 'turn/start'; ts: number; sessionId: string }
   | { type: 'turn/end'; ts: number; sessionId: string }
@@ -47,7 +54,7 @@ export interface LLMMessage {
   content?: string
   name?: string
   tool_call_id?: string
-  tool_calls?: ToolCall[]
+  tool_calls?: OpenAIToolCall[]
 }
 
 export interface ChatResult {
