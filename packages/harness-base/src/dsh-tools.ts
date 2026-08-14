@@ -83,7 +83,12 @@ export function toolsCompatPlugin(options: ToolsCompatOptions = {}): Plugin.Obje
               schema: TOOL_OUTPUT_SCHEMA as never,
               render: renderValue,
             },
-            execute: async (args) => def.execute(args as Record<string, unknown>),
+            execute: async (args) => {
+              // lossless JSON 兜底：清洗掉 undefined 字段等非 JSON 内容
+              // （dsh-tools 输出校验会拒绝含 undefined 的对象）
+              const raw = await def.execute(args as Record<string, unknown>)
+              return JSON.parse(JSON.stringify(raw))
+            },
           }
           const disposer = runtime.register(definition)
           defs.set(def.name, def)

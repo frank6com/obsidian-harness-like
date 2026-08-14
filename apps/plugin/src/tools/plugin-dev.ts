@@ -192,12 +192,16 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
             if (wanted && id !== wanted) continue
             const rec: PluginRecord | undefined = ctx.pluginRuntime.get(id)
             const info = rec ?? ctx.pluginRuntime.inspect(id)
-            rows.push({
-              id,
-              version: info.manifest?.version,
-              status: info.status,
-              error: info.error,
-            })
+            rows.push(
+              JSON.parse(
+                JSON.stringify({
+                  id,
+                  version: info.manifest?.version,
+                  status: info.status,
+                  error: info.error,
+                }),
+              ),
+            )
           }
           return { count: rows.length, plugins: rows }
         },
@@ -222,12 +226,14 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
           if (!granted) return { ok: false, reason: '用户未授权，插件未加载' }
           await ctx.pluginRuntime.stop(id)
           const result = await ctx.pluginRuntime.load(id)
-          return {
-            ok: result.status === 'running',
-            plugin_id: id,
-            status: result.status,
-            error: result.error,
-          }
+          return JSON.parse(
+            JSON.stringify({
+              ok: result.status === 'running',
+              plugin_id: id,
+              status: result.status,
+              error: result.error,
+            }),
+          )
         },
       })
     },

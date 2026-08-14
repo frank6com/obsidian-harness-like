@@ -195,4 +195,25 @@ describe('plugin_status / reload_plugin', () => {
     expect(out).toMatchObject({ ok: false, status: 'error' })
     expect((out as { error?: string }).error).toBeTruthy()
   })
+
+  it('pipeline 路径：含 undefined 字段的返回值通过 lossless JSON 校验（ChatView 实际路径）', async () => {
+    const { ctx } = await setup()
+    await createGenPlugin(ctx)
+    // 经官方流水线执行（含 output 校验）——此前 plugin_status/reload_plugin 在此路径
+    // 因返回对象含 error: undefined 被拒（用户环境复现）
+    const status = await ctx.toolsCompat.execute({
+      callId: 'call_9' as never,
+      name: 'plugin_status',
+      arguments: {},
+      signal: new AbortController().signal,
+    })
+    expect(status.isError).toBe(false)
+    const reload = await ctx.toolsCompat.execute({
+      callId: 'call_10' as never,
+      name: 'reload_plugin',
+      arguments: { plugin_id: 'gen-plugin' },
+      signal: new AbortController().signal,
+    })
+    expect(reload.isError).toBe(false)
+  })
 })

@@ -35,8 +35,20 @@ export function toApiLike(app: App): ObsidianApiLike {
           await app.vault.modify(file, content)
           return
         }
-        // 新文件：需要父目录已存在（P0 限制，文档说明）
-        await app.vault.create(path, content)
+        try {
+          // 新文件：需要父目录已存在（P0 限制，文档说明）
+          await app.vault.create(path, content)
+        } catch (err) {
+          // 缓存时序：文件实际已存在但 vault 缓存未更新（如刚由插件写入）
+          if (err instanceof Error && /already exists/i.test(err.message)) {
+            const again = app.vault.getAbstractFileByPath(path)
+            if (again instanceof TFile) {
+              await app.vault.modify(again, content)
+              return
+            }
+          }
+          throw err
+        }
       },
       async create(path, content) {
         await app.vault.create(path, content)
