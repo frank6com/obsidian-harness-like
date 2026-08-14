@@ -21,12 +21,28 @@ export class GrantModal extends Modal {
   override onOpen(): void {
     const { contentEl, titleEl } = this
     titleEl.setText(`授权运行插件 ${this.info.id} v${this.info.version}`)
+
+    // 索取权限的内容提示：明确说明插件将获得什么
+    new Setting(contentEl).setName('该插件将获得以下本地权限')
+    const scope = contentEl.createDiv({ cls: 'dsh-modal-scope' })
+    scope.createEl('ul', {}, (ul) => {
+      for (const item of [
+        '读写 vault 内笔记（写入需经过审批）',
+        '注册命令、工具与自定义面板',
+        '读取当前打开的笔记与编辑器选区',
+        '调用 Obsidian 通知',
+      ]) {
+        ul.createEl('li', { text: item })
+      }
+    })
     new Setting(contentEl)
-      .setName('该插件将获得与 Obsidian 插件同等的本地权限')
+      .setName('安全边界')
       .setDesc(
-        this.info.description ??
-          '只执行本地文件。选择信任范围（对齐 dsh 的单勾/双勾语义）：',
+        '只执行本机 .obsidian/dsh-plugins/ 下的本地文件，不会下载或执行远程代码；' +
+          (this.info.description ? `\n${this.info.description}` : ''),
       )
+      .setClass('dsh-modal-warning')
+    new Setting(contentEl).setName('选择信任范围（对齐 dsh 的单勾/双勾语义）')
     new Setting(contentEl).addButton((b) =>
       b
         .setButtonText('信任此版本（单勾）')
@@ -75,6 +91,7 @@ export class WriteApprovalModal extends Modal {
   constructor(
     app: App,
     private target: string,
+    private meta?: { preview?: string },
   ) {
     super(app)
   }
@@ -82,7 +99,17 @@ export class WriteApprovalModal extends Modal {
   override onOpen(): void {
     const { contentEl, titleEl } = this
     titleEl.setText('写操作需要审批')
-    new Setting(contentEl).setDesc(`agent 请求写入：\`${this.target}\``)
+    new Setting(contentEl).setName('目标文件').setDesc(`\`${this.target}\``)
+    if (this.meta?.preview) {
+      new Setting(contentEl).setName('内容预览（前 200 字符）')
+      contentEl.createEl('pre', {
+        cls: 'dsh-modal-preview',
+        text: this.meta.preview,
+      })
+    }
+    new Setting(contentEl)
+      .setName('影响范围')
+      .setDesc('仅写入 vault 内的笔记/文件，不会修改 Obsidian 自身配置；"本会话允许写"不持久化。')
     new Setting(contentEl).addButton((b) =>
       b
         .setButtonText('允许一次')

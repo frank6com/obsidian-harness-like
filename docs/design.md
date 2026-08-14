@@ -242,6 +242,8 @@ obsidian-harness-cordis/
 - [ ] 内置工具集（读/写、文件名/标题/链接搜索、图谱查询）；全文倒排索引列入后续里程碑；工具 schema 进入提示词组装
 - [ ] 事件 seam 文档（用户插件可拦截 `tools/*`、`agent/*`）
 - [ ] 单元测试覆盖状态机与沙箱策略
+- [ ] Chat 体验改进落地（[docs/ux-checklist.md](docs/ux-checklist.md) P0.5 全组 + P1 首批）
+- [ ] 设置面丰富（对照 dsh：模型参数、grant 管理、会话保留策略、日志级别）
 
 ### P2 深度（后续）
 - [ ] 子 agent / 工作流；preset 概念（isolate realm）

@@ -51,9 +51,11 @@ export default class DshObsidianPlugin extends Plugin {
     const ctx = new cordis.Context()
     this.ctx = ctx
 
+    const apiLike = toApiLike(this.app)
+
     this.fibers.push(
       ctx.plugin(
-        obsidianAdapterPlugin(toApiLike(this.app), {
+        obsidianAdapterPlugin(apiLike, {
           load: () => this.settings,
           save: (d) => {
             this.settings = d as unknown as DshSettings
@@ -101,14 +103,19 @@ export default class DshObsidianPlugin extends Plugin {
     })
 
     // 写操作审批钩子（内置工具调用）
-    const askWriteApproval = async (targetPath: string): Promise<WriteDecision> => {
+    const askWriteApproval = async (
+      targetPath: string,
+      meta?: { preview?: string },
+    ): Promise<WriteDecision> => {
       const decision = ctx.approval.decideWrite(this.settings.approvalDefault)
       if (decision === 'allow') return 'allow'
-      const r = await new WriteApprovalModal(this.app, targetPath).ask()
+      const r = await new WriteApprovalModal(this.app, targetPath, meta).ask()
       if (r.choice === 'allow-session') ctx.approval.setSessionAllow(true)
       return r.choice === 'deny' ? 'deny' : 'allow'
     }
-    this.fibers.push(ctx.plugin(builtinToolsPlugin({ askWriteApproval })))
+    this.fibers.push(
+      ctx.plugin(builtinToolsPlugin({ askWriteApproval, openTarget: (t) => apiLike.openTarget(t) })),
+    )
 
     // 视图与命令
     this.registerView(CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, ctx))

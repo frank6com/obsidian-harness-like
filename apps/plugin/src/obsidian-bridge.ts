@@ -9,6 +9,9 @@
 import { App, Notice, TFile, type EventRef } from 'obsidian'
 import type { CommandsLike, ObsidianApiLike, ViewRegistryLike } from '@dsh-obsidian/obsidian-adapter'
 
+/** esbuild bundle 内可见的宿主 require（解析 node 内置模块 / electron / obsidian） */
+declare function require(id: string): unknown
+
 interface AppLike {
   commands: CommandsLike
   viewRegistry: ViewRegistryLike
@@ -90,6 +93,20 @@ export function toApiLike(app: App): ObsidianApiLike {
       notice(message, timeout) {
         new Notice(message, timeout)
       },
+    },
+    openTarget: async (target) => {
+      const { shell } = require('electron') as {
+        shell: {
+          openExternal(url: string): Promise<void>
+          openPath(path: string): Promise<string>
+        }
+      }
+      if (/^[a-z][a-z0-9+.-]*:/i.test(target)) {
+        await shell.openExternal(target)
+      } else {
+        const error = await shell.openPath(target)
+        if (error) throw new Error(`打开失败: ${error}`)
+      }
     },
   }
 }

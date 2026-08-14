@@ -56,4 +56,6 @@ export interface ObsidianApiLike {
   commands: CommandsLike
   viewRegistry: ViewRegistryLike
   notice: NoticeLike
+  /** 打开外部目标：http(s) 走系统浏览器，本地路径走默认应用（由桥接层实现） */
+  openTarget(target: string): Promise<void>
 }
