@@ -11,12 +11,14 @@ import { SandboxPolicy, type SandboxScope } from './sandbox'
 import { SessionLog } from './session-log'
 import { DeepSeekAdapter, createLlmCaller, type LlmCaller } from './llm'
 import { toolsCompatPlugin, type ToolApprovalRequest, type ToolCompatFacade } from './dsh-tools'
+import { shouldLog, type LogLevel } from './log'
 import type { LLMConfig, SessionEvent } from './types'
 
 export * from './types'
 export * from './sandbox'
 export * from './approval'
 export * from './session-log'
+export * from './log'
 export * from './tools'
 export * from './llm'
 export * from './dsh-tools'
@@ -29,6 +31,8 @@ export interface HarnessConfig {
   getLLMConfig(): LLMConfig
   /** 工具执行审批钩子（tools/pre-execute 瀑布）；默认放行 */
   approveTool?(request: ToolApprovalRequest): Promise<'allow' | 'deny'>
+  /** 日志级别（默认 info） */
+  logLevel?: LogLevel
 }
 
 export function harnessServicesPlugin(cfg: HarnessConfig): Plugin.Object {
@@ -48,15 +52,20 @@ export function harnessServicesPlugin(cfg: HarnessConfig): Plugin.Object {
       const llmCaller = createLlmCaller(llmRuntime, () => cfg.getLLMConfig())
 
       // llm/stream 瀑布监听：可观测性（Stage 3+ 可挂重试/路由）
+      const minLevel = cfg.logLevel ?? 'info'
       ctx.on(
         'llm/stream',
         async function* (options, next) {
+          if (shouldLog('info', minLevel)) {
+            console.info(`[dsh] llm/stream ${options.provider}/${options.model}`)
+          }
           const t0 = Date.now()
-          console.info(`[dsh] llm/stream ${options.provider}/${options.model}`)
           try {
             yield* next()
           } finally {
-            console.info(`[dsh] llm/stream 完成 ${Date.now() - t0}ms`)
+            if (shouldLog('info', minLevel)) {
+              console.info(`[dsh] llm/stream 完成 ${Date.now() - t0}ms`)
+            }
           }
         },
       )

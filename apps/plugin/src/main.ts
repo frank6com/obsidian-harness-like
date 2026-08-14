@@ -11,7 +11,8 @@ import { Plugin, type Editor, type WorkspaceLeaf } from 'obsidian'
 import * as obsidianModule from 'obsidian'
 import * as cordis from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
-import { harnessServicesPlugin } from '@dsh-obsidian/harness-base'
+import { harnessServicesPlugin, selectSessionsToPrune, shouldLog } from '@dsh-obsidian/harness-base'
+import { isPathInDirs } from './policy'
 import { obsidianAdapterPlugin } from '@dsh-obsidian/obsidian-adapter'
 import { runtimePlugin } from '@dsh-obsidian/plugin-runtime'
 import { toApiLike } from './obsidian-bridge'
@@ -68,7 +69,7 @@ export default class DshObsidianPlugin extends Plugin {
         }),
       ),
     )
-    // 工具审批（tools/pre-execute 瀑布）：写操作走沙箱 + 弹窗
+    // 工具审批（tools/pre-execute 瀑布）：写操作走白名单 + 沙箱 + 弹窗
     const approveTool = async (request: {
       name: string
       arguments: unknown
@@ -79,6 +80,8 @@ export default class DshObsidianPlugin extends Plugin {
       const targetPath = String(args.path ?? '')
       const decision = ctx.sandbox.decide(targetPath, 'write')
       if (!decision.allowed) return 'deny'
+      // 目录级白名单：命中则免审批
+      if (isPathInDirs(targetPath, this.settings.writeAllowDirs)) return 'allow'
       const mode = ctx.approval.decideWrite(this.settings.approvalDefault)
       if (mode === 'allow') return 'allow'
       ctx.emit('dsh/waiting-approval', targetPath)
@@ -109,6 +112,7 @@ export default class DshObsidianPlugin extends Plugin {
             maxTokens: this.settings.maxTokens,
           }),
           approveTool,
+          logLevel: this.settings.logLevel,
         }),
       ),
     )
@@ -180,6 +184,8 @@ export default class DshObsidianPlugin extends Plugin {
 
     // 启动时加载已授权用户插件
     await this.loadUserPlugins()
+    // 会话保留策略：清理过期会话
+    await this.pruneSessions()
     console.info('[dsh-obsidian] onload 完成')
   }
 
@@ -216,6 +222,21 @@ export default class DshObsidianPlugin extends Plugin {
       if (result.status === 'error') {
         console.warn(`[dsh-obsidian] 插件加载失败 ${id}: ${result.error}`)
       }
+    }
+  }
+
+  /** 会话保留策略：删除超过保留天数的会话日志 */
+  private async pruneSessions(): Promise<void> {
+    if (this.settings.sessionRetentionDays <= 0 || !this.ctx) return
+    try {
+      const list = await this.ctx.sessionLog.list()
+      const stale = selectSessionsToPrune(list, Date.now(), this.settings.sessionRetentionDays)
+      for (const id of stale) await this.ctx.sessionLog.remove(id)
+      if (stale.length > 0 && shouldLog('info', this.settings.logLevel)) {
+        console.info(`[dsh-obsidian] 已清理 ${stale.length} 个过期会话（保留 ${this.settings.sessionRetentionDays} 天）`)
+      }
+    } catch (err) {
+      console.warn('[dsh-obsidian] 会话清理失败', err)
     }
   }
 

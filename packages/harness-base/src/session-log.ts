@@ -28,6 +28,17 @@ export interface SessionMeta {
   notePath: string | null
 }
 
+/** 会话保留策略：选出超过 retentionDays 未更新的会话 id（retentionDays <= 0 表示不清理） */
+export function selectSessionsToPrune(
+  list: SessionSummary[],
+  now: number,
+  retentionDays: number,
+): string[] {
+  if (retentionDays <= 0) return []
+  const cutoff = now - retentionDays * 86_400_000
+  return list.filter((s) => s.updatedAt < cutoff).map((s) => s.id)
+}
+
 export class SessionLog {
   private chain: Promise<void> = Promise.resolve()
 

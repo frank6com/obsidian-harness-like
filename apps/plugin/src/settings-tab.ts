@@ -112,6 +112,55 @@ export class DshSettingsTab extends PluginSettingTab {
           }),
       )
 
+    new Setting(containerEl)
+      .setName('目录级审批白名单')
+      .setDesc('每行一个 vault 相对目录（如 Inbox / Projects）。agent 写入这些目录下的笔记免审批。')
+      .addTextArea((t) =>
+        t
+          .setValue(this.plugin.settings.writeAllowDirs.join('\n'))
+          .onChange(async (v) => {
+            this.plugin.settings.writeAllowDirs = v
+              .split('\n')
+              .map((s) => s.trim())
+              .filter(Boolean)
+            await this.plugin.saveSettings()
+          }),
+      )
+
+    // ---------- 会话 ----------
+    containerEl.createEl('h3', { text: '会话' })
+    new Setting(containerEl)
+      .setName('会话保留天数')
+      .setDesc('启动时自动清理超过 N 天未更新的会话日志（0 = 不清理）')
+      .addText((t) =>
+        t
+          .setValue(String(this.plugin.settings.sessionRetentionDays))
+          .onChange(async (v) => {
+            const n = Math.max(0, Math.floor(Number(v) || 0))
+            this.plugin.settings.sessionRetentionDays = n
+            t.setValue(String(n))
+            await this.plugin.saveSettings()
+          }),
+      )
+
+    // ---------- 日志 ----------
+    containerEl.createEl('h3', { text: '日志' })
+    new Setting(containerEl)
+      .setName('日志级别')
+      .setDesc('控制 [dsh] 前缀的 console 输出（llm/stream 耗时等）')
+      .addDropdown((d) =>
+        d
+          .addOption('debug', 'debug')
+          .addOption('info', 'info')
+          .addOption('warn', 'warn')
+          .addOption('error', 'error')
+          .setValue(this.plugin.settings.logLevel)
+          .onChange(async (v) => {
+            this.plugin.settings.logLevel = v as 'debug' | 'info' | 'warn' | 'error'
+            await this.plugin.saveSettings()
+          }),
+      )
+
     // ---------- 插件授权管理 ----------
     containerEl.createEl('h3', { text: '插件授权（grant）' })
     const grants = this.ctx.approval.listGrants()
