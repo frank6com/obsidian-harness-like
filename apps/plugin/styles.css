@@ -65,6 +65,50 @@
   padding: 8px;
 }
 
+/* 空状态引导 */
+.dsh-welcome {
+  margin: auto;
+  max-width: 420px;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px 12px;
+}
+
+.dsh-welcome h3 {
+  margin: 0 0 8px;
+  color: var(--text-normal);
+}
+
+.dsh-welcome p {
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+
+.dsh-welcome-chip {
+  display: inline-block;
+  margin: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dsh-welcome-chip:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dsh-welcome-hint {
+  margin-top: 20px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .dsh-session-btn {
   display: block;
   width: 100%;

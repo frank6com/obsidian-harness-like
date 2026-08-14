@@ -80,6 +80,8 @@ export default class DshObsidianPlugin extends Plugin {
             baseURL: this.settings.baseURL,
             apiKey: this.settings.apiKey,
             model: this.settings.model,
+            temperature: this.settings.temperature,
+            maxTokens: this.settings.maxTokens,
           }),
         }),
       ),
@@ -136,7 +138,7 @@ export default class DshObsidianPlugin extends Plugin {
       name: '重载已授权的用户插件',
       callback: () => void this.loadUserPlugins(),
     })
-    this.addSettingTab(new DshSettingsTab(this.app, this))
+    this.addSettingTab(new DshSettingsTab(this.app, this, ctx))
     this.addRibbonIcon('bot', '打开 dsh Chat', () => void this.activateView(CHAT_VIEW_TYPE))
 
     // 启动时加载已授权用户插件

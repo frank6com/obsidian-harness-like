@@ -19,6 +19,13 @@ export interface SessionSummary {
   id: string
   updatedAt: number
   count: number
+  title?: string
+  notePath?: string | null
+}
+
+export interface SessionMeta {
+  title: string
+  notePath: string | null
 }
 
 export class SessionLog {
@@ -67,6 +74,27 @@ export class SessionLog {
     return events
   }
 
+  /** 读取会话元信息（首条 session/meta 事件）；无则 undefined */
+  async readMeta(sessionId: string): Promise<SessionMeta | undefined> {
+    await this.chain
+    let text: string
+    try {
+      text = await fs.promises.readFile(this.file(sessionId), 'utf8')
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+      throw err
+    }
+    const first = text.split('\n').find((l) => l.trim())
+    if (!first) return undefined
+    try {
+      const ev = JSON.parse(first) as SessionEvent
+      if (ev.type === 'session/meta') return { title: ev.title, notePath: ev.notePath }
+    } catch {
+      // 首行损坏：无元信息
+    }
+    return undefined
+  }
+
   async list(): Promise<SessionSummary[]> {
     await this.chain
     let names: string[]
@@ -80,11 +108,18 @@ export class SessionLog {
       if (!name.endsWith('.jsonl')) continue
       const id = name.slice(0, -'.jsonl'.length)
       try {
-        const [stat, events] = await Promise.all([
+        const [stat, events, meta] = await Promise.all([
           fs.promises.stat(path.join(this.dir, name)),
           this.read(id),
+          this.readMeta(id),
         ])
-        out.push({ id, updatedAt: stat.mtimeMs, count: events.length })
+        out.push({
+          id,
+          updatedAt: stat.mtimeMs,
+          count: events.length,
+          title: meta?.title,
+          notePath: meta?.notePath,
+        })
       } catch {
         // 跳过无法读取的文件
       }

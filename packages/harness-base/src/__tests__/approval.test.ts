@@ -47,6 +47,15 @@ describe('ApprovalService grants（单勾/双勾）', () => {
     const svc2 = new ApprovalService(store)
     expect(svc2.isGranted('p1', '0.1.0')).toBe(true)
   })
+
+  it('listGrants 列出全部授权（管理界面用）', () => {
+    const svc = new ApprovalService(makeStore())
+    svc.grant('p1', 'version', '0.1.0')
+    svc.grant('p2', 'all', '1.0.0')
+    const list = svc.listGrants()
+    expect(list).toHaveLength(2)
+    expect(list.find((x) => x.pluginId === 'p2')?.grant.mode).toBe('all')
+  })
 })
 
 describe('ApprovalService 写操作决策', () => {

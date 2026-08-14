@@ -81,6 +81,43 @@ describe('LLMClient', () => {
     await expect(client.chat({ messages: [], tools: [] })).rejects.toThrow(/401/)
   })
 
+  it('temperature / max_tokens 按配置写入请求体', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      body: sseBody('data: {"choices":[{"delta":{"content":"x"}}]}\n\n', 'data: [DONE]\n\n'),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new LLMClient(() => ({
+      baseURL: 'https://api.example.com',
+      apiKey: 'k',
+      model: 'm',
+      temperature: 0.3,
+      maxTokens: 512,
+    }))
+    await client.chat({ messages: [], tools: [] })
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(init.body as string)
+    expect(body).toMatchObject({ temperature: 0.3, max_tokens: 512 })
+  })
+
+  it('未配置 temperature/maxTokens 时不写入请求体', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      body: sseBody('data: {"choices":[{"delta":{"content":"x"}}]}\n\n', 'data: [DONE]\n\n'),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new LLMClient(() => ({
+      baseURL: 'https://api.example.com',
+      apiKey: 'k',
+      model: 'm',
+    }))
+    await client.chat({ messages: [], tools: [] })
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(init.body as string)
+    expect(body.temperature).toBeUndefined()
+    expect(body.max_tokens).toBeUndefined()
+  })
+
   it('未配置 key 直接报错', async () => {
     const client = new LLMClient(() => ({
       baseURL: 'https://api.example.com',

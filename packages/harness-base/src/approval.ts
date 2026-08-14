@@ -33,6 +33,11 @@ export class ApprovalService {
     return this.grants[pluginId]
   }
 
+  /** 全部授权（grant 管理界面用） */
+  listGrants(): Array<{ pluginId: string; grant: GrantRecord }> {
+    return Object.entries(this.grants).map(([pluginId, grant]) => ({ pluginId, grant }))
+  }
+
   grant(pluginId: string, mode: GrantMode, version: string): void {
     this.grants[pluginId] = { mode, version, grantedAt: Date.now() }
     this.store.save(this.grants)

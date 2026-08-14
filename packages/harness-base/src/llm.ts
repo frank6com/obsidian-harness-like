@@ -31,18 +31,22 @@ export class LLMClient {
     if (!cfg.apiKey) throw new Error('未配置 API key（设置页 → 模型）')
     const url = cfg.baseURL.replace(/\/+$/, '') + '/chat/completions'
 
+    const body: Record<string, unknown> = {
+      model: cfg.model,
+      messages: opts.messages,
+      stream: true,
+    }
+    if (opts.tools.length) body.tools = opts.tools
+    if (cfg.temperature !== undefined) body.temperature = cfg.temperature
+    if (cfg.maxTokens && cfg.maxTokens > 0) body.max_tokens = cfg.maxTokens
+
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${cfg.apiKey}`,
       },
-      body: JSON.stringify({
-        model: cfg.model,
-        messages: opts.messages,
-        tools: opts.tools.length ? opts.tools : undefined,
-        stream: true,
-      }),
+      body: JSON.stringify(body),
       signal: opts.signal,
     })
 

@@ -123,6 +123,7 @@ export class ChatView extends ItemView {
     await this.refreshSessions()
     this.renderBinding()
     this.setPhase({ kind: 'idle' })
+    if (!this.currentSessionId) this.renderWelcome()
   }
 
   override onClose(): Promise<void> {
@@ -266,6 +267,14 @@ export class ChatView extends ItemView {
       sessionId = `session-${Date.now()}`
       this.currentSessionId = sessionId
       this.sessions.set(sessionId, { notePath: this.boundNote })
+      // 会话元信息（标题 + 绑定笔记）落盘，重启后仍可恢复
+      void this.ctx.sessions.append(sessionId, {
+        type: 'session/meta',
+        ts: Date.now(),
+        sessionId,
+        title: text.length > 24 ? text.slice(0, 24) + '…' : text,
+        notePath: this.boundNote,
+      } satisfies SessionEvent)
       void this.refreshSessions()
     }
     this.appendMessage('user', text)
@@ -398,9 +407,11 @@ export class ChatView extends ItemView {
       const btn = this.listEl.createEl('button', {
         cls: 'dsh-session-btn' + (s.id === this.currentSessionId ? ' is-active' : ''),
       })
-      const meta = this.sessions.get(s.id)?.notePath
-      btn.createDiv({ text: s.id })
-      btn.createDiv({ cls: 'dsh-session-sub', text: `${meta ?? '全局'} · ${s.count} 条` })
+      btn.createDiv({ text: s.title ?? s.id })
+      btn.createDiv({
+        cls: 'dsh-session-sub',
+        text: `${s.notePath ?? '全局'} · ${s.count} 条`,
+      })
       btn.onclick = () => {
         this.currentSessionId = s.id
         void this.renderSession()
@@ -417,6 +428,17 @@ export class ChatView extends ItemView {
     const id = this.currentSessionId
     if (!id) return
     const events = await this.ctx.sessions.read(id)
+    if (!events.length) {
+      this.renderWelcome()
+      return
+    }
+    // 恢复绑定：内存 map 优先，其次会话元信息
+    const meta = await this.ctx.sessions.readMeta(id)
+    if (!this.sessions.has(id) && meta) {
+      this.sessions.set(id, { notePath: meta.notePath })
+      this.boundNote = meta.notePath
+      this.renderBinding()
+    }
     for (const e of events) {
       if (e.type === 'user/message') this.appendMessage('user', e.content)
       else if (e.type === 'assistant/message') this.appendMessage('assistant', e.content)
@@ -424,6 +446,39 @@ export class ChatView extends ItemView {
       else if (e.type === 'tool/call') this.renderToolCall(e.id, e.tool, e.input)
       else if (e.type === 'tool/result') {
         this.renderToolResult(e.id, e.tool, e.ok, e.error, e.output)
+      }
+    }
+  }
+
+  /** 空状态引导：示例问题 + 未配置 key 提示 */
+  private renderWelcome(): void {
+    this.messagesEl.empty()
+    const wrap = this.messagesEl.createDiv({ cls: 'dsh-welcome' })
+    wrap.createEl('h3', { text: 'dsh Chat' })
+    wrap.createEl('p', {
+      text: '在 Obsidian 内运行 Cordis 插件体系与 agent。试试下面的示例，或直接输入你的问题。',
+    })
+    const examples = [
+      '统计 vault 里有多少笔记',
+      '搜索包含"读书"的笔记',
+      '把当前笔记绑定到本会话',
+      '写一篇周记到 Inbox',
+    ]
+    for (const text of examples) {
+      const chip = wrap.createEl('button', { cls: 'dsh-welcome-chip', text })
+      chip.onclick = () => {
+        this.inputEl.value = text
+        this.inputEl.focus()
+        this.autoGrowInput()
+      }
+    }
+    const key = this.ctx.settings.get('apiKey', '')
+    if (!key) {
+      const hint = wrap.createDiv({ cls: 'dsh-welcome-hint' })
+      hint.createSpan({ text: '还没有配置 API Key，先' })
+      const btn = hint.createEl('button', { cls: 'dsh-btn', text: '打开设置' })
+      btn.onclick = () => {
+        this.app.setting.open()
       }
     }
   }

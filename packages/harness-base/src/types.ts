@@ -22,6 +22,13 @@ export interface OpenAIToolCall {
 export type SessionEvent =
   | { type: 'turn/start'; ts: number; sessionId: string }
   | { type: 'turn/end'; ts: number; sessionId: string }
+  | {
+      type: 'session/meta'
+      ts: number
+      sessionId: string
+      title: string
+      notePath: string | null
+    }
   | { type: 'user/message'; ts: number; sessionId: string; content: string }
   | { type: 'assistant/message'; ts: number; sessionId: string; content: string }
   | {
@@ -53,6 +60,10 @@ export interface LLMConfig {
   baseURL: string
   apiKey: string
   model: string
+  /** 采样温度（0-2），不设置则用端点默认 */
+  temperature?: number
+  /** 最大输出 token 数，0 或不设置则不限制 */
+  maxTokens?: number
 }
 
 export interface LLMMessage {

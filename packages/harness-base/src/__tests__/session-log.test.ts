@@ -78,4 +78,24 @@ describe('SessionLog', () => {
     expect(events.map((e) => e.type)).toEqual(['user/message'])
     await pending
   })
+
+  it('session/meta 提供标题与绑定笔记，list 携带元信息', async () => {
+    const dir = await tmpDir()
+    const log = new SessionLog(dir)
+    await log.append('s1', {
+      type: 'session/meta',
+      ts: 1,
+      sessionId: 's1',
+      title: '统计笔记',
+      notePath: 'Inbox/示例.md',
+    })
+    await log.append('s1', { type: 'user/message', ts: 2, sessionId: 's1', content: '统计' })
+    const meta = await log.readMeta('s1')
+    expect(meta).toEqual({ title: '统计笔记', notePath: 'Inbox/示例.md' })
+    const list = await log.list()
+    expect(list[0]).toMatchObject({ id: 's1', title: '统计笔记', notePath: 'Inbox/示例.md' })
+    // 无 meta 的会话回退
+    await log.append('s2', { type: 'user/message', ts: 3, sessionId: 's2', content: 'x' })
+    expect(await log.readMeta('s2')).toBeUndefined()
+  })
 })
