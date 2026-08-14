@@ -88,8 +88,14 @@ export function toolsCompatPlugin(options: ToolsCompatOptions = {}): Plugin.Obje
           const disposer = runtime.register(definition)
           defs.set(def.name, def)
           return () => {
-            disposer()
-            defs.delete(def.name)
+            try {
+              disposer()
+            } catch (err) {
+              console.warn(`[dsh] 工具注销失败（忽略）: ${def.name}`, err)
+            } finally {
+              // 无论官方注销是否抛错，本地映射必须清理，否则重载报"工具已注册"
+              defs.delete(def.name)
+            }
           }
         },
         get(name: string): ToolDef | undefined {

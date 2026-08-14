@@ -102,7 +102,15 @@ export class CommandsService {
 
   addCommand(cmd: import('./api').CommandLike): () => void {
     const registered = this.api.commands.addCommand(cmd)
-    return () => this.api.commands.removeCommand(registered.id)
+    // 卸载必须不抛错：Obsidian 的 removeCommand 对缺失命令会抛错，
+    // 而 cordis 的 dispose 链遇错即断，会阻断后续 disposer（如工具注销）
+    return () => {
+      try {
+        this.api.commands.removeCommand(registered.id)
+      } catch (err) {
+        console.warn('[dsh] 命令卸载失败（忽略）:', err)
+      }
+    }
   }
 }
 
