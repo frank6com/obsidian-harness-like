@@ -109,6 +109,7 @@ export default class DshObsidianPlugin extends Plugin {
     ): Promise<WriteDecision> => {
       const decision = ctx.approval.decideWrite(this.settings.approvalDefault)
       if (decision === 'allow') return 'allow'
+      ctx.emit('dsh/waiting-approval', targetPath)
       const r = await new WriteApprovalModal(this.app, targetPath, meta).ask()
       if (r.choice === 'allow-session') ctx.approval.setSessionAllow(true)
       return r.choice === 'deny' ? 'deny' : 'allow'

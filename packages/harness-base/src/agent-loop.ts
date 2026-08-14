@@ -10,6 +10,11 @@ import type { LLMMessage, OpenAIToolCall, SessionEvent, ToolCall, ToolExecution 
 import { LLMClient, type LLMTool } from './llm'
 import { ToolRegistry } from './tools'
 
+export type AgentPhase =
+  | { kind: 'thinking' }
+  | { kind: 'tool'; name: string }
+  | { kind: 'done' }
+
 export interface AgentRunContext {
   sessionId: string
   llm: LLMClient
@@ -20,6 +25,8 @@ export interface AgentRunContext {
   onEvent(event: SessionEvent): void
   /** 流式增量（UI 直接订阅） */
   onStream?(delta: string): void
+  /** 阶段状态（不落盘，UI 直接订阅） */
+  onPhase?(phase: AgentPhase): void
   /** 历史事件（重建上下文） */
   history: SessionEvent[]
   /** 附加系统提示（如当前笔记上下文） */
@@ -104,73 +111,88 @@ interface ToolDefLike {
 export async function runAgentLoop(ac: AgentRunContext): Promise<void> {
   const maxTurns = ac.maxTurns ?? 8
   const messages = buildMessages(ac.history, ac.system)
-
-  ac.onEvent({ type: 'turn/start', ts: Date.now(), sessionId: ac.sessionId })
-
-  for (let turn = 0; turn < maxTurns; turn++) {
-    const res = await ac.llm.chat({
-      messages,
-      tools: toLLMTools(ac.tools.list()),
-      signal: ac.signal,
-      onDelta: ac.onStream,
-    })
-
-    if (res.content) {
-      const ev: SessionEvent = {
-        type: 'assistant/message',
-        ts: Date.now(),
-        sessionId: ac.sessionId,
-        content: res.content,
-      }
-      ac.onEvent(ev)
-      messages.push({ role: 'assistant', content: res.content })
-    }
-
-    if (!res.toolCalls.length) break
-
-    messages.push({
-      role: 'assistant',
-      content: res.content ?? '',
-      tool_calls: toWireToolCalls(res.toolCalls),
-    })
-
-    for (const tc of res.toolCalls) {
-      const input = safeParseArguments(tc.arguments)
-      ac.onEvent({
-        type: 'tool/call',
-        ts: Date.now(),
-        sessionId: ac.sessionId,
-        id: tc.id,
-        tool: tc.name,
-        input,
-      })
-      let result: ToolExecution
-      try {
-        result = await ac.executeTool(tc.name, input)
-      } catch (err) {
-        result = { ok: false, error: err instanceof Error ? err.message : String(err) }
-      }
-      ac.onEvent({
-        type: 'tool/result',
-        ts: Date.now(),
-        sessionId: ac.sessionId,
-        id: tc.id,
-        tool: tc.name,
-        ok: result.ok,
-        output: result.output,
-        error: result.error,
-      })
-      messages.push({
-        role: 'tool',
-        tool_call_id: tc.id,
-        content: result.ok
-          ? typeof result.output === 'string'
-            ? result.output
-            : JSON.stringify(result.output)
-          : `ERROR: ${result.error ?? 'unknown'}`,
-      })
+  const signal = ac.signal
+  const throwIfAborted = (): void => {
+    if (signal?.aborted) {
+      const err = new Error('已停止')
+      err.name = 'AbortError'
+      throw err
     }
   }
 
-  ac.onEvent({ type: 'turn/end', ts: Date.now(), sessionId: ac.sessionId })
+  ac.onEvent({ type: 'turn/start', ts: Date.now(), sessionId: ac.sessionId })
+  try {
+    for (let turn = 0; turn < maxTurns; turn++) {
+      throwIfAborted()
+      ac.onPhase?.({ kind: 'thinking' })
+
+      const res = await ac.llm.chat({
+        messages,
+        tools: toLLMTools(ac.tools.list()),
+        signal,
+        onDelta: ac.onStream,
+      })
+
+      if (res.content) {
+        const ev: SessionEvent = {
+          type: 'assistant/message',
+          ts: Date.now(),
+          sessionId: ac.sessionId,
+          content: res.content,
+        }
+        ac.onEvent(ev)
+        messages.push({ role: 'assistant', content: res.content })
+      }
+
+      if (!res.toolCalls.length) break
+
+      messages.push({
+        role: 'assistant',
+        content: res.content ?? '',
+        tool_calls: toWireToolCalls(res.toolCalls),
+      })
+
+      for (const tc of res.toolCalls) {
+        throwIfAborted()
+        ac.onPhase?.({ kind: 'tool', name: tc.name })
+        const input = safeParseArguments(tc.arguments)
+        ac.onEvent({
+          type: 'tool/call',
+          ts: Date.now(),
+          sessionId: ac.sessionId,
+          id: tc.id,
+          tool: tc.name,
+          input,
+        })
+        let result: ToolExecution
+        try {
+          result = await ac.executeTool(tc.name, input)
+        } catch (err) {
+          result = { ok: false, error: err instanceof Error ? err.message : String(err) }
+        }
+        ac.onEvent({
+          type: 'tool/result',
+          ts: Date.now(),
+          sessionId: ac.sessionId,
+          id: tc.id,
+          tool: tc.name,
+          ok: result.ok,
+          output: result.output,
+          error: result.error,
+        })
+        messages.push({
+          role: 'tool',
+          tool_call_id: tc.id,
+          content: result.ok
+            ? typeof result.output === 'string'
+              ? result.output
+              : JSON.stringify(result.output)
+            : `ERROR: ${result.error ?? 'unknown'}`,
+        })
+      }
+    }
+    ac.onPhase?.({ kind: 'done' })
+  } finally {
+    ac.onEvent({ type: 'turn/end', ts: Date.now(), sessionId: ac.sessionId })
+  }
 }

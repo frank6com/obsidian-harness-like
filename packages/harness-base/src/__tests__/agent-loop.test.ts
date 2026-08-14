@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { buildMessages, runAgentLoop } from '../agent-loop'
+import { buildMessages, runAgentLoop, type AgentPhase } from '../agent-loop'
 import { LLMClient } from '../llm'
 import { ToolRegistry } from '../tools'
 import type { SessionEvent, ToolExecution } from '../types'
@@ -170,5 +170,91 @@ describe('runAgentLoop', () => {
     })
     const result = events.find((e) => e.type === 'tool/result')
     expect(result?.type === 'tool/result' && result.ok).toBe(false)
+  })
+
+  it('阶段事件：thinking → done', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, body: sse('你好') }))
+    const llm = new LLMClient(() => ({ baseURL: 'https://x', apiKey: 'k', model: 'm' }))
+    const tools = new ToolRegistry()
+    const phases: AgentPhase[] = []
+    await runAgentLoop({
+      sessionId: 's1',
+      llm,
+      tools,
+      executeTool: async () => ({ ok: true, output: null }),
+      onEvent: () => {},
+      history: [],
+      onPhase: (p) => phases.push(p),
+    })
+    expect(phases.map((p) => p.kind)).toEqual(['thinking', 'done'])
+  })
+
+  it('阶段事件：工具阶段携带工具名', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce({ ok: true, body: sseToolCall('count_notes', '{}') })
+        .mockResolvedValueOnce({ ok: true, body: sse('完成') }),
+    )
+    const llm = new LLMClient(() => ({ baseURL: 'https://x', apiKey: 'k', model: 'm' }))
+    const tools = new ToolRegistry()
+    const phases: AgentPhase[] = []
+    await runAgentLoop({
+      sessionId: 's1',
+      llm,
+      tools,
+      executeTool: async () => ({ ok: true, output: null }),
+      onEvent: () => {},
+      history: [],
+      onPhase: (p) => phases.push(p),
+    })
+    expect(phases).toContainEqual({ kind: 'tool', name: 'count_notes' })
+    expect(phases[phases.length - 1]).toEqual({ kind: 'done' })
+  })
+
+  it('abort：已中止的信号立即抛 AbortError', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const llm = new LLMClient(() => ({ baseURL: 'https://x', apiKey: 'k', model: 'm' }))
+    const tools = new ToolRegistry()
+    await expect(
+      runAgentLoop({
+        sessionId: 's1',
+        llm,
+        tools,
+        executeTool: async () => ({ ok: true, output: null }),
+        onEvent: () => {},
+        history: [],
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('abort：工具执行期间中止，循环抛 AbortError 且补发 turn/end', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: true, body: sseToolCall('count_notes', '{}') })),
+    )
+    const controller = new AbortController()
+    const llm = new LLMClient(() => ({ baseURL: 'https://x', apiKey: 'k', model: 'm' }))
+    const tools = new ToolRegistry()
+    const events: SessionEvent[] = []
+    await expect(
+      runAgentLoop({
+        sessionId: 's1',
+        llm,
+        tools,
+        executeTool: async () => {
+          controller.abort()
+          return { ok: true, output: null }
+        },
+        onEvent: (e) => events.push(e),
+        history: [],
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+    // finally 保证 turn/end 落盘，日志闭合
+    expect(events.some((e) => e.type === 'turn/end')).toBe(true)
   })
 })

@@ -6,6 +6,15 @@
   height: 100%;
 }
 
+.dsh-chat.is-collapsed .dsh-chat-list {
+  display: none;
+}
+
+.dsh-btn-icon {
+  padding: 4px 8px;
+  line-height: 1;
+}
+
 .dsh-chat-header {
   display: flex;
   align-items: center;
@@ -111,10 +120,45 @@
   background: var(--background-secondary);
 }
 
+.dsh-msg-streaming::after {
+  content: '▍';
+  margin-left: 1px;
+  color: var(--text-accent);
+  animation: dsh-blink 1s steps(1) infinite;
+}
+
+@keyframes dsh-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 .dsh-msg-system {
   align-self: center;
   color: var(--text-warning);
   font-size: 12px;
+}
+
+/* 阶段状态条 */
+.dsh-phase {
+  min-height: 18px;
+  padding: 2px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid transparent;
+}
+
+.dsh-phase:not(:empty) {
+  border-top-color: var(--background-modifier-border);
+  color: var(--text-accent);
+}
+
+/* 重试行 */
+.dsh-retry-row {
+  align-self: center;
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 .dsh-tool-card {
@@ -124,6 +168,31 @@
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 12px;
+  cursor: pointer;
+}
+
+.dsh-tool-card.is-running {
+  border-color: var(--interactive-accent);
+}
+
+.dsh-tool-card.is-running .dsh-tool-card-title::before {
+  content: '⟳ ';
+  display: inline-block;
+  animation: dsh-spin 1s linear infinite;
+}
+
+@keyframes dsh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dsh-tool-card.is-success {
+  border-color: var(--color-green);
+}
+
+.dsh-tool-card.is-error {
+  border-color: var(--text-error);
 }
 
 .dsh-tool-card-title {
@@ -133,10 +202,16 @@
 
 .dsh-tool-card-detail {
   margin: 0;
-  max-height: 120px;
-  overflow: auto;
+  max-height: 60px;
+  overflow: hidden;
   font-size: 11px;
   color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dsh-tool-card-detail.is-expanded {
+  max-height: none;
 }
 
 .dsh-chat-footer {
@@ -169,6 +244,11 @@
 .dsh-btn-primary {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+.dsh-btn-stop {
+  background: var(--text-error) !important;
   border-color: transparent;
 }
 

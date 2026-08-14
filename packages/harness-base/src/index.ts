@@ -64,5 +64,7 @@ declare module '@deepseek-ai/cordis' {
   }
   interface Events {
     'session/event': (e: SessionEvent) => void
+    /** 宿主打开审批弹窗（UI 阶段状态联动） */
+    'dsh/waiting-approval': (targetPath: string) => void
   }
 }

@@ -1,11 +1,19 @@
 /**
- * ChatView：会话列表 + 消息流 + 工具卡片 + 输入框 + 会话级"允许写"开关。
- * 从 session/event 渲染；流式增量直接追加到气泡。
+ * ChatView：会话列表 + 消息流 + 工具卡片（实时状态）+ 阶段状态条 +
+ * 输入框（自适应增高）+ 发送/停止三态按钮 + 会话级"允许写"开关。
+ *
+ * P0.5 改进（docs/ux-checklist.md §1）：过程状态可见、工具卡片实时状态、
+ * 流式光标、错误重试、列表可收起、发送中禁用与中止。
  */
 
 import { ItemView, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
-import { runAgentLoop, type SessionEvent, type ToolExecution } from '@dsh-obsidian/harness-base'
+import {
+  runAgentLoop,
+  type AgentPhase,
+  type SessionEvent,
+  type ToolExecution,
+} from '@dsh-obsidian/harness-base'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
 
@@ -13,17 +21,33 @@ interface SessionMeta {
   notePath: string | null
 }
 
+/** 宿主侧额外阶段：idle / waiting（等待审批）/ stopped */
+type UiPhase = AgentPhase | { kind: 'idle' } | { kind: 'waiting' } | { kind: 'stopped' }
+
+function summarize(value: unknown): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+  return text.length > 300 ? text.slice(0, 300) + ' …' : text
+}
+
 export class ChatView extends ItemView {
   private currentSessionId: string | null = null
   private boundNote: string | null = null
   private sessions = new Map<string, SessionMeta>()
+  private root!: HTMLElement
   private listEl!: HTMLElement
   private messagesEl!: HTMLElement
   private boundEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
+  private sendBtn!: HTMLButtonElement
+  private phaseEl!: HTMLElement
   private allowWriteEl!: HTMLInputElement
   private streamingEl: HTMLElement | null = null
   private streamingText = ''
+  private toolCards = new Map<string, HTMLElement>()
+  private running = false
+  private abortController: AbortController | null = null
+  private lastFailed: { sessionId: string; text: string } | null = null
+  private listCollapsed = false
   private disposers: Array<() => void> = []
 
   constructor(
@@ -47,10 +71,12 @@ export class ChatView extends ItemView {
 
   override async onOpen(): Promise<void> {
     this.contentEl.empty()
-    const root = this.contentEl.createDiv({ cls: 'dsh-chat' })
+    this.root = this.contentEl.createDiv({ cls: 'dsh-chat' })
 
-    // 头部：标题 + 绑定笔记 + 会话级允许写
-    const header = root.createDiv({ cls: 'dsh-chat-header' })
+    // 头部：折叠按钮 + 标题 + 绑定笔记 + 会话级允许写
+    const header = this.root.createDiv({ cls: 'dsh-chat-header' })
+    const collapseBtn = header.createEl('button', { cls: 'dsh-btn dsh-btn-icon', text: '☰' })
+    collapseBtn.onclick = () => this.toggleSessionList()
     header.createSpan({ cls: 'dsh-chat-title', text: 'dsh Chat' })
     this.boundEl = header.createSpan({ cls: 'dsh-bound' })
     const bindBtn = header.createEl('button', { cls: 'dsh-btn', text: '绑定当前笔记' })
@@ -68,31 +94,38 @@ export class ChatView extends ItemView {
     }
 
     // 主体：会话列表 + 消息
-    const body = root.createDiv({ cls: 'dsh-chat-body' })
+    const body = this.root.createDiv({ cls: 'dsh-chat-body' })
     this.listEl = body.createDiv({ cls: 'dsh-chat-list' })
     this.messagesEl = body.createDiv({ cls: 'dsh-chat-messages' })
 
-    // 底部：输入
-    const footer = root.createDiv({ cls: 'dsh-chat-footer' })
+    // 阶段状态条（思考/工具/等待审批/已停止）
+    this.phaseEl = this.root.createDiv({ cls: 'dsh-phase', text: '' })
+
+    // 底部：输入 + 发送/停止
+    const footer = this.root.createDiv({ cls: 'dsh-chat-footer' })
     this.inputEl = footer.createEl('textarea', {
       cls: 'dsh-chat-input',
       attr: { placeholder: '输入消息…（Enter 发送，Shift+Enter 换行）' },
     })
-    const sendBtn = footer.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: '发送' })
-    sendBtn.onclick = () => void this.send()
+    this.inputEl.addEventListener('input', () => this.autoGrowInput())
     this.inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
-        void this.send()
+        void this.onSendClick()
       }
     })
+    this.sendBtn = footer.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: '发送' })
+    this.sendBtn.onclick = () => void this.onSendClick()
 
     this.disposers.push(this.ctx.on('session/event', (e) => this.onSessionEvent(e)))
+    this.disposers.push(this.ctx.on('dsh/waiting-approval', () => this.setPhase({ kind: 'waiting' })))
     await this.refreshSessions()
     this.renderBinding()
+    this.setPhase({ kind: 'idle' })
   }
 
   override onClose(): Promise<void> {
+    this.abortController?.abort()
     for (const d of this.disposers) {
       try {
         d()
@@ -104,31 +137,102 @@ export class ChatView extends ItemView {
     return Promise.resolve()
   }
 
+  // ---------- 事件与渲染 ----------
+
   private onSessionEvent(e: SessionEvent): void {
     if (e.sessionId !== this.currentSessionId) return
     if (e.type === 'assistant/message') {
       if (this.streamingEl) {
+        this.streamingEl.classList.remove('dsh-msg-streaming')
         this.streamingEl.textContent = e.content
         this.streamingEl = null
       } else {
         this.appendMessage('assistant', e.content)
       }
     } else if (e.type === 'tool/call') {
-      this.appendToolCard(`调用工具 ${e.tool}`, e.input)
+      this.renderToolCall(e.id, e.tool, e.input)
     } else if (e.type === 'tool/result') {
-      this.appendToolCard(
-        e.ok ? `✓ ${e.tool} 完成` : `✗ ${e.tool} 失败: ${e.error ?? '未知错误'}`,
-        e.output,
-      )
+      this.renderToolResult(e.id, e.tool, e.ok, e.error, e.output)
     } else if (e.type === 'turn/end') {
       void this.refreshSessions()
     }
+  }
+
+  private renderToolCall(id: string, tool: string, input: unknown): void {
+    const card = this.messagesEl.createDiv({ cls: 'dsh-tool-card is-running' })
+    card.createDiv({ cls: 'dsh-tool-card-title', text: `调用工具 ${tool}` })
+    const detail = card.createEl('pre', { cls: 'dsh-tool-card-detail', text: summarize(input) })
+    card.onclick = () => detail.classList.toggle('is-expanded')
+    this.toolCards.set(id, card)
+    this.scrollToBottom()
+  }
+
+  private renderToolResult(
+    id: string,
+    tool: string,
+    ok: boolean,
+    error: string | undefined,
+    output: unknown,
+  ): void {
+    const card = this.toolCards.get(id)
+    if (card) {
+      card.classList.remove('is-running')
+      card.classList.add(ok ? 'is-success' : 'is-error')
+      const title = card.querySelector('.dsh-tool-card-title')
+      if (title) {
+        title.textContent = ok ? `✓ ${tool} 完成` : `✗ ${tool} 失败: ${error ?? '未知错误'}`
+      }
+      const detail = card.querySelector('pre')
+      if (detail && output !== undefined) detail.textContent = summarize(output)
+      this.toolCards.delete(id)
+    } else {
+      // 回放或跨会话兜底
+      this.appendToolCard(ok ? `✓ ${tool} 完成` : `✗ ${tool} 失败: ${error ?? ''}`, output)
+    }
+    this.scrollToBottom()
+  }
+
+  private appendToolCard(title: string, detail: unknown): void {
+    const card = this.messagesEl.createDiv({ cls: 'dsh-tool-card' })
+    card.createDiv({ cls: 'dsh-tool-card-title', text: title })
+    if (detail !== undefined) {
+      card.createEl('pre', { cls: 'dsh-tool-card-detail', text: summarize(detail) })
+    }
+    this.scrollToBottom()
+  }
+
+  private appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
+    const el = this.messagesEl.createDiv({ cls: `dsh-msg dsh-msg-${role}` })
+    el.textContent = content
+    this.scrollToBottom()
+    return el
+  }
+
+  private appendStream(delta: string): void {
+    if (!this.streamingEl) {
+      this.streamingEl = this.appendMessage('assistant', '')
+      this.streamingEl.classList.add('dsh-msg-streaming')
+    }
+    this.streamingText += delta
+    this.streamingEl.textContent = this.streamingText
+    this.scrollToBottom()
+  }
+
+  // ---------- 发送 / 中止 / 重试 ----------
+
+  private onSendClick(): void {
+    if (this.running) {
+      this.abortController?.abort()
+      return
+    }
+    void this.send()
   }
 
   private async send(): Promise<void> {
     const text = this.inputEl.value.trim()
     if (!text) return
     this.inputEl.value = ''
+    this.inputEl.style.height = 'auto'
     let sessionId = this.currentSessionId
     if (!sessionId) {
       sessionId = `session-${Date.now()}`
@@ -137,17 +241,24 @@ export class ChatView extends ItemView {
       void this.refreshSessions()
     }
     this.appendMessage('user', text)
+    this.lastFailed = null
     await this.run(sessionId, text)
   }
 
-  private async run(sessionId: string, text: string): Promise<void> {
+  private async run(sessionId: string, text: string, skipAppend = false): Promise<void> {
+    this.running = true
+    this.setSendingState()
+    this.abortController = new AbortController()
+    const signal = this.abortController.signal
     try {
-      await this.ctx.sessions.append(sessionId, {
-        type: 'user/message',
-        ts: Date.now(),
-        sessionId,
-        content: text,
-      } satisfies SessionEvent)
+      if (!skipAppend) {
+        await this.ctx.sessions.append(sessionId, {
+          type: 'user/message',
+          ts: Date.now(),
+          sessionId,
+          content: text,
+        } satisfies SessionEvent)
+      }
       const history = (await this.ctx.sessions.read(sessionId)).filter(
         (e) => e.type !== 'turn/start' && e.type !== 'turn/end',
       )
@@ -180,14 +291,30 @@ export class ChatView extends ItemView {
         executeTool: (name, input) => this.executeTool(name, input),
         onEvent: sink,
         onStream: (delta) => this.appendStream(delta),
+        onPhase: (phase) => this.setPhase(phase),
         history,
         system,
+        signal,
       })
     } catch (err) {
-      this.appendMessage('system', `错误: ${err instanceof Error ? err.message : String(err)}`)
+      if (err instanceof Error && err.name === 'AbortError') {
+        this.appendMessage('system', '已停止')
+        this.setPhase({ kind: 'stopped' })
+      } else {
+        const msg = err instanceof Error ? err.message : String(err)
+        this.appendMessage('system', `错误: ${msg}`)
+        this.lastFailed = { sessionId, text }
+        const row = this.messagesEl.createDiv({ cls: 'dsh-retry-row' })
+        const btn = row.createEl('button', { cls: 'dsh-btn', text: '重试' })
+        btn.onclick = () => void this.run(sessionId, text, true)
+      }
     } finally {
+      this.running = false
+      this.abortController = null
+      this.setSendingState()
       this.streamingEl = null
       this.streamingText = ''
+      this.setPhase({ kind: 'idle' })
     }
   }
 
@@ -202,31 +329,33 @@ export class ChatView extends ItemView {
     }
   }
 
-  private appendStream(delta: string): void {
-    if (!this.streamingEl) {
-      this.streamingEl = this.appendMessage('assistant', '')
-    }
-    this.streamingText += delta
-    this.streamingEl.textContent = this.streamingText
+  private setPhase(phase: UiPhase): void {
+    const text =
+      phase.kind === 'thinking'
+        ? '思考中…'
+        : phase.kind === 'tool'
+          ? `调用工具 ${phase.name}…`
+          : phase.kind === 'waiting'
+            ? '等待你的审批…'
+            : phase.kind === 'stopped'
+              ? '已停止'
+              : phase.kind === 'done' || phase.kind === 'idle'
+                ? ''
+                : ''
+    this.phaseEl.setText(text)
   }
 
-  private appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
-    const el = this.messagesEl.createDiv({ cls: `dsh-msg dsh-msg-${role}` })
-    el.textContent = content
-    this.scrollToBottom()
-    return el
+  private setSendingState(): void {
+    this.sendBtn.setText(this.running ? '停止' : '发送')
+    this.sendBtn.classList.toggle('dsh-btn-stop', this.running)
+    this.inputEl.disabled = this.running
   }
 
-  private appendToolCard(title: string, detail: unknown): void {
-    const card = this.messagesEl.createDiv({ cls: 'dsh-tool-card' })
-    card.createDiv({ cls: 'dsh-tool-card-title', text: title })
-    if (detail !== undefined) {
-      card.createEl('pre', {
-        cls: 'dsh-tool-card-detail',
-        text: typeof detail === 'string' ? detail : JSON.stringify(detail, null, 2),
-      })
-    }
-    this.scrollToBottom()
+  // ---------- 会话列表 / 绑定 / 输入 ----------
+
+  private toggleSessionList(): void {
+    this.listCollapsed = !this.listCollapsed
+    this.root.classList.toggle('is-collapsed', this.listCollapsed)
   }
 
   private async refreshSessions(): Promise<void> {
@@ -255,21 +384,27 @@ export class ChatView extends ItemView {
     this.messagesEl.empty()
     this.streamingEl = null
     this.streamingText = ''
+    this.toolCards.clear()
     const id = this.currentSessionId
     if (!id) return
     const events = await this.ctx.sessions.read(id)
     for (const e of events) {
       if (e.type === 'user/message') this.appendMessage('user', e.content)
       else if (e.type === 'assistant/message') this.appendMessage('assistant', e.content)
-      else if (e.type === 'tool/call') this.appendToolCard(`调用工具 ${e.tool}`, e.input)
+      else if (e.type === 'tool/call') this.renderToolCall(e.id, e.tool, e.input)
       else if (e.type === 'tool/result') {
-        this.appendToolCard(e.ok ? `✓ ${e.tool} 完成` : `✗ ${e.tool} 失败: ${e.error ?? ''}`, e.output)
+        this.renderToolResult(e.id, e.tool, e.ok, e.error, e.output)
       }
     }
   }
 
   private renderBinding(): void {
     this.boundEl.setText(this.boundNote ? `绑定: ${this.boundNote}` : '未绑定笔记')
+  }
+
+  private autoGrowInput(): void {
+    this.inputEl.style.height = 'auto'
+    this.inputEl.style.height = Math.min(this.inputEl.scrollHeight, 140) + 'px'
   }
 
   private scrollToBottom(): void {
