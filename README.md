@@ -40,7 +40,16 @@ pnpm test         # vitest 全量
 pnpm build        # 产物构建
 ```
 
-开发循环：`pnpm dev` 后把 `apps/plugin/dist/` 产物复制到测试 vault 的 `.obsidian/plugins/dsh-obsidian/`（配合 obsidian-hot-reload 插件自动重载）。
+**接入测试 vault（推荐：文件级软链，零复制、不污染仓库）**：
+
+```sh
+pnpm dev                      # 终端 1：watch 构建
+pnpm link:vault /path/to/vault   # 把四个产物以软链接入 vault（重复执行幂等）
+```
+
+`link:vault` 在 vault 的 `.obsidian/plugins/dsh-obsidian/` 建立真实目录，只软链 `main.js` / `manifest.json` / `styles.css` / `versions.json`；Obsidian 写入的 `data.json` 会作为真实文件留在 vault 侧，项目目录始终干净。之后在 Obsidian 里重载插件即可看到最新代码（配合 obsidian-hot-reload；若热重载对软链不敏感，用 `Cmd+R` 或 hot-reload 的重载命令）。
+
+> 旧做法（目录级软链）会把 `data.json` 穿透进项目目录，已废弃；如已使用，先删除 vault 侧旧软链再执行 `link:vault`。
 
 ## 仓库结构
 

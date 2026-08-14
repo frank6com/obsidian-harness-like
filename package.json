@@ -6,6 +6,7 @@
     "build": "pnpm --filter dsh-obsidian-plugin build",
     "dev": "pnpm --filter dsh-obsidian-plugin dev",
     "test": "vitest run",
+    "link:vault": "bash scripts/link-dev.sh",
     "typecheck": "tsc --noEmit -p packages/harness-base/tsconfig.json && tsc --noEmit -p packages/obsidian-adapter/tsconfig.json && tsc --noEmit -p packages/plugin-runtime/tsconfig.json && tsc --noEmit -p apps/plugin/tsconfig.json"
   },
   "pnpm": {

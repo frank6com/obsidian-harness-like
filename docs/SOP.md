@@ -17,11 +17,12 @@
 ## 2. 每日开发循环
 
 ```sh
-pnpm --filter plugin dev        # esbuild watch，输出 apps/plugin/main.js
+pnpm dev                      # esbuild watch，输出 apps/plugin/dist/main.js（终端 1）
+pnpm link:vault <dev-vault>   # 文件级软链接入测试 vault（幂等；可设 DEV_VAULT 环境变量）
 ```
 
-1. watch 构建后，把 `apps/plugin/` 产物复制到 `dev-vault/.obsidian/plugins/dsh-obsidian/`。
-2. hot-reload 自动重载；未生效则手动 `Cmd+R` 重载 Obsidian。
+1. `link:vault` 在 vault 侧建立真实插件目录，仅软链 `main.js` / `manifest.json` / `styles.css` / `versions.json` 四个产物——**禁止目录级软链**（会把 `data.json` 穿透进仓库）。
+2. hot-reload 自动重载；对软链不敏感时手动 `Cmd+R` 或使用 hot-reload 的重载命令。
 3. DevTools（`Cmd+Opt+I`）查看 console；常见问题见 §6。
 4. 提交前：`pnpm lint && pnpm test` + 手动验收清单（§5）。
 5. 提交信息规范：`feat|fix|chore(dsh-obsidian|adapter|runtime|ui|docs): 摘要`，中英文均可，附上游版本号（涉及升级时）。

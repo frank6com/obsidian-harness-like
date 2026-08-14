@@ -3,3 +3,5 @@ dist/
 *.log
 .DS_Store
 *.tsbuildinfo
+# Obsidian 插件运行时数据（即使误写也不入库）
+data.json
