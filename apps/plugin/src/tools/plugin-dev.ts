@@ -99,7 +99,7 @@ ctx.effect(() => [
 export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Object {
   return {
     name: 'plugin-dev-tools',
-    inject: ['vault', 'sandbox', 'toolsCompat', 'pluginRuntime', 'approval', 'notice'],
+    inject: ['vault', 'sandbox', 'toolsCompat', 'pluginRuntime', 'approval', 'notice', 'views'],
     apply(ctx) {
       const pluginsDir = ctx.sandbox.scope.pluginsDir
       /** vault API 一律用 vault 相对路径（绝对路径会破坏 Obsidian 路径语义） */
@@ -204,6 +204,20 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
             )
           }
           return { count: rows.length, plugins: rows }
+        },
+      })
+
+      ctx.toolsCompat.register({
+        name: 'open_view',
+        description: '打开（或聚焦）一个已注册类型的自定义面板视图（插件注册的 ItemView）',
+        input: {
+          type: 'object',
+          properties: { type: { type: 'string', description: '视图类型，如 note-count-view' } },
+          required: ['type'],
+        },
+        execute(input) {
+          ctx.views.open(String(input.type ?? ''))
+          return { ok: true, type: String(input.type ?? '') }
         },
       })
 

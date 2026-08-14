@@ -53,6 +53,13 @@ async function setup(
   ctx.reflect.provide('sandbox', new SandboxPolicy({ vaultRoot, dataDir, pluginsDir, tempDir }))
   ctx.reflect.provide('approval', new ApprovalService({ load: () => ({}), save: () => {} }))
   ctx.reflect.provide('notice', { notice: () => {} })
+  const openedViews: string[] = []
+  ctx.reflect.provide('views', {
+    registerView: () => () => {},
+    open: (type: string) => {
+      openedViews.push(type)
+    },
+  } as never)
 
   await ctx.plugin(toolsCompatPlugin())
   await ctx.plugin(
@@ -60,7 +67,7 @@ async function setup(
   )
   await ctx.plugin(pluginDevToolsPlugin({ ensureGranted: ensureGranted ?? (async () => true) }))
 
-  return { ctx, vaultRoot, pluginsDir }
+  return { ctx, vaultRoot, pluginsDir, openedViews }
 }
 
 const GEN_PLUGIN_JS = `const { Context } = require('@deepseek-ai/cordis')
@@ -147,6 +154,13 @@ describe('plugin_status / reload_plugin', () => {
       content: GEN_PLUGIN_JS,
     })
   }
+
+  it('open_view 打开面板视图', async () => {
+    const { ctx, openedViews } = await setup()
+    const out = await ctx.toolsCompat.get('open_view')!.execute({ type: 'note-count-view' })
+    expect(out).toEqual({ ok: true, type: 'note-count-view' })
+    expect(openedViews).toEqual(['note-count-view'])
+  })
 
   it('plugin_status 列出未加载插件', async () => {
     const { ctx } = await setup()

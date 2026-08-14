@@ -35,20 +35,15 @@ export function toApiLike(app: App): ObsidianApiLike {
           await app.vault.modify(file, content)
           return
         }
-        try {
-          // 新文件：需要父目录已存在（P0 限制，文档说明）
-          await app.vault.create(path, content)
-        } catch (err) {
-          // 缓存时序：文件实际已存在但 vault 缓存未更新（如刚由插件写入）
-          if (err instanceof Error && /already exists/i.test(err.message)) {
-            const again = app.vault.getAbstractFileByPath(path)
-            if (again instanceof TFile) {
-              await app.vault.modify(again, content)
-              return
-            }
-          }
-          throw err
+        // 缓存没有：查磁盘（Obsidian 缓存可能滞后于磁盘，如刚由插件写入）
+        const stat = await app.vault.adapter.stat(path).catch(() => null)
+        if (stat) {
+          // 磁盘已存在但缓存未知：直接写盘绕开 vault.create 的缓存检查
+          await app.vault.adapter.write(path, content)
+          return
         }
+        // 真新文件：需要父目录已存在（P0 限制，文档说明）
+        await app.vault.create(path, content)
       },
       async create(path, content) {
         await app.vault.create(path, content)

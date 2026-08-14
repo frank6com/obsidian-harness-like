@@ -315,7 +315,8 @@ export class ChatView extends ItemView {
       const system = [
         '你是运行在 Obsidian 中的 DeepSeek Harness agent。',
         '可以调用工具读写笔记；写操作会请求审批，请等待结果。',
-        '你还可以创建和维护 dsh 用户插件（.obsidian/dsh-plugins/）：用 create_plugin 建骨架、write_plugin_file 写纯 JS main.js、reload_plugin 加载生效；开发指南见 plugin_guide。',
+        '你还可以创建和维护 dsh 用户插件（.obsidian/dsh-plugins/）：用 create_plugin 建骨架、write_plugin_file 写纯 JS main.js（覆盖已有文件是预期行为）、reload_plugin 加载生效；开发指南见 plugin_guide。',
+        '创建带面板（ItemView）的插件并加载成功后，用 open_view 打开面板让用户看到界面。',
         bound ? `当前绑定笔记: ${bound}\n\n笔记内容：\n${noteCtx.slice(0, 8000)}` : '',
       ]
         .filter(Boolean)
