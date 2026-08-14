@@ -42,6 +42,7 @@ function fsVault(root: string) {
 
 async function setup(
   ensureGranted?: (id: string, version: string, description?: string) => Promise<boolean>,
+  confirmOverwrite?: (pluginId: string, file: string) => Promise<boolean>,
 ) {
   const vaultRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-dev-'))
   const dataDir = path.join(vaultRoot, '.obsidian', 'dsh')
@@ -65,7 +66,12 @@ async function setup(
   await ctx.plugin(
     runtimePlugin({ pluginsDir, require: (id) => (id === '@deepseek-ai/cordis' ? cordis : undefined) }),
   )
-  await ctx.plugin(pluginDevToolsPlugin({ ensureGranted: ensureGranted ?? (async () => true) }))
+  await ctx.plugin(
+    pluginDevToolsPlugin({
+      ensureGranted: ensureGranted ?? (async () => true),
+      confirmOverwrite: confirmOverwrite ?? (async () => true),
+    }),
+  )
 
   return { ctx, vaultRoot, pluginsDir, openedViews }
 }
@@ -142,6 +148,52 @@ describe('plugin_guide / create_plugin / write_plugin_file', () => {
       }),
     ).rejects.toThrow(/文件路径非法/)
     expect(fs.existsSync(path.join(vaultRoot, '.obsidian', 'evil.js'))).toBe(false)
+  })
+
+  it('write_plugin_file 覆盖已存在文件需确认：拒绝则不修改', async () => {
+    const asks: string[] = []
+    const { ctx, pluginsDir } = await setup(undefined, async (pid, file) => {
+      asks.push(`${pid}/${file}`)
+      return false
+    })
+    await ctx.toolsCompat.get('create_plugin')!.execute({ id: 'gen-plugin' })
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'gen-plugin',
+      file: 'main.js',
+      content: 'original',
+    })
+    const out = await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'gen-plugin',
+      file: 'main.js',
+      content: 'overwritten',
+    })
+    expect(out).toMatchObject({ ok: false, reason: '用户拒绝覆盖，文件未修改' })
+    expect(asks).toEqual(['gen-plugin/main.js'])
+    const content = await fs.promises.readFile(
+      path.join(pluginsDir, 'gen-plugin', 'main.js'),
+      'utf8',
+    )
+    expect(content).toBe('original')
+  })
+
+  it('write_plugin_file 覆盖确认通过后写入新内容', async () => {
+    const { ctx, pluginsDir } = await setup(undefined, async () => true)
+    await ctx.toolsCompat.get('create_plugin')!.execute({ id: 'gen-plugin' })
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'gen-plugin',
+      file: 'main.js',
+      content: 'v1',
+    })
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'gen-plugin',
+      file: 'main.js',
+      content: 'v2',
+    })
+    const content = await fs.promises.readFile(
+      path.join(pluginsDir, 'gen-plugin', 'main.js'),
+      'utf8',
+    )
+    expect(content).toBe('v2')
   })
 })
 

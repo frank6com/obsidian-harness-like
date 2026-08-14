@@ -16,6 +16,8 @@ import type { PluginRecord } from '@dsh-obsidian/plugin-runtime'
 export interface PluginDevToolsOptions {
   /** 授权确认（宿主弹窗）；返回是否已授权 */
   ensureGranted(pluginId: string, version: string, description?: string): Promise<boolean>
+  /** 覆盖已有插件文件的确认（高风险操作拦截）；返回是否允许覆盖 */
+  confirmOverwrite(pluginId: string, file: string): Promise<boolean>
 }
 
 const PLUGIN_ID_RE = /^[a-z0-9][a-z0-9-_]{0,63}$/
@@ -156,7 +158,7 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
 
       ctx.toolsCompat.register({
         name: 'write_plugin_file',
-        description: '写入插件目录内的文件（如 main.js；路径必须位于插件目录内）',
+        description: '写入插件目录内的文件（覆盖已存在文件需用户确认；读取文件请用 read_note，勿用本工具）',
         input: {
           type: 'object',
           properties: {
@@ -172,6 +174,12 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
           if (!rel) throw new Error(`文件路径非法: ${input.file}`)
           const vaultRel = path.posix.join(pluginsDirRel, pluginId, rel)
           ctx.sandbox.assertWrite(vaultRel)
+          // 高风险拦截：覆盖已存在文件需用户确认
+          const exists = await fileExists(ctx, vaultRel)
+          if (exists) {
+            const allow = await options.confirmOverwrite(pluginId, rel)
+            if (!allow) return { ok: false, reason: '用户拒绝覆盖，文件未修改' }
+          }
           // 子目录先建（write 要求父目录存在）
           const parent = path.posix.dirname(rel)
           if (parent !== '.') {

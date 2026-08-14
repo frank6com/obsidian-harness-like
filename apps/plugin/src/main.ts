@@ -16,7 +16,7 @@ import { runtimePlugin } from '@dsh-obsidian/plugin-runtime'
 import { toApiLike } from './obsidian-bridge'
 import { DEFAULT_SETTINGS, type DshSettings } from './settings'
 import { DshSettingsTab } from './settings-tab'
-import { WriteApprovalModal, GrantModal } from './modals'
+import { WriteApprovalModal, GrantModal, ConfirmModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
 import { pluginDevToolsPlugin } from './tools/plugin-dev'
 import { ChatView, CHAT_VIEW_TYPE } from './views/ChatView'
@@ -131,7 +131,7 @@ export default class DshObsidianPlugin extends Plugin {
       ctx.plugin(builtinToolsPlugin({ openTarget: (t) => apiLike.openTarget(t) })),
     )
 
-    // 插件创造模式：agent 创建/修改/重载用户插件（未授权先弹授权窗）
+    // 插件创造模式：agent 创建/修改/重载用户插件（未授权先弹授权窗；覆盖文件需确认）
     const ensureGranted = async (
       pluginId: string,
       version: string,
@@ -143,7 +143,14 @@ export default class DshObsidianPlugin extends Plugin {
       ctx.approval.grant(pluginId, choice.mode, version)
       return true
     }
-    this.fibers.push(ctx.plugin(pluginDevToolsPlugin({ ensureGranted })))
+    const confirmOverwrite = async (pluginId: string, file: string): Promise<boolean> => {
+      return new ConfirmModal(
+        this.app,
+        `agent 请求覆盖插件 ${pluginId} 的文件 ${file}\n覆盖后原内容将丢失。`,
+        '允许覆盖',
+      ).ask()
+    }
+    this.fibers.push(ctx.plugin(pluginDevToolsPlugin({ ensureGranted, confirmOverwrite })))
 
     // 视图与命令
     this.registerView(CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, ctx))

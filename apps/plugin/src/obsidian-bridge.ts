@@ -122,19 +122,17 @@ export function toApiLike(app: App, plugin?: Plugin): ObsidianApiLike {
     },
     ribbon: {
       addRibbonIcon(icon, title, callback) {
-        // workspace.addRibbonIcon 在 1.13 类型面外，运行时存在
-        const ws = app.workspace as unknown as {
-          addRibbonIcon(i: string, t: string, cb: () => void): HTMLElement
-        }
-        const el = ws.addRibbonIcon(icon, title, callback)
+        // 正确 API 是 plugin.addRibbonIcon（workspace 上没有）；返回元素，disposer 移除
+        if (!plugin) throw new Error('ribbon 服务需要宿主插件实例')
+        const el = plugin.addRibbonIcon(icon, title, callback)
         return { remove: () => el.remove() }
       },
     },
     statusbar: {
       addStatusBarItem() {
-        // workspace.addStatusBarItem 在 1.13 类型面外，运行时存在
-        const ws = app.workspace as unknown as { addStatusBarItem(): HTMLElement }
-        const el = ws.addStatusBarItem()
+        // 正确 API 是 plugin.addStatusBarItem（workspace 上没有）
+        if (!plugin) throw new Error('statusbar 服务需要宿主插件实例')
+        const el = plugin.addStatusBarItem()
         return { el, remove: () => el.remove() }
       },
     },
