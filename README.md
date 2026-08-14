@@ -28,6 +28,8 @@
 1. **设置**：命令面板 → "打开 dsh 设置"（或 设置 → 第三方插件 → dsh-obsidian）→ 填写 API Key（默认 DeepSeek 端点）
 2. **Chat**：点击侧边栏机器人图标 → 输入消息 → agent 可调用工具读写笔记；写操作会弹审批（可"本会话允许写"）
 3. **示例插件**：把 `apps/plugin/examples/my-first-plugin/` 复制到 `.obsidian/dsh-plugins/my-first-plugin/` → 插件管理器 → "授权并加载"（单勾=仅此版本 / 双勾=信任后续）
+
+> **插件迁移提示（示例 v0.0.2 起）**：注册工具使用 **`ctx.toolsCompat`**（`ctx.tools` 是官方 ToolRuntime 的保留键，旧式定义会被校验拒绝，报 `must declare output { schema, render, presentationMeta? }`）。若 vault 内副本仍显示 `v0.0.1`，说明是旧产物，重新复制整个示例目录（含重新构建的 `main.js`）。
 4. **会话**：自动持久化在 `.obsidian/dsh/sessions/*.jsonl`，重启后恢复；"绑定当前笔记"让 agent 感知笔记内容
 
 ## 开发
