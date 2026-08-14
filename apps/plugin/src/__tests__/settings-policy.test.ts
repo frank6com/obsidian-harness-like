@@ -88,7 +88,7 @@ describe('migrateSettings（旧版单提供方 → 多提供方）', () => {
     expect(s.providers[0]).toMatchObject({
       baseURL: 'https://x.example.com',
       apiKey: 'k',
-      model: 'm1',
+      models: ['m1'],
       temperature: 0.5,
       maxTokens: 200,
     })
@@ -98,8 +98,8 @@ describe('migrateSettings（旧版单提供方 → 多提供方）', () => {
   it('已有多提供方结构时保留', () => {
     const s = migrateSettings({
       providers: [
-        { id: 'a', name: 'A', baseURL: 'https://a', apiKey: '', model: 'x', temperature: 0, maxTokens: 0, extraHeaders: ['X-K: v'] },
-        { id: 'b', name: 'B', baseURL: 'https://b', apiKey: '', model: 'y', temperature: 0, maxTokens: 0, extraHeaders: [] },
+        { id: 'a', name: 'A', baseURL: 'https://a', apiKey: '', models: ['x'], temperature: 0, maxTokens: 0, extraHeaders: ['X-K: v'] },
+        { id: 'b', name: 'B', baseURL: 'https://b', apiKey: '', models: ['y'], temperature: 0, maxTokens: 0, extraHeaders: [] },
       ],
       activeProviderId: 'b',
       streamingEnabled: false,
