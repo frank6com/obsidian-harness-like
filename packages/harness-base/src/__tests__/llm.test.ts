@@ -37,7 +37,11 @@ async function setup(cfg: LLMConfig = baseConfig) {
     },
   })
   await fiber
-  const caller: LlmCaller = createLlmCaller(runtime, () => cfg)
+  const caller: LlmCaller = createLlmCaller(runtime, {
+    getConfig: () => cfg,
+    defaultProvider: () => 'deepseek',
+    defaultModel: () => cfg.model,
+  })
   return { ctx, runtime, caller, fiber }
 }
 

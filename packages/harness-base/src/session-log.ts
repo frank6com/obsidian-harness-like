@@ -21,11 +21,13 @@ export interface SessionSummary {
   count: number
   title?: string
   notePath?: string | null
+  modelId?: string
 }
 
 export interface SessionMeta {
   title: string
   notePath: string | null
+  modelId?: string
 }
 
 /** 会话保留策略：选出超过 retentionDays 未更新的会话 id（retentionDays <= 0 表示不清理） */
@@ -99,7 +101,9 @@ export class SessionLog {
     if (!first) return undefined
     try {
       const ev = JSON.parse(first) as SessionEvent
-      if (ev.type === 'session/meta') return { title: ev.title, notePath: ev.notePath }
+      if (ev.type === 'session/meta') {
+        return { title: ev.title, notePath: ev.notePath, modelId: ev.modelId }
+      }
     } catch {
       // 首行损坏：无元信息
     }
@@ -130,6 +134,7 @@ export class SessionLog {
           count: events.length,
           title: meta?.title,
           notePath: meta?.notePath,
+          modelId: meta?.modelId,
         })
       } catch {
         // 跳过无法读取的文件

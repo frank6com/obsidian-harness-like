@@ -35,10 +35,21 @@ export interface LlmCallerOptions {
   tools: ToolDef[]
   signal?: AbortSignal
   onDelta?: (delta: string) => void
+  /** 会话级模型选择，格式 "providerId/model"；缺省用默认提供方 */
+  model?: string
 }
 
 export interface LlmCaller {
   call(options: LlmCallerOptions): Promise<ChatResult>
+}
+
+export interface LlmRuntimeConfig {
+  /** 模型路由与参数：按 provider 返回端点/凭据/默认模型 */
+  getConfig(provider: string): LLMConfig
+  /** 默认提供方 id（会话未指定模型时的兜底） */
+  defaultProvider(): string
+  /** 默认模型（defaultProvider 下） */
+  defaultModel(): string
 }
 
 /** ---------- 消息/工具词汇转换 ---------- */
@@ -86,10 +97,10 @@ function toToolSchema(tool: ToolDef): ToolSchema {
   return { name: tool.name, description: tool.description, parameters: tool.input }
 }
 
-/** ---------- DeepSeek 适配器 ---------- */
+/** ---------- DeepSeek 适配器（多 provider 路由） ---------- */
 
 export class DeepSeekAdapter extends LlmAdapter {
-  constructor(private getConfig: () => LLMConfig) {
+  constructor(private getConfigByProvider: (provider: string) => LLMConfig) {
     super()
   }
 
@@ -98,7 +109,7 @@ export class DeepSeekAdapter extends LlmAdapter {
   }
 
   override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
-    const cfg = this.getConfig()
+    const cfg = this.getConfigByProvider(options.provider)
     const apiKey = assertUsableApiKey(cfg.apiKey, 'dsh-obsidian', 'settings.apiKey')
     const url = cfg.baseURL.replace(/\/+$/, '') + '/chat/completions'
 
@@ -229,14 +240,22 @@ interface ToolCallDelta {
 
 /** ---------- 调用器（agent loop 消费面） ---------- */
 
-export function createLlmCaller(
-  llm: LlmRuntime,
-  getConfig: () => LLMConfig,
-): LlmCaller {
+export function createLlmCaller(llm: LlmRuntime, cfg: LlmRuntimeConfig): LlmCaller {
   return {
     async call(options) {
-      const cfg = getConfig()
-      const provider = 'deepseek'
+      // 会话级模型选择 "providerId/model"；缺省用默认提供方
+      let provider = cfg.defaultProvider()
+      let model = cfg.defaultModel()
+      if (options.model) {
+        const idx = options.model.indexOf('/')
+        if (idx > 0) {
+          provider = options.model.slice(0, idx)
+          model = options.model.slice(idx + 1)
+        } else {
+          model = options.model
+        }
+      }
+      const c = cfg.getConfig(provider)
       // 系统提示：官方走 GenerateOptions.system 槽
       const system =
         options.messages[0]?.role === 'system' ? options.messages[0].content : undefined
@@ -279,7 +298,7 @@ export function createLlmCaller(
           return createMessage({
             role: 'assistant',
             content: blocks,
-            source: { kind: 'model', provider, model: cfg.model },
+            source: { kind: 'model', provider, model },
           })
         }
         return createUserMessage({
@@ -294,12 +313,12 @@ export function createLlmCaller(
 
       const chunks = llm.stream({
         provider,
-        model: cfg.model,
+        model,
         system,
         messages: official,
         tools: options.tools.map(toToolSchema),
-        temperature: cfg.temperature,
-        maxTokens: cfg.maxTokens,
+        temperature: c.temperature,
+        maxTokens: c.maxTokens,
         signal: options.signal,
       })
 

@@ -6,7 +6,10 @@ export interface ProviderConfig {
   name: string
   baseURL: string
   apiKey: string
+  /** 默认模型 */
   model: string
+  /** 可选模型列表（对话面板选择器用；空则仅 model） */
+  models?: string[]
   /** 采样温度（0-2），0 = 端点默认 */
   temperature: number
   /** 最大输出 token 数，0 = 不限制 */
@@ -16,10 +19,10 @@ export interface ProviderConfig {
 }
 
 export interface DshSettings {
-  /** 模型提供方列表 */
+  /** 模型提供方（通道）列表 */
   providers: ProviderConfig[]
-  /** 当前使用的提供方 id */
-  activeProviderId: string
+  /** 默认提供方 id（新会话的模型兜底；对话面板可切换） */
+  defaultProviderId: string
   /** 写操作审批默认模式（ask = 每次询问；deny = 默认拒绝） */
   approvalDefault: 'ask' | 'deny'
   /** 目录级审批白名单：这些目录下的写操作免审批（vault 相对路径，如 Inbox） */
@@ -52,7 +55,7 @@ export const DEFAULT_PROVIDER: ProviderConfig = {
 export function defaultSettings(): DshSettings {
   return {
     providers: [{ ...DEFAULT_PROVIDER }],
-    activeProviderId: 'deepseek',
+    defaultProviderId: 'deepseek',
     approvalDefault: 'ask',
     writeAllowDirs: [],
     toolPolicy: [],
@@ -79,10 +82,12 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): DshSe
       ...p,
       extraHeaders: Array.isArray(p.extraHeaders) ? p.extraHeaders : [],
     }))
-    base.activeProviderId =
-      typeof r.activeProviderId === 'string' && providers.some((p) => p.id === r.activeProviderId)
-        ? (r.activeProviderId as string)
-        : providers[0]!.id
+    base.defaultProviderId =
+      typeof r.defaultProviderId === 'string' && providers.some((p) => p.id === r.defaultProviderId)
+        ? (r.defaultProviderId as string)
+        : typeof r.activeProviderId === 'string' && providers.some((p) => p.id === r.activeProviderId)
+          ? (r.activeProviderId as string)
+          : providers[0]!.id
   } else {
     // 旧版字段迁移
     base.providers = [
@@ -95,7 +100,7 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): DshSe
         maxTokens: typeof r.maxTokens === 'number' ? (r.maxTokens as number) : DEFAULT_PROVIDER.maxTokens,
       },
     ]
-    base.activeProviderId = 'deepseek'
+    base.defaultProviderId = 'deepseek'
   }
 
   base.approvalDefault = r.approvalDefault === 'deny' ? 'deny' : 'ask'

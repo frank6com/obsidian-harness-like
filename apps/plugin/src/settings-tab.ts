@@ -79,7 +79,7 @@ export class DshSettingsTab extends PluginSettingTab {
       item.createDiv({ text: p.name || p.id })
       item.createDiv({
         cls: 'dsh-provider-sub',
-        text: p.id === settings.activeProviderId ? '✓ 当前使用中' : p.model,
+        text: p.id === settings.defaultProviderId ? '✓ 默认' : (p.models?.length ? p.models.join(', ') : p.model),
       })
       item.onclick = () => {
         this.activeProviderId = p.id
@@ -106,14 +106,14 @@ export class DshSettingsTab extends PluginSettingTab {
 
     const p = settings.providers.find((x) => x.id === this.activeProviderId) ?? settings.providers[0]
     if (!p) return
-    const isActive = settings.activeProviderId === p.id
+    const isDefault = settings.defaultProviderId === p.id
 
     new Setting(form).setName('提供方').setDesc(p.id).addButton((b) =>
       b
-        .setButtonText(isActive ? '✓ 当前使用中' : '设为当前')
+        .setButtonText(isDefault ? '✓ 默认模型' : '设为默认模型')
         .setCta()
         .onClick(() => {
-          settings.activeProviderId = p.id
+          settings.defaultProviderId = p.id
           void this.plugin.saveSettings()
           this.display()
         }),
@@ -145,12 +145,23 @@ export class DshSettingsTab extends PluginSettingTab {
         }),
       )
     new Setting(form)
-      .setName('模型')
+      .setName('默认模型')
       .addText((t) =>
         t.setValue(p.model).onChange(async (v) => {
           p.model = v.trim()
           await this.plugin.saveSettings()
         }),
+      )
+    new Setting(form)
+      .setName('模型列表')
+      .setDesc('逗号分隔（对话面板选择器用）；留空则仅默认模型')
+      .addText((t) =>
+        t
+          .setValue((p.models ?? []).join(', '))
+          .onChange(async (v) => {
+            p.models = v.split(/[,，]/).map((s) => s.trim()).filter(Boolean)
+            await this.plugin.saveSettings()
+          }),
       )
     new Setting(form)
       .setName('Temperature')
@@ -184,7 +195,7 @@ export class DshSettingsTab extends PluginSettingTab {
           await this.plugin.saveSettings()
         }),
       )
-    if (settings.providers.length > 1 && !isActive) {
+    if (settings.providers.length > 1 && !isDefault) {
       new Setting(form).addButton((b) =>
         b.setButtonText('删除此提供方').setWarning().onClick(async () => {
           const ok = await new ConfirmModal(this.app, `删除提供方 ${p.name}？`, '删除').ask()

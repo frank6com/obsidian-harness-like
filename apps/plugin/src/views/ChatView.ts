@@ -36,6 +36,8 @@ export class ChatView extends ItemView {
   private currentSessionId: string | null = null
   private boundNote: string | null = null
   private sessions = new Map<string, SessionMeta>()
+  private sessionModels = new Map<string, string>()
+  private modelSelect!: HTMLSelectElement
   private root!: HTMLElement
   private listEl!: HTMLElement
   private messagesEl!: HTMLElement
@@ -106,8 +108,13 @@ export class ChatView extends ItemView {
     // 阶段状态条（思考/工具/等待审批/已停止）
     this.phaseEl = this.root.createDiv({ cls: 'dsh-phase', text: '' })
 
-    // 底部：输入 + 发送/停止
+    // 底部：模型选择 + 输入 + 发送/停止
     const footer = this.root.createDiv({ cls: 'dsh-chat-footer' })
+    this.modelSelect = footer.createEl('select', { cls: 'dsh-model-select' })
+    this.buildModelOptions()
+    this.modelSelect.addEventListener('change', () => {
+      if (this.currentSessionId) this.sessionModels.set(this.currentSessionId, this.modelSelect.value)
+    })
     this.inputEl = footer.createEl('textarea', {
       cls: 'dsh-chat-input',
       attr: { placeholder: '输入消息…（Enter 发送，Shift+Enter 换行）' },
@@ -278,6 +285,7 @@ export class ChatView extends ItemView {
         sessionId,
         title: text.length > 24 ? text.slice(0, 24) + '…' : text,
         notePath: this.boundNote,
+        modelId: this.modelSelect.value,
       } satisfies SessionEvent)
       void this.refreshSessions()
     }
@@ -340,6 +348,7 @@ export class ChatView extends ItemView {
         onPhase: (phase) => this.setPhase(phase),
         history,
         system,
+        model: this.sessionModels.get(sessionId) ?? (this.modelSelect.value || undefined),
         signal,
       })
     } catch (err) {
@@ -404,10 +413,45 @@ export class ChatView extends ItemView {
 
   // ---------- 会话列表 / 绑定 / 输入 ----------
 
+  /** 模型选择器选项：所有提供方 × 模型列表 */
+  private buildModelOptions(): void {
+    const providers = this.ctx.settings.get('providers', [] as Array<{
+      id: string
+      name?: string
+      model?: string
+      models?: string[]
+    }>)
+    this.modelSelect.empty()
+    for (const p of providers) {
+      const models = p.models?.length ? p.models : p.model ? [p.model] : []
+      for (const m of models) {
+        this.modelSelect.createEl('option', {
+          value: `${p.id}/${m}`,
+          text: `${p.name || p.id}: ${m}`,
+        })
+      }
+    }
+    this.modelSelect.value = this.defaultModelId()
+  }
+
+  /** 默认模型选择（defaultProviderId + 其默认模型） */
+  private defaultModelId(): string {
+    const providers = this.ctx.settings.get('providers', [] as Array<{
+      id: string
+      model?: string
+      models?: string[]
+    }>)
+    const defaultId = this.ctx.settings.get('defaultProviderId', '') as string
+    const p = providers.find((x) => x.id === defaultId) ?? providers[0]
+    if (!p) return ''
+    return `${p.id}/${p.models?.length ? p.models[0] : p.model ?? ''}`
+  }
+
   /** 开始新会话：回到空状态，绑定清零 */
   private newSession(): void {
     this.currentSessionId = null
     this.boundNote = null
+    this.modelSelect.value = this.defaultModelId()
     this.renderBinding()
     void this.renderSession()
     void this.refreshSessions()
@@ -501,12 +545,18 @@ export class ChatView extends ItemView {
       this.renderWelcome()
       return
     }
-    // 恢复绑定：内存 map 优先，其次会话元信息
+    // 恢复绑定与模型选择：内存 map 优先，其次会话元信息
     const meta = await this.ctx.sessionLog.readMeta(id)
     if (!this.sessions.has(id) && meta) {
       this.sessions.set(id, { notePath: meta.notePath })
       this.boundNote = meta.notePath
       this.renderBinding()
+    }
+    if (meta?.modelId) {
+      this.sessionModels.set(id, meta.modelId)
+      this.modelSelect.value = meta.modelId
+    } else {
+      this.modelSelect.value = this.defaultModelId()
     }
     for (const e of events) {
       if (e.type === 'user/message') this.appendMessage('user', e.content)

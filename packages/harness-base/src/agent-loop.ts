@@ -32,6 +32,8 @@ export interface AgentRunContext {
   history: SessionEvent[]
   /** 附加系统提示（如当前笔记上下文） */
   system?: string
+  /** 会话级模型选择 "providerId/model"（缺省用默认提供方） */
+  model?: string
   signal?: AbortSignal
   maxTurns?: number
 }
@@ -131,6 +133,7 @@ export async function runAgentLoop(ac: AgentRunContext): Promise<void> {
         tools: ac.tools.list(),
         signal,
         onDelta: ac.onStream,
+        model: ac.model,
       })
 
       if (res.content) {

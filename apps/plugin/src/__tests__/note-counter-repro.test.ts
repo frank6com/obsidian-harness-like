@@ -92,6 +92,9 @@ describe('note-counter 重写复现', () => {
           apiKey: 'k',
           model: 'deepseek-chat',
         }),
+        providerIds: ['deepseek'],
+        defaultProvider: () => 'deepseek',
+        defaultModel: () => 'deepseek-chat',
       }),
     )
     await ctx.plugin(

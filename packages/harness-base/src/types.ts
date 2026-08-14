@@ -28,6 +28,8 @@ export type SessionEvent =
       sessionId: string
       title: string
       notePath: string | null
+      /** 会话级模型选择 "providerId/model" */
+      modelId?: string
     }
   | { type: 'user/message'; ts: number; sessionId: string; content: string }
   | { type: 'assistant/message'; ts: number; sessionId: string; content: string }

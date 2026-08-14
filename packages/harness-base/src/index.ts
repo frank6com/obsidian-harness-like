@@ -28,7 +28,14 @@ export interface HarnessConfig {
   sandbox: SandboxScope
   sessionDir: string
   approvalStore: ApprovalStore
-  getLLMConfig(): LLMConfig
+  /** 按 provider 返回端点/凭据/默认模型 */
+  getLLMConfig(provider: string): LLMConfig
+  /** 全部 provider id（注册模型路由） */
+  providerIds: string[]
+  /** 默认提供方 id（会话未指定模型时） */
+  defaultProvider(): string
+  /** 默认模型（defaultProvider 下） */
+  defaultModel(): string
   /** 工具执行审批钩子（tools/pre-execute 瀑布）；默认放行 */
   approveTool?(request: ToolApprovalRequest): Promise<'allow' | 'deny'>
   /** 日志级别（默认 info） */
@@ -43,13 +50,17 @@ export function harnessServicesPlugin(cfg: HarnessConfig): Plugin.Object {
       const approval = new ApprovalService(cfg.approvalStore)
       const sessions = new SessionLog(cfg.sessionDir)
 
-      // llm seam（Stage 2）：官方 LlmRuntime + DeepSeek 适配器
+      // llm seam（Stage 2）：官方 LlmRuntime + DeepSeek 适配器（多 provider 路由）
       const llmRuntime = new LlmRuntime(ctx)
       llmRuntime.registerAdapter(
-        ['deepseek'],
-        new DeepSeekAdapter(() => cfg.getLLMConfig()),
+        cfg.providerIds,
+        new DeepSeekAdapter((provider) => cfg.getLLMConfig(provider)),
       )
-      const llmCaller = createLlmCaller(llmRuntime, () => cfg.getLLMConfig())
+      const llmCaller = createLlmCaller(llmRuntime, {
+        getConfig: (provider) => cfg.getLLMConfig(provider),
+        defaultProvider: () => cfg.defaultProvider(),
+        defaultModel: () => cfg.defaultModel(),
+      })
 
       // llm/stream 瀑布监听：可观测性（Stage 3+ 可挂重试/路由）
       const minLevel = cfg.logLevel ?? 'info'

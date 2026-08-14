@@ -103,7 +103,7 @@ describe('migrateSettings（旧版单提供方 → 多提供方）', () => {
       streamingEnabled: false,
     } as unknown as Record<string, unknown>)
     expect(s.providers).toHaveLength(2)
-    expect(s.activeProviderId).toBe('b')
+    expect(s.defaultProviderId).toBe('b')
     expect(s.streamingEnabled).toBe(false)
   })
 })

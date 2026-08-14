@@ -123,8 +123,8 @@ export default class DshObsidianPlugin extends Plugin {
               void this.saveSettings()
             },
           },
-          getLLMConfig: () => {
-            const p = this.activeProvider()
+          getLLMConfig: (provider: string) => {
+            const p = this.providerById(provider)
             return {
               baseURL: p.baseURL,
               apiKey: p.apiKey,
@@ -134,6 +134,9 @@ export default class DshObsidianPlugin extends Plugin {
               extraHeaders: parseHeaderLines(p.extraHeaders),
             }
           },
+          providerIds: this.settings.providers.map((p) => p.id),
+          defaultProvider: () => this.defaultProvider().id,
+          defaultModel: () => this.defaultProvider().model,
           approveTool,
           logLevel: this.settings.logLevel,
         }),
@@ -229,10 +232,18 @@ export default class DshObsidianPlugin extends Plugin {
     this.settings = migrateSettings(data as Record<string, unknown> | undefined)
   }
 
-  /** 当前激活的模型提供方 */
-  private activeProvider(): ProviderConfig {
-    const active = this.settings.providers.find((p) => p.id === this.settings.activeProviderId)
-    return active ?? this.settings.providers[0] ?? defaultSettings().providers[0]!
+  /** 按 id 取提供方（未知 id 回退默认） */
+  private providerById(id: string): ProviderConfig {
+    return (
+      this.settings.providers.find((p) => p.id === id) ??
+      this.settings.providers[0] ??
+      defaultSettings().providers[0]!
+    )
+  }
+
+  /** 默认提供方 */
+  private defaultProvider(): ProviderConfig {
+    return this.providerById(this.settings.defaultProviderId)
   }
 
   async saveSettings(): Promise<void> {
