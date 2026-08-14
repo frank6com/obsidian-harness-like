@@ -65,10 +65,17 @@ module.exports = {
 }
 
 可用服务（inject 声明）：toolsCompat（注册工具）、commands（注册命令）、views（注册/打开自定义面板）、
-vault（读写笔记）、editor（当前编辑器）、workspace（活跃文件）、notice（通知）、sandbox、
-approval、sessionLog、llmCaller。
+vault（读写笔记）、editor（当前编辑器）、workspace（活跃文件）、notice（通知）、ribbon（侧边栏图标）、
+statusbar（状态栏）、settings（设置/设置页）、sandbox、approval、sessionLog、llmCaller。
 可用事件（ctx.on）：dsh/session/event（会话事件）、vault/modify|create|delete|rename、
 workspace/file-open、dsh/waiting-approval（审批弹窗打开）。
+
+铁律（违反会导致报错或错误实现）：
+1. inject 必须声明 apply 里用到的【每一个】服务——漏一个访问就报
+   "cannot get property X without inject"。
+2. 禁止直接操作 Obsidian DOM（document.querySelector('.workspace-ribbon') 等内部类名），
+   一律通过 ctx.* 服务：侧边栏图标用 ctx.ribbon.addRibbonIcon，状态栏用 ctx.statusbar。
+3. 所有注册必须包进 ctx.effect(() => [disposer1, disposer2])，插件停止时自动撤销。
 
 带界面的插件（自定义面板：注册视图 + 命令打开，构建需 --external:obsidian）：
 
@@ -83,22 +90,27 @@ class MyView extends ItemView {
   }
 }
 
-ctx.effect(() => [
-  ctx.views.registerView('my-view', (leaf) => new MyView(leaf)),
-  ctx.commands.addCommand({
-    id: 'my-plugin:open-view',
-    name: '打开我的面板',
-    callback: () => ctx.views.open('my-view'),
-  }),
-])
+module.exports = {
+  name: 'my-plugin',
+  inject: ['views', 'commands', 'ribbon', 'notice'],   // ← 用到谁就声明谁
+  apply(ctx) {
+    ctx.effect(() => [
+      ctx.views.registerView('my-view', (leaf) => new MyView(leaf)),
+      ctx.commands.addCommand({
+        id: 'my-plugin:open-view',
+        name: '打开我的面板',
+        callback: () => ctx.views.open('my-view'),
+      }),
+      ctx.ribbon.addRibbonIcon('pencil', '打开我的面板', () => ctx.views.open('my-view')),
+    ])
+  },
+}
 
 更多 UI 能力（与 Obsidian 原生插件对齐）：
-- 侧边栏图标：ctx.ribbon.addRibbonIcon('icon-id', '提示', () => { ... })（返回 disposer，包进 effect）
 - 底部状态栏：const item = ctx.statusbar.addStatusBarItem(); item.el.setText('...')（disposer = item.remove）
 - 设置页：ctx.settings.registerSettingTab(new (require('obsidian').PluginSettingTab)(...))——需在设置 Tab 的 display() 里渲染
 
 注意：
-- 所有注册必须包进 ctx.effect(() => [disposer1, disposer2])，插件停止时自动撤销。
 - 工具 execute 返回 JSON 可序列化对象。
 - 修改 main.js 后调用 reload_plugin 生效；运行中插件重载需用户确认授权。
 - 插件构建命令把 obsidian 也 external：esbuild src/main.js --bundle --external:@deepseek-ai/cordis --external:obsidian --format=cjs --outfile=main.js`
