@@ -478,7 +478,8 @@ export class ChatView extends ItemView {
       hint.createSpan({ text: '还没有配置 API Key，先' })
       const btn = hint.createEl('button', { cls: 'dsh-btn', text: '打开设置' })
       btn.onclick = () => {
-        this.app.setting.open()
+        // app.setting 在 1.13 类型面外，运行时存在
+        ;(this.app as unknown as { setting: { open(): void } }).setting.open()
       }
     }
   }
