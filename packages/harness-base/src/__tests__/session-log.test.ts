@@ -51,4 +51,31 @@ describe('SessionLog', () => {
     await log.remove('s1')
     expect(await log.read('s1')).toEqual([])
   })
+
+  it('并发 append 保持调用顺序（tool/call 先于 tool/result）', async () => {
+    const log = new SessionLog(await tmpDir())
+    await Promise.all([
+      log.append('s1', { type: 'tool/call', ts: 1, sessionId: 's1', id: 'c1', tool: 'x', input: {} }),
+      log.append('s1', {
+        type: 'tool/result',
+        ts: 2,
+        sessionId: 's1',
+        id: 'c1',
+        tool: 'x',
+        ok: true,
+        output: { hits: [] },
+      }),
+    ])
+    const events = await log.read('s1')
+    expect(events.map((e) => e.type)).toEqual(['tool/call', 'tool/result'])
+  })
+
+  it('read 等待未完成追加（不发后不理丢事件）', async () => {
+    const log = new SessionLog(await tmpDir())
+    const pending = log.append('s1', { type: 'user/message', ts: 1, sessionId: 's1', content: 'hi' })
+    // 不 await pending，直接 read：串行链保证能看到
+    const events = await log.read('s1')
+    expect(events.map((e) => e.type)).toEqual(['user/message'])
+    await pending
+  })
 })

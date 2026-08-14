@@ -60,12 +60,15 @@ export function toWireToolCalls(calls: ToolCall[]): OpenAIToolCall[] {
 export function buildMessages(history: SessionEvent[], system?: string): LLMMessage[] {
   const out: LLMMessage[] = []
   if (system) out.push({ role: 'system', content: system })
+  // 防御历史脏数据：追踪未配对的 tool 调用
+  const pending = new Set<string>()
   for (const e of history) {
     if (e.type === 'user/message') {
       out.push({ role: 'user', content: e.content })
     } else if (e.type === 'assistant/message') {
       out.push({ role: 'assistant', content: e.content })
     } else if (e.type === 'tool/call') {
+      pending.add(e.id)
       out.push({
         role: 'assistant',
         content: '',
@@ -81,6 +84,8 @@ export function buildMessages(history: SessionEvent[], system?: string): LLMMess
         ],
       })
     } else if (e.type === 'tool/result') {
+      if (!pending.has(e.id)) continue // 孤儿 result：无前置 tool_calls，丢弃
+      pending.delete(e.id)
       out.push({
         role: 'tool',
         tool_call_id: e.id,
@@ -91,6 +96,10 @@ export function buildMessages(history: SessionEvent[], system?: string): LLMMess
           : `ERROR: ${e.error ?? 'unknown'}`,
       })
     }
+  }
+  if (pending.size) {
+    // 孤儿 tool_calls（中断/丢失 result）：移除，避免 API 报 insufficient tool messages
+    return out.filter((m) => !m.tool_calls?.some((tc) => pending.has(tc.id)))
   }
   return out
 }

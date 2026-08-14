@@ -1,6 +1,10 @@
 /**
  * 会话日志：追加式 JSONL，每条记录一个会话事件。
  * 损坏行跳过并忽略（归档重建由数据安全 SOP 处理）。
+ *
+ * 并发安全：所有 append 经实例内 promise 链串行化（保证落盘顺序 =
+ * 调用顺序）；read/list/remove 先等待链上未完成写入再执行，
+ * 避免"读到半截/顺序错乱"导致重建消息列表时出现孤儿 tool 消息。
  */
 
 import * as fs from 'fs'
@@ -18,19 +22,31 @@ export interface SessionSummary {
 }
 
 export class SessionLog {
+  private chain: Promise<void> = Promise.resolve()
+
   constructor(private dir: string) {}
 
   private file(sessionId: string): string {
     return path.join(this.dir, `${sanitize(sessionId)}.jsonl`)
   }
 
-  async append(sessionId: string, event: SessionEvent): Promise<void> {
-    await fs.promises.mkdir(this.dir, { recursive: true })
-    const line = JSON.stringify({ ...event, sessionId })
-    await fs.promises.appendFile(this.file(sessionId), line + '\n', 'utf8')
+  /** 追加一条事件；写入串行化，返回本次写入的 promise */
+  append(sessionId: string, event: SessionEvent): Promise<void> {
+    const op = this.chain.then(async () => {
+      await fs.promises.mkdir(this.dir, { recursive: true })
+      const line = JSON.stringify({ ...event, sessionId })
+      await fs.promises.appendFile(this.file(sessionId), line + '\n', 'utf8')
+    })
+    // 链上吞掉错误，避免一次失败阻塞后续写入；调用方仍能收到本次拒绝
+    this.chain = op.then(
+      () => {},
+      () => {},
+    )
+    return op
   }
 
   async read(sessionId: string): Promise<SessionEvent[]> {
+    await this.chain
     let text: string
     try {
       text = await fs.promises.readFile(this.file(sessionId), 'utf8')
@@ -52,6 +68,7 @@ export class SessionLog {
   }
 
   async list(): Promise<SessionSummary[]> {
+    await this.chain
     let names: string[]
     try {
       names = await fs.promises.readdir(this.dir)
@@ -77,6 +94,7 @@ export class SessionLog {
   }
 
   async remove(sessionId: string): Promise<void> {
+    await this.chain
     await fs.promises.rm(this.file(sessionId), { force: true })
   }
 }

@@ -55,6 +55,24 @@ describe('buildMessages', () => {
     expect(msgs[3]).toMatchObject({ role: 'tool', tool_call_id: 'c1', content: '{"content":"x"}' })
     expect(msgs[4]).toMatchObject({ role: 'assistant', content: '完成了' })
   })
+
+  it('孤儿 tool/result（无前置 tool/call）被丢弃', () => {
+    const history: SessionEvent[] = [
+      { type: 'tool/result', ts: 1, sessionId: 's', id: 'orphan', tool: 'x', ok: true, output: 1 },
+      { type: 'user/message', ts: 2, sessionId: 's', content: 'hi' },
+    ]
+    const msgs = buildMessages(history)
+    expect(msgs.filter((m) => m.role === 'tool')).toHaveLength(0)
+  })
+
+  it('孤儿 tool/call（无 result）被整体移除', () => {
+    const history: SessionEvent[] = [
+      { type: 'tool/call', ts: 1, sessionId: 's', id: 'c9', tool: 'x', input: {} },
+      { type: 'user/message', ts: 2, sessionId: 's', content: 'hi' },
+    ]
+    const msgs = buildMessages(history)
+    expect(msgs.filter((m) => m.tool_calls)).toHaveLength(0)
+  })
 })
 
 describe('runAgentLoop', () => {

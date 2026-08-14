@@ -202,8 +202,8 @@
 
 .dsh-tool-card-detail {
   margin: 0;
-  max-height: 60px;
-  overflow: hidden;
+  max-height: 90px;
+  overflow: auto;
   font-size: 11px;
   color: var(--text-muted);
   white-space: pre-wrap;

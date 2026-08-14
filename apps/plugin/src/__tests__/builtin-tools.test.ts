@@ -49,7 +49,7 @@ async function setup() {
   return { ctx, tools, sandbox, writes, inserted, opened, options, fiber, vaultRoot }
 }
 
-describe('read_note / search_notes', () => {
+describe('read_note / search_notes / list_notes', () => {
   it('read_note 读取笔记', async () => {
     const { ctx } = await setup()
     const out = await ctx.tools.get('read_note')!.execute({ path: 'a.md' })
@@ -62,6 +62,19 @@ describe('read_note / search_notes', () => {
     expect(out).toEqual({ hits: ['Inbox/A.md'] })
     const all = await ctx.tools.get('search_notes')!.execute({ query: '' })
     expect((all as { hits: string[] }).hits).toHaveLength(3)
+  })
+
+  it('list_notes 列出全部并支持文件夹过滤与限量', async () => {
+    const { ctx } = await setup()
+    const all = await ctx.tools.get('list_notes')!.execute({})
+    expect(all).toEqual({
+      count: 3,
+      notes: ['Inbox/A.md', 'Inbox/B.md', '读书笔记.md'],
+    })
+    const inbox = await ctx.tools.get('list_notes')!.execute({ folder: 'Inbox' })
+    expect(inbox).toEqual({ count: 2, notes: ['Inbox/A.md', 'Inbox/B.md'] })
+    const limited = await ctx.tools.get('list_notes')!.execute({ limit: 1 })
+    expect(limited).toEqual({ count: 3, notes: ['Inbox/A.md'] })
   })
 })
 

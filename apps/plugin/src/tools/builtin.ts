@@ -58,6 +58,25 @@ export function builtinToolsPlugin(opts: BuiltinToolsOptions): Plugin.Object {
         }),
 
         ctx.tools.register({
+          name: 'list_notes',
+          description: '列出 vault 中全部 markdown 笔记路径（可按文件夹过滤、限量）',
+          input: {
+            type: 'object',
+            properties: {
+              folder: { type: 'string', description: '可选：只列出该文件夹下的笔记，如 "Inbox"' },
+              limit: { type: 'number', description: '返回条数上限，默认 100，最多 500' },
+            },
+          },
+          execute(input) {
+            const base = String(input.folder ?? '').replace(/\/+$/, '')
+            const limit = Math.max(1, Math.min(500, Number(input.limit ?? 100)))
+            const all = ctx.vault.listMarkdown()
+            const filtered = base ? all.filter((p) => p.startsWith(base + '/')) : all
+            return { count: filtered.length, notes: filtered.slice(0, limit) }
+          },
+        }),
+
+        ctx.tools.register({
           name: 'open_in_browser',
           description: '在系统默认浏览器中打开 vault 内的文件（如 HTML 笔记）',
           input: {
