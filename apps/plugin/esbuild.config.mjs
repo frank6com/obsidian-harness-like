@@ -37,6 +37,24 @@ const syncPlugin = {
   },
 }
 
+/**
+ * Obsidian renderer 兼容：
+ * - node:module → 本地垫片（dsh-llm 顶层 createRequire 读 package.json 会炸）
+ * - 其余 node:* 内置模块 → 剥掉 node: 前缀（裸名是 Obsidian require shim 最稳的形态）
+ */
+const nodeShimPlugin = {
+  name: 'node-module-shim',
+  setup(build) {
+    build.onResolve({ filter: /^node:/ }, (args) => {
+      const name = args.path.slice('node:'.length)
+      if (name === 'module') {
+        return { path: path.join(ROOT, 'apps', 'plugin', 'shims', 'node-module.ts') }
+      }
+      return { path: name, external: true }
+    })
+  },
+}
+
 const options = {
   entryPoints: ['src/main.ts'],
   bundle: true,
@@ -48,7 +66,7 @@ const options = {
   external: ['obsidian', 'electron'],
   sourcemap: 'inline',
   logLevel: 'info',
-  plugins: [syncPlugin],
+  plugins: [nodeShimPlugin, syncPlugin],
 }
 
 if (watch) {
