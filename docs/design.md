@@ -210,7 +210,7 @@ obsidian-harness-cordis/
 
 | # | 决策 | 理由 | 代价 / 风险 |
 |---|---|---|---|
-| D1 | 进程内嵌入 dsh 官方包（精确锁版本） | 语义兼容、省自研量 | rc 期版本漂移 → SOP §8 |
+| D1 | 进程内嵌入 dsh 官方包（精确锁版本） | 语义兼容、省自研量 | rc 期版本漂移 → SOP §8。实施状态：依赖已对齐 0.1.0-rc.6 并锁版；服务替换按 seams.md §5 分阶段（llm→tools→sessions→agent） |
 | D2 | 无子进程 / 无本地服务器 | 审核友好、生命周期简单 | 无 shell 类工具（v1 接受） |
 | D3 | 原生 Obsidian UI 而非嵌入 Web GUI | 商店体验一致、无 CSP 问题 | UI 工作量 |
 | D4 | 会话/插件数据放 vault 内 | 用户可见、可备份 | 大 vault 性能 → 懒渲染 + 索引 |
@@ -238,12 +238,13 @@ obsidian-harness-cordis/
 5. 会话绑定笔记（notePath）当前为内存态，持久化随会话元数据列入 P1。
 
 ### P1 插件系统（2–4 周）
-- [ ] PluginManagerView 完整状态机（define/run/stop/undefine/update/rollback + 诊断）
+- [ ] PluginManagerView 完整状态机（define/run/stop/undefine/update/rollback + 诊断）※重新加载/删除/授权状态已补，define/undefine 为文件操作
 - [ ] 内置工具集（读/写、文件名/标题/链接搜索、图谱查询）；全文倒排索引列入后续里程碑；工具 schema 进入提示词组装
-- [ ] 事件 seam 文档（用户插件可拦截 `tools/*`、`agent/*`）
+- [x] 事件 seam 文档（[docs/seams.md](docs/seams.md)）：seam 模型、依赖星座核对、各 seam 现状与阻碍、插件可用事件与示例、Stage 2–5 迁移路线
+- [ ] dsh 官方包替换自研薄层（分阶段：llm→tools→sessions→agent，见 seams.md §5；依赖已对齐 rc.6）
 - [ ] 单元测试覆盖状态机与沙箱策略
-- [ ] Chat 体验改进落地（[docs/ux-checklist.md](docs/ux-checklist.md) P0.5 全组 + P1 首批）
-- [ ] 设置面丰富（对照 dsh：模型参数、grant 管理、会话保留策略、日志级别）
+- [ ] Chat 体验改进落地（[docs/ux-checklist.md](docs/ux-checklist.md) P0.5 全组 + P1 首批）※P0.5 全组、P1 首批/二批已落地
+- [ ] 设置面丰富（对照 dsh：模型参数、grant 管理、会话保留策略、日志级别）※模型参数与 grant 管理已落地
 
 ### P2 深度（后续）
 - [ ] 子 agent / 工作流；preset 概念（isolate realm）
