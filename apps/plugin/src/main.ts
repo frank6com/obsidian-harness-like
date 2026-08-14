@@ -16,8 +16,9 @@ import { runtimePlugin } from '@dsh-obsidian/plugin-runtime'
 import { toApiLike } from './obsidian-bridge'
 import { DEFAULT_SETTINGS, type DshSettings } from './settings'
 import { DshSettingsTab } from './settings-tab'
-import { WriteApprovalModal } from './modals'
+import { WriteApprovalModal, GrantModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
+import { pluginDevToolsPlugin } from './tools/plugin-dev'
 import { ChatView, CHAT_VIEW_TYPE } from './views/ChatView'
 import { PluginManagerView, PLUGIN_MANAGER_VIEW_TYPE } from './views/PluginManagerView'
 
@@ -129,6 +130,20 @@ export default class DshObsidianPlugin extends Plugin {
     this.fibers.push(
       ctx.plugin(builtinToolsPlugin({ openTarget: (t) => apiLike.openTarget(t) })),
     )
+
+    // 插件创造模式：agent 创建/修改/重载用户插件（未授权先弹授权窗）
+    const ensureGranted = async (
+      pluginId: string,
+      version: string,
+      description?: string,
+    ): Promise<boolean> => {
+      if (ctx.approval.isGranted(pluginId, version)) return true
+      const choice = await new GrantModal(this.app, { id: pluginId, version, description }).ask()
+      if ('cancel' in choice) return false
+      ctx.approval.grant(pluginId, choice.mode, version)
+      return true
+    }
+    this.fibers.push(ctx.plugin(pluginDevToolsPlugin({ ensureGranted })))
 
     // 视图与命令
     this.registerView(CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, ctx))

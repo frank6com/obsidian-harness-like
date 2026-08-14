@@ -19,6 +19,7 @@ function stubApi(): ObsidianApiLike {
       read: async (p: string) => `内容(${p})`,
       write: async () => {},
       create: async () => {},
+      createFolder: async () => {},
       delete: async () => {},
       rename: async () => {},
       getMarkdownPaths: () => ['Inbox/a.md'],

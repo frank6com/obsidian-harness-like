@@ -41,6 +41,20 @@ export function toApiLike(app: App): ObsidianApiLike {
       async create(path, content) {
         await app.vault.create(path, content)
       },
+      async createFolder(path) {
+        // Obsidian createFolder 一次只建一层且父目录必须存在：逐层创建，已存在则忽略
+        const parts = path.split('/').filter(Boolean)
+        let current = ''
+        for (const part of parts) {
+          current = current ? `${current}/${part}` : part
+          if (app.vault.getAbstractFileByPath(current)) continue
+          try {
+            await app.vault.createFolder(current)
+          } catch {
+            // 并发创建竞态：已存在则跳过
+          }
+        }
+      },
       async delete(path) {
         const file = app.vault.getAbstractFileByPath(path)
         if (file instanceof TFile) await app.vault.delete(file)

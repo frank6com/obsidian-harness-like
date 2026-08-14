@@ -40,6 +40,10 @@ export class VaultService {
     return this.api.vault.create(path, content)
   }
 
+  createFolder(path: string): Promise<void> {
+    return this.api.vault.createFolder(path)
+  }
+
   delete(path: string): Promise<void> {
     return this.api.vault.delete(path)
   }

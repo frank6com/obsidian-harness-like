@@ -15,6 +15,7 @@ export interface VaultLike {
   read(path: string): Promise<string>
   write(path: string, content: string): Promise<void>
   create(path: string, content: string): Promise<void>
+  createFolder(path: string): Promise<void>
   delete(path: string): Promise<void>
   rename(oldPath: string, newPath: string): Promise<void>
   getMarkdownPaths(): string[]
