@@ -6,7 +6,7 @@
  * 流式光标、错误重试、列表可收起、发送中禁用与中止。
  */
 
-import { ItemView, MarkdownRenderer, WorkspaceLeaf } from 'obsidian'
+import { ItemView, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import {
   runAgentLoop,
@@ -14,6 +14,7 @@ import {
   type SessionEvent,
   type ToolExecution,
 } from '@dsh-obsidian/harness-base'
+import { attachCodeCopyButtons, renderMarkdown } from '../markdown'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
 
@@ -216,13 +217,10 @@ export class ChatView extends ItemView {
     return el
   }
 
-  /** 用 Obsidian 原生渲染器渲染 Markdown（带主题样式、安全处理） */
+  /** 渲染 Markdown（marked + DOMPurify，样式由 styles.css 完全控制） */
   private renderMarkdown(el: HTMLElement, markdown: string): void {
-    el.empty()
-    MarkdownRenderer.render(this.app, markdown, el, '', this).catch(() => {
-      // 渲染失败（如视图已关闭）回退纯文本
-      el.textContent = markdown
-    })
+    el.innerHTML = renderMarkdown(markdown)
+    attachCodeCopyButtons(el)
   }
 
   private addCopyButton(el: HTMLElement, text: string): void {

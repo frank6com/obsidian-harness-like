@@ -104,10 +104,22 @@
   position: relative;
   padding: 8px 10px;
   border-radius: 8px;
-  white-space: pre-wrap;
   word-break: break-word;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
+  /* 文本必须可选中复制 */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.dsh-msg * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.dsh-msg-user,
+.dsh-msg-system {
+  white-space: pre-wrap;
 }
 
 /* 消息复制按钮（悬浮显示） */
@@ -131,35 +143,170 @@
   opacity: 1;
 }
 
-/* 已渲染 Markdown 的气泡内排版 */
-.dsh-msg-assistant :is(p, ul, ol, table, blockquote) {
+/* ===== 已渲染 Markdown 的气泡排版（marked + 自研样式层，完全可控） ===== */
+
+.dsh-msg-assistant {
+  align-self: flex-start;
+  background: var(--background-secondary);
+  max-width: 100%;
+}
+
+.dsh-msg-assistant > :first-child {
+  margin-top: 0;
+}
+
+.dsh-msg-assistant > :last-child {
+  margin-bottom: 0;
+}
+
+.dsh-msg-assistant p {
   margin: 0 0 6px;
 }
 
-.dsh-msg-assistant :is(h1, h2, h3, h4) {
+.dsh-msg-assistant h1,
+.dsh-msg-assistant h2,
+.dsh-msg-assistant h3,
+.dsh-msg-assistant h4,
+.dsh-msg-assistant h5,
+.dsh-msg-assistant h6 {
+  margin: 10px 0 6px;
+  line-height: 1.3;
+}
+
+.dsh-msg-assistant h1 {
+  font-size: 1.25em;
+}
+
+.dsh-msg-assistant h2 {
+  font-size: 1.15em;
+}
+
+.dsh-msg-assistant h3,
+.dsh-msg-assistant h4,
+.dsh-msg-assistant h5,
+.dsh-msg-assistant h6 {
   font-size: 1.05em;
-  margin: 4px 0;
 }
 
+.dsh-msg-assistant ul,
+.dsh-msg-assistant ol {
+  margin: 0 0 6px;
+  padding-left: 22px;
+}
+
+.dsh-msg-assistant li {
+  margin: 2px 0;
+}
+
+.dsh-msg-assistant strong {
+  font-weight: 600;
+}
+
+/* 表格：必须有框线 */
+.dsh-msg-assistant table {
+  border-collapse: collapse;
+  margin: 6px 0;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.dsh-msg-assistant th,
+.dsh-msg-assistant td {
+  border: 1px solid var(--background-modifier-border);
+  padding: 4px 8px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.dsh-msg-assistant th {
+  background: var(--background-modifier-hover);
+  font-weight: 600;
+}
+
+.dsh-msg-assistant tr:nth-child(2n) td {
+  background: var(--background-primary);
+}
+
+/* 代码块 */
 .dsh-msg-assistant pre {
-  margin: 4px 0;
-  max-height: 240px;
-  overflow: auto;
+  position: relative;
+  margin: 6px 0;
+  padding: 10px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  overflow-x: auto;
+  max-height: 320px;
 }
 
-.dsh-msg-assistant :last-child {
-  margin-bottom: 0;
+.dsh-msg-assistant pre code {
+  display: block;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-normal);
+  white-space: pre;
+}
+
+.dsh-msg-assistant :not(pre) > code {
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+/* 代码块复制按钮 */
+.dsh-code-copy {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border-radius: 4px;
+  padding: 0 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  line-height: 1.7;
+  z-index: 1;
+}
+
+.dsh-msg-assistant pre:hover .dsh-code-copy {
+  opacity: 1;
+}
+
+/* 引用 / 链接 / 分隔线 / 图片 */
+.dsh-msg-assistant blockquote {
+  margin: 6px 0;
+  padding: 2px 10px;
+  border-left: 3px solid var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.dsh-msg-assistant a {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.dsh-msg-assistant hr {
+  border: none;
+  border-top: 1px solid var(--background-modifier-border);
+  margin: 8px 0;
+}
+
+.dsh-msg-assistant img {
+  max-width: 100%;
+  border-radius: 6px;
 }
 
 .dsh-msg-user {
   align-self: flex-end;
   background: var(--interactive-accent);
   color: var(--text-on-accent);
-}
-
-.dsh-msg-assistant {
-  align-self: flex-start;
-  background: var(--background-secondary);
 }
 
 .dsh-msg-streaming::after {
