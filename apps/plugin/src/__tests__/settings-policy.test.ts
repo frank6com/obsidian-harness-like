@@ -7,8 +7,10 @@ import { shouldLog, selectSessionsToPrune, type SessionSummary } from '@dsh-obsi
 import {
   migrateSettings,
   parseHeaderLines,
+  parseModelId,
   parseToolPolicy,
 } from '../settings'
+import { modeAllows } from '../mode'
 import { isPathInDirs, normalizeVaultPath } from '../policy'
 
 describe('shouldLog', () => {
@@ -103,7 +105,7 @@ describe('migrateSettings（旧版单提供方 → 多提供方）', () => {
       streamingEnabled: false,
     } as unknown as Record<string, unknown>)
     expect(s.providers).toHaveLength(2)
-    expect(s.defaultProviderId).toBe('b')
+    expect(s.defaultModelId).toBe('b/y')
     expect(s.streamingEnabled).toBe(false)
   })
 })
@@ -120,5 +122,38 @@ describe('parseToolPolicy / parseHeaderLines', () => {
     expect(parseHeaderLines(['X-Gateway: abc', 'badline', 'X-Empty: '])).toEqual({
       'X-Gateway': 'abc',
     })
+  })
+})
+
+describe('parseModelId / 模式策略', () => {
+  it('parseModelId 解析与非法输入', () => {
+    expect(parseModelId('deepseek/deepseek-chat')).toEqual({
+      provider: 'deepseek',
+      model: 'deepseek-chat',
+    })
+    expect(parseModelId('no-slash')).toBeNull()
+    expect(parseModelId('/model')).toBeNull()
+    expect(parseModelId('provider/')).toBeNull()
+  })
+
+  it('migrate：defaultModelId 优先，旧 activeProviderId 迁移为模型级默认', () => {
+    const s = migrateSettings({
+      providers: [
+        { id: 'a', name: 'A', baseURL: 'https://a', apiKey: '', models: ['a1', 'a2'], temperature: 0, maxTokens: 0, extraHeaders: [] },
+        { id: 'b', name: 'B', baseURL: 'https://b', apiKey: '', models: ['b1'], temperature: 0, maxTokens: 0, extraHeaders: [] },
+      ],
+      defaultModelId: 'a/a2',
+    } as unknown as Record<string, unknown>)
+    expect(s.defaultModelId).toBe('a/a2')
+  })
+
+  it('modeAllows：chat 只读 / edit 无插件开发 / create 全量', () => {
+    expect(modeAllows('chat', 'read_note')).toBe(true)
+    expect(modeAllows('chat', 'write_note')).toBe(false)
+    expect(modeAllows('chat', 'create_plugin')).toBe(false)
+    expect(modeAllows('edit', 'write_note')).toBe(true)
+    expect(modeAllows('edit', 'create_plugin')).toBe(false)
+    expect(modeAllows('create', 'create_plugin')).toBe(true)
+    expect(modeAllows('create', 'anything')).toBe(true)
   })
 })

@@ -676,3 +676,79 @@
   flex: 1;
   min-width: 0;
 }
+
+/* ===== Chat 输入区工具栏（模式 + 模型） ===== */
+.dsh-chat-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 0;
+}
+
+.dsh-mode-group {
+  display: flex;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.dsh-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 3px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dsh-mode-btn:hover {
+  color: var(--text-normal);
+}
+
+.dsh-mode-btn.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dsh-model-select {
+  max-width: 220px;
+  font-size: 12px;
+}
+
+/* 设置页：模型列表管理 */
+.dsh-model-list {
+  padding: 0 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dsh-model-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.dsh-model-name {
+  flex: 1;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+.dsh-model-default {
+  color: var(--color-green);
+  font-size: 11px;
+}
+
+.dsh-model-add {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 8px;
+}
+
+.dsh-model-input {
+  flex: 1;
+}

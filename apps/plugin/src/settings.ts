@@ -1,15 +1,28 @@
 import type { GrantRecord, LogLevel } from '@dsh-obsidian/harness-base'
 
-/** 一个模型提供方（OpenAI 兼容端点） */
+/** 智能体模式（对齐 dsh 的预设模式） */
+export type AgentMode = 'chat' | 'edit' | 'create'
+
+export const AGENT_MODE_LABELS: Record<AgentMode, string> = {
+  chat: '对话',
+  edit: '修编',
+  create: '创造',
+}
+
+export const AGENT_MODE_DESCRIPTIONS: Record<AgentMode, string> = {
+  chat: '仅对话与读取信息（只读工具）',
+  edit: '可创建和编辑笔记等（默认）',
+  create: '完整能力，可创建/修改插件',
+}
+
+/** 一个模型提供方（通道） */
 export interface ProviderConfig {
   id: string
   name: string
   baseURL: string
   apiKey: string
-  /** 默认模型 */
-  model: string
-  /** 可选模型列表（对话面板选择器用；空则仅 model） */
-  models?: string[]
+  /** 已添加的模型列表（端点获取或手动添加） */
+  models: string[]
   /** 采样温度（0-2），0 = 端点默认 */
   temperature: number
   /** 最大输出 token 数，0 = 不限制 */
@@ -21,8 +34,10 @@ export interface ProviderConfig {
 export interface DshSettings {
   /** 模型提供方（通道）列表 */
   providers: ProviderConfig[]
-  /** 默认提供方 id（新会话的模型兜底；对话面板可切换） */
-  defaultProviderId: string
+  /** 默认模型（"providerId/model" 粒度），新会话兜底 */
+  defaultModelId: string
+  /** 智能体模式：chat=仅对话/只读；edit=可读写笔记；create=完整能力（含插件创建） */
+  agentMode: AgentMode
   /** 写操作审批默认模式（ask = 每次询问；deny = 默认拒绝） */
   approvalDefault: 'ask' | 'deny'
   /** 目录级审批白名单：这些目录下的写操作免审批（vault 相对路径，如 Inbox） */
@@ -46,7 +61,7 @@ export const DEFAULT_PROVIDER: ProviderConfig = {
   name: 'DeepSeek',
   baseURL: 'https://api.deepseek.com',
   apiKey: '',
-  model: 'deepseek-chat',
+  models: ['deepseek-chat'],
   temperature: 0.7,
   maxTokens: 0,
   extraHeaders: [],
@@ -54,8 +69,9 @@ export const DEFAULT_PROVIDER: ProviderConfig = {
 
 export function defaultSettings(): DshSettings {
   return {
-    providers: [{ ...DEFAULT_PROVIDER }],
-    defaultProviderId: 'deepseek',
+    providers: [{ ...DEFAULT_PROVIDER, models: [...DEFAULT_PROVIDER.models] }],
+    defaultModelId: 'deepseek/deepseek-chat',
+    agentMode: 'edit',
     approvalDefault: 'ask',
     writeAllowDirs: [],
     toolPolicy: [],
@@ -67,46 +83,88 @@ export function defaultSettings(): DshSettings {
   }
 }
 
-/** 旧版单提供方配置 → 多提供方结构（兼容迁移） */
+/** 解析 "providerId/model"；非法返回 null */
+export function parseModelId(modelId: string): { provider: string; model: string } | null {
+  const idx = modelId.indexOf('/')
+  if (idx <= 0 || idx === modelId.length - 1) return null
+  return { provider: modelId.slice(0, idx), model: modelId.slice(idx + 1) }
+}
+
+function asProvider(p: Partial<ProviderConfig> & { model?: string }): ProviderConfig {
+  const legacyModel = p.model
+  const models = Array.isArray(p.models)
+    ? p.models.filter((m): m is string => typeof m === 'string' && !!m)
+    : typeof legacyModel === 'string' && legacyModel
+      ? [legacyModel]
+      : []
+  return {
+    id: typeof p.id === 'string' ? p.id : `provider-${Math.random().toString(36).slice(2, 8)}`,
+    name: typeof p.name === 'string' && p.name ? p.name : '提供方',
+    baseURL: typeof p.baseURL === 'string' ? p.baseURL : '',
+    apiKey: typeof p.apiKey === 'string' ? p.apiKey : '',
+    models: models.length ? [...new Set(models)] : [],
+    temperature: typeof p.temperature === 'number' ? p.temperature : DEFAULT_PROVIDER.temperature,
+    maxTokens: typeof p.maxTokens === 'number' ? p.maxTokens : DEFAULT_PROVIDER.maxTokens,
+    extraHeaders: Array.isArray(p.extraHeaders) ? (p.extraHeaders as string[]) : [],
+  }
+}
+
+/** 旧版配置 → 新版（多提供方 + 模型列表 + 模型级默认） */
 export function migrateSettings(raw: Record<string, unknown> | undefined): DshSettings {
   const base = defaultSettings()
   if (!raw || typeof raw !== 'object') return base
   const r = raw as Record<string, unknown>
 
   const providers = Array.isArray(r.providers)
-    ? (r.providers as ProviderConfig[]).filter((p) => p && typeof p.id === 'string')
+    ? (r.providers as Partial<ProviderConfig>[]).filter((p) => p && typeof p.id === 'string')
     : []
   if (providers.length) {
-    base.providers = providers.map((p) => ({
-      ...DEFAULT_PROVIDER,
-      ...p,
-      extraHeaders: Array.isArray(p.extraHeaders) ? p.extraHeaders : [],
-    }))
-    base.defaultProviderId =
-      typeof r.defaultProviderId === 'string' && providers.some((p) => p.id === r.defaultProviderId)
-        ? (r.defaultProviderId as string)
-        : typeof r.activeProviderId === 'string' && providers.some((p) => p.id === r.activeProviderId)
-          ? (r.activeProviderId as string)
-          : providers[0]!.id
+    base.providers = providers.map(asProvider)
   } else {
-    // 旧版字段迁移
+    // 旧版单提供方字段迁移
     base.providers = [
-      {
-        ...DEFAULT_PROVIDER,
-        baseURL: typeof r.baseURL === 'string' && r.baseURL ? (r.baseURL as string) : DEFAULT_PROVIDER.baseURL,
+      asProvider({
+        id: 'deepseek',
+        name: 'DeepSeek',
+        baseURL:
+          typeof r.baseURL === 'string' && r.baseURL
+            ? (r.baseURL as string)
+            : DEFAULT_PROVIDER.baseURL,
         apiKey: typeof r.apiKey === 'string' ? (r.apiKey as string) : '',
-        model: typeof r.model === 'string' && r.model ? (r.model as string) : DEFAULT_PROVIDER.model,
-        temperature: typeof r.temperature === 'number' ? (r.temperature as number) : DEFAULT_PROVIDER.temperature,
-        maxTokens: typeof r.maxTokens === 'number' ? (r.maxTokens as number) : DEFAULT_PROVIDER.maxTokens,
-      },
+        model: typeof r.model === 'string' && r.model ? (r.model as string) : 'deepseek-chat',
+        models: Array.isArray(r.models) ? (r.models as string[]) : undefined,
+        temperature: typeof r.temperature === 'number' ? (r.temperature as number) : undefined,
+        maxTokens: typeof r.maxTokens === 'number' ? (r.maxTokens as number) : undefined,
+      }),
     ]
-    base.defaultProviderId = 'deepseek'
   }
 
+  // 默认模型：defaultModelId 优先，其次旧 defaultProviderId/activeProviderId + 模型
+  const first = base.providers[0]!
+  if (typeof r.defaultModelId === 'string' && parseModelId(r.defaultModelId)) {
+    base.defaultModelId = r.defaultModelId
+  } else {
+    const legacyProvider =
+      (typeof r.defaultProviderId === 'string' && r.defaultProviderId) ||
+      (typeof r.activeProviderId === 'string' && r.activeProviderId)
+    const lp =
+      typeof legacyProvider === 'string'
+        ? base.providers.find((p) => p.id === legacyProvider)
+        : undefined
+    const target = lp ?? first
+    base.defaultModelId = target.models[0]
+      ? `${target.id}/${target.models[0]}`
+      : `${first.id}/${first.models[0] ?? 'deepseek-chat'}`
+  }
+  if (!base.providers.some((p) => p.id === parseModelId(base.defaultModelId)?.provider)) {
+    base.defaultModelId = `${first.id}/${first.models[0] ?? 'deepseek-chat'}`
+  }
+
+  base.agentMode = (['chat', 'edit', 'create'] as const).includes(r.agentMode as never)
+    ? (r.agentMode as AgentMode)
+    : 'edit'
   base.approvalDefault = r.approvalDefault === 'deny' ? 'deny' : 'ask'
-  base.writeAllowDirs = Array.isArray(r.writeAllowDirs)
-    ? (r.writeAllowDirs as string[])
-    : []
+  base.writeAllowDirs = Array.isArray(r.writeAllowDirs) ? (r.writeAllowDirs as string[]) : []
   base.toolPolicy = Array.isArray(r.toolPolicy) ? (r.toolPolicy as string[]) : []
   base.sessionRetentionDays =
     typeof r.sessionRetentionDays === 'number' ? (r.sessionRetentionDays as number) : 0

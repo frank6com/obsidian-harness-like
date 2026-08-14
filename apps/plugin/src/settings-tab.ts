@@ -7,8 +7,9 @@ import { App, PluginSettingTab, Setting } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import type DshObsidianPlugin from './main'
 import { ConfirmModal } from './modals'
+import type { AgentMode } from './settings'
 
-type TabId = 'model' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
+type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
 
 export class DshSettingsTab extends PluginSettingTab {
   private activeTab: TabId = 'model'
@@ -28,6 +29,7 @@ export class DshSettingsTab extends PluginSettingTab {
 
     const tabs: Array<{ id: TabId; label: string }> = [
       { id: 'model', label: '模型' },
+      { id: 'agent', label: '智能体' },
       { id: 'approval', label: '审批' },
       { id: 'session', label: '会话' },
       { id: 'data', label: '数据' },
@@ -51,6 +53,7 @@ export class DshSettingsTab extends PluginSettingTab {
     const content = containerEl.createDiv({ cls: 'dsh-settings-content' })
     const renderers: Record<TabId, (c: HTMLElement) => void> = {
       model: (c) => this.renderModelTab(c),
+      agent: (c) => this.renderAgentTab(c),
       approval: (c) => this.renderApprovalTab(c),
       session: (c) => this.renderSessionTab(c),
       data: (c) => this.renderDataTab(c),
@@ -79,22 +82,22 @@ export class DshSettingsTab extends PluginSettingTab {
       item.createDiv({ text: p.name || p.id })
       item.createDiv({
         cls: 'dsh-provider-sub',
-        text: p.id === settings.defaultProviderId ? '✓ 默认' : (p.models?.length ? p.models.join(', ') : p.model),
+        text: p.models.length ? `${p.models.length} 个模型` : '无模型',
       })
       item.onclick = () => {
         this.activeProviderId = p.id
         this.display()
       }
     }
-    const add = list.createEl('button', { cls: 'dsh-btn dsh-provider-add', text: '＋ 添加提供方' })
+    const add = list.createEl('button', { cls: 'dsh-btn dsh-provider-add', text: '＋ 添加通道' })
     add.onclick = () => {
       const id = `provider-${Date.now()}`
       settings.providers.push({
         id,
-        name: '新提供方',
+        name: '新通道',
         baseURL: 'https://',
         apiKey: '',
-        model: '',
+        models: [],
         temperature: 0.7,
         maxTokens: 0,
         extraHeaders: [],
@@ -106,18 +109,8 @@ export class DshSettingsTab extends PluginSettingTab {
 
     const p = settings.providers.find((x) => x.id === this.activeProviderId) ?? settings.providers[0]
     if (!p) return
-    const isDefault = settings.defaultProviderId === p.id
 
-    new Setting(form).setName('提供方').setDesc(p.id).addButton((b) =>
-      b
-        .setButtonText(isDefault ? '✓ 默认模型' : '设为默认模型')
-        .setCta()
-        .onClick(() => {
-          settings.defaultProviderId = p.id
-          void this.plugin.saveSettings()
-          this.display()
-        }),
-    )
+    new Setting(form).setName('通道').setDesc(p.id)
     new Setting(form)
       .setName('名称')
       .addText((t) =>
@@ -144,25 +137,73 @@ export class DshSettingsTab extends PluginSettingTab {
           await this.plugin.saveSettings()
         }),
       )
-    new Setting(form)
-      .setName('默认模型')
-      .addText((t) =>
-        t.setValue(p.model).onChange(async (v) => {
-          p.model = v.trim()
-          await this.plugin.saveSettings()
-        }),
-      )
+
+    // 模型列表：从端点获取 / 手动添加 / 设为默认 / 删除
     new Setting(form)
       .setName('模型列表')
-      .setDesc('逗号分隔（对话面板选择器用）；留空则仅默认模型')
-      .addText((t) =>
-        t
-          .setValue((p.models ?? []).join(', '))
-          .onChange(async (v) => {
-            p.models = v.split(/[,，]/).map((s) => s.trim()).filter(Boolean)
-            await this.plugin.saveSettings()
+      .setDesc('从端点获取或手动添加；默认模型 = 新会话的兜底')
+      .addButton((b) =>
+        b
+          .setButtonText('从端点获取')
+          .onClick(async () => {
+            try {
+              const fetched = await this.fetchModels(p.baseURL, p.apiKey)
+              if (!fetched.length) {
+                this.ctx.notice.notice('端点未返回模型列表，请手动添加')
+                return
+              }
+              p.models = [...new Set([...p.models, ...fetched])]
+              await this.plugin.saveSettings()
+              this.display()
+              this.ctx.notice.notice(`已添加 ${fetched.length} 个模型`)
+            } catch (err) {
+              this.ctx.notice.notice(`获取模型失败: ${err instanceof Error ? err.message : String(err)}`)
+            }
           }),
       )
+    const modelsBox = form.createDiv({ cls: 'dsh-model-list' })
+    for (const m of p.models) {
+      const row = modelsBox.createDiv({ cls: 'dsh-model-item' })
+      const isDefault = settings.defaultModelId === `${p.id}/${m}`
+      row.createDiv({ cls: 'dsh-model-name', text: m })
+      if (isDefault) {
+        row.createEl('span', { cls: 'dsh-model-default', text: '✓ 默认' })
+      }
+      const setDefault = row.createEl('button', {
+        cls: 'dsh-btn',
+        text: isDefault ? '默认' : '设为默认',
+      })
+      setDefault.onclick = async () => {
+        settings.defaultModelId = `${p.id}/${m}`
+        await this.plugin.saveSettings()
+        this.display()
+      }
+      const del = row.createEl('button', { cls: 'dsh-btn', text: '✕', attr: { title: '移除模型' } })
+      del.onclick = async () => {
+        p.models = p.models.filter((x) => x !== m)
+        if (settings.defaultModelId === `${p.id}/${m}`) {
+          settings.defaultModelId = `${p.id}/${p.models[0] ?? ''}`
+        }
+        await this.plugin.saveSettings()
+        this.display()
+      }
+    }
+    const addRow = form.createDiv({ cls: 'dsh-model-add' })
+    const addInput = addRow.createEl('input', { cls: 'dsh-model-input', attr: { placeholder: '手动输入模型名' } })
+    const addBtn = addRow.createEl('button', { cls: 'dsh-btn', text: '添加' })
+    const commit = async () => {
+      const name = addInput.value.trim()
+      if (!name) return
+      if (!p.models.includes(name)) p.models.push(name)
+      addInput.value = ''
+      await this.plugin.saveSettings()
+      this.display()
+    }
+    addBtn.onclick = commit
+    addInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') void commit()
+    })
+
     new Setting(form)
       .setName('Temperature')
       .setDesc('采样温度：越低越保守，越高越发散（0 = 端点默认）')
@@ -195,10 +236,10 @@ export class DshSettingsTab extends PluginSettingTab {
           await this.plugin.saveSettings()
         }),
       )
-    if (settings.providers.length > 1 && !isDefault) {
+    if (settings.providers.length > 1) {
       new Setting(form).addButton((b) =>
-        b.setButtonText('删除此提供方').setWarning().onClick(async () => {
-          const ok = await new ConfirmModal(this.app, `删除提供方 ${p.name}？`, '删除').ask()
+        b.setButtonText('删除此通道').setWarning().onClick(async () => {
+          const ok = await new ConfirmModal(this.app, `删除通道 ${p.name}？`, '删除').ask()
           if (!ok) return
           settings.providers = settings.providers.filter((x) => x.id !== p.id)
           if (this.activeProviderId === p.id) {
@@ -208,6 +249,42 @@ export class DshSettingsTab extends PluginSettingTab {
           this.display()
         }),
       )
+    }
+  }
+
+  /** 从 OpenAI 兼容端点获取模型列表 */
+  private async fetchModels(baseURL: string, apiKey: string): Promise<string[]> {
+    const url = baseURL.replace(/\/+$/, '') + '/models'
+    const res = await fetch(url, {
+      headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {},
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = (await res.json()) as { data?: Array<{ id?: string }> }
+    return (data.data ?? []).map((m) => m.id ?? '').filter(Boolean)
+  }
+
+  // ---------- 智能体模式 ----------
+
+  private renderAgentTab(c: HTMLElement): void {
+    const { settings } = this.plugin
+    const modes: Array<{ id: AgentMode; label: string; desc: string }> = [
+      { id: 'chat', label: '对话模式', desc: '仅对话与读取信息（只读工具）' },
+      { id: 'edit', label: '修编模式', desc: '可创建和编辑笔记等（默认）' },
+      { id: 'create', label: '创造模式', desc: '完整能力，可创建/修改插件（唯一能创建插件的模式）' },
+    ]
+    for (const m of modes) {
+      new Setting(c)
+        .setName(m.label)
+        .setDesc(m.desc)
+        .addToggle((t) =>
+          t.setValue(settings.agentMode === m.id).onChange(async (v) => {
+            if (v) {
+              settings.agentMode = m.id
+              await this.plugin.saveSettings()
+              this.display()
+            }
+          }),
+        )
     }
   }
 

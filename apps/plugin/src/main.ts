@@ -20,6 +20,7 @@ import {
   defaultSettings,
   migrateSettings,
   parseHeaderLines,
+  parseModelId,
   parseToolPolicy,
   type DshSettings,
   type ProviderConfig,
@@ -128,15 +129,15 @@ export default class DshObsidianPlugin extends Plugin {
             return {
               baseURL: p.baseURL,
               apiKey: p.apiKey,
-              model: p.model,
+              model: p.models[0] ?? '',
               temperature: p.temperature,
               maxTokens: p.maxTokens,
               extraHeaders: parseHeaderLines(p.extraHeaders),
             }
           },
           providerIds: this.settings.providers.map((p) => p.id),
-          defaultProvider: () => this.defaultProvider().id,
-          defaultModel: () => this.defaultProvider().model,
+          defaultProvider: () => this.defaultModel().provider,
+          defaultModel: () => this.defaultModel().model,
           approveTool,
           logLevel: this.settings.logLevel,
         }),
@@ -241,9 +242,12 @@ export default class DshObsidianPlugin extends Plugin {
     )
   }
 
-  /** 默认提供方 */
-  private defaultProvider(): ProviderConfig {
-    return this.providerById(this.settings.defaultProviderId)
+  /** 默认模型（defaultModelId 解析，回退第一个提供方的第一个模型） */
+  private defaultModel(): { provider: string; model: string } {
+    const mid = parseModelId(this.settings.defaultModelId)
+    if (mid && this.settings.providers.some((p) => p.id === mid.provider)) return mid
+    const first = this.settings.providers[0] ?? defaultSettings().providers[0]!
+    return { provider: first.id, model: first.models[0] ?? '' }
   }
 
   async saveSettings(): Promise<void> {

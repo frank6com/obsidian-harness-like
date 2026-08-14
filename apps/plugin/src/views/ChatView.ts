@@ -15,6 +15,8 @@ import {
   type ToolExecution,
 } from '@dsh-obsidian/harness-base'
 import { attachCodeCopyButtons, renderMarkdown } from '../markdown'
+import { modeAllows } from '../mode'
+import type { AgentMode } from '../settings'
 import { safeFileName, sessionToMarkdown } from '../export'
 import { ConfirmModal } from '../modals'
 
@@ -38,6 +40,7 @@ export class ChatView extends ItemView {
   private sessions = new Map<string, SessionMeta>()
   private sessionModels = new Map<string, string>()
   private modelSelect!: HTMLSelectElement
+  private modeBtns!: Map<string, HTMLButtonElement>
   private root!: HTMLElement
   private listEl!: HTMLElement
   private messagesEl!: HTMLElement
@@ -108,13 +111,38 @@ export class ChatView extends ItemView {
     // 阶段状态条（思考/工具/等待审批/已停止）
     this.phaseEl = this.root.createDiv({ cls: 'dsh-phase', text: '' })
 
-    // 底部：模型选择 + 输入 + 发送/停止
-    const footer = this.root.createDiv({ cls: 'dsh-chat-footer' })
-    this.modelSelect = footer.createEl('select', { cls: 'dsh-model-select' })
+    // 工具栏：智能体模式（分段控件）+ 模型选择（成熟 AI 工具的输入区布局）
+    const toolbar = this.root.createDiv({ cls: 'dsh-chat-toolbar' })
+    const modeGroup = toolbar.createDiv({ cls: 'dsh-mode-group' })
+    const modes: Array<{ id: AgentMode; label: string; title: string }> = [
+      { id: 'chat', label: '对话', title: '仅对话与读取信息' },
+      { id: 'edit', label: '修编', title: '可读写笔记（默认）' },
+      { id: 'create', label: '创造', title: '完整能力（可创建插件）' },
+    ]
+    const currentMode = this.ctx.settings.get('agentMode', 'edit') as AgentMode
+    this.modeBtns = new Map()
+    for (const m of modes) {
+      const btn = modeGroup.createEl('button', {
+        cls: 'dsh-mode-btn' + (m.id === currentMode ? ' is-active' : ''),
+        attr: { title: m.title },
+        text: m.label,
+      })
+      this.modeBtns.set(m.id, btn)
+      btn.onclick = () => {
+        if ((this.ctx.settings.get('agentMode', 'edit') as AgentMode) === m.id) return
+        this.ctx.settings.set('agentMode', m.id)
+        for (const [id, el] of this.modeBtns!) el.classList.toggle('is-active', id === m.id)
+        this.ctx.notice.notice(`已切换到「${m.label}」模式：${m.title}`)
+      }
+    }
+    this.modelSelect = toolbar.createEl('select', { cls: 'dsh-model-select' })
     this.buildModelOptions()
     this.modelSelect.addEventListener('change', () => {
       if (this.currentSessionId) this.sessionModels.set(this.currentSessionId, this.modelSelect.value)
     })
+
+    // 底部：输入 + 发送/停止
+    const footer = this.root.createDiv({ cls: 'dsh-chat-footer' })
     this.inputEl = footer.createEl('textarea', {
       cls: 'dsh-chat-input',
       attr: { placeholder: '输入消息…（Enter 发送，Shift+Enter 换行）' },
@@ -338,10 +366,14 @@ export class ChatView extends ItemView {
 
       const streaming = this.ctx.settings.get('streamingEnabled', true)
 
+      const mode = this.ctx.settings.get('agentMode', 'edit') as AgentMode
+
       await runAgentLoop({
         sessionId,
         llm: this.ctx.llmCaller,
-        tools: this.ctx.toolsCompat,
+        tools: {
+          list: () => this.ctx.toolsCompat.list().filter((t) => modeAllows(mode, t.name)),
+        },
         executeTool: (name, input) => this.executeTool(name, input),
         onEvent: sink,
         onStream: streaming ? (delta) => this.appendStream(delta) : undefined,
@@ -375,6 +407,10 @@ export class ChatView extends ItemView {
   }
 
   private async executeTool(name: string, input: Record<string, unknown>): Promise<ToolExecution> {
+    const mode = this.ctx.settings.get('agentMode', 'edit') as AgentMode
+    if (!modeAllows(mode, name)) {
+      return { ok: false, error: `当前「${mode}」模式不允许使用工具 ${name}` }
+    }
     try {
       const result = await this.ctx.toolsCompat.execute({
         callId: `call_${Math.random().toString(36).slice(2, 10)}` as never,
