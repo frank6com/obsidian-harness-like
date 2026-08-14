@@ -125,6 +125,11 @@ export class ViewsService {
     this.api.viewRegistry.registerView(type, creator)
     return () => this.api.viewRegistry.unregisterView(type)
   }
+
+  /** 打开（或聚焦）已注册类型的视图面板 */
+  open(type: string): void {
+    this.api.viewRegistry.openView(type)
+  }
 }
 
 export class SettingsService {

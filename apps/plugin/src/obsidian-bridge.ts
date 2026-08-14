@@ -6,7 +6,7 @@
  * 运行时仍然存在，此处以最小结构断言访问。
  */
 
-import { App, Notice, TFile, type EventRef } from 'obsidian'
+import { App, Notice, TFile, type EventRef, type WorkspaceLeaf } from 'obsidian'
 import type { CommandsLike, ObsidianApiLike, ViewRegistryLike } from '@dsh-obsidian/obsidian-adapter'
 
 /** esbuild bundle 内可见的宿主 require（解析 node 内置模块 / electron / obsidian） */
@@ -101,6 +101,16 @@ export function toApiLike(app: App): ObsidianApiLike {
       },
       unregisterView(type) {
         viewApi.unregisterView(type)
+      },
+      openView(type) {
+        const leaves = app.workspace.getLeavesOfType(type)
+        let leaf: WorkspaceLeaf | undefined | null = leaves[0]
+        if (!leaf) {
+          leaf = app.workspace.getRightLeaf(false)
+          if (!leaf) return
+          void leaf.setViewState({ type, active: true })
+        }
+        app.workspace.revealLeaf(leaf)
       },
     },
     notice: {

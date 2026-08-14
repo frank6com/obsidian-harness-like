@@ -36,6 +36,7 @@ function stubApi(): ObsidianApiLike {
     viewRegistry: {
       registerView: () => {},
       unregisterView: () => {},
+      openView: () => {},
     },
     notice: { notice: () => {} },
     openTarget: async () => {},

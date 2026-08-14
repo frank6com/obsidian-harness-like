@@ -45,6 +45,8 @@ export interface CommandsLike {
 export interface ViewRegistryLike {
   registerView(type: string, creator: unknown): void
   unregisterView(type: string): void
+  /** 打开（或聚焦）一个已注册类型的视图面板 */
+  openView(type: string): void
 }
 
 export interface NoticeLike {

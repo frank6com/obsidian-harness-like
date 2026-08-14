@@ -62,16 +62,39 @@ module.exports = {
   },
 }
 
-可用服务（inject 声明）：toolsCompat（注册工具）、commands（注册命令）、views（注册面板）、
+可用服务（inject 声明）：toolsCompat（注册工具）、commands（注册命令）、views（注册/打开自定义面板）、
 vault（读写笔记）、editor（当前编辑器）、workspace（活跃文件）、notice（通知）、sandbox、
 approval、sessionLog、llmCaller。
 可用事件（ctx.on）：dsh/session/event（会话事件）、vault/modify|create|delete|rename、
 workspace/file-open、dsh/waiting-approval（审批弹窗打开）。
 
+带界面的插件（自定义面板：注册视图 + 命令打开，构建需 --external:obsidian）：
+
+const { ItemView } = require('obsidian')
+
+class MyView extends ItemView {
+  getViewType() { return 'my-view' }
+  getDisplayText() { return '我的面板' }
+  getIcon() { return 'pencil' }
+  onOpen() {
+    this.contentEl.createEl('h3', { text: '你好，dsh！' })
+  }
+}
+
+ctx.effect(() => [
+  ctx.views.registerView('my-view', (leaf) => new MyView(leaf)),
+  ctx.commands.addCommand({
+    id: 'my-plugin:open-view',
+    name: '打开我的面板',
+    callback: () => ctx.views.open('my-view'),
+  }),
+])
+
 注意：
 - 所有注册必须包进 ctx.effect(() => [disposer1, disposer2])，插件停止时自动撤销。
 - 工具 execute 返回 JSON 可序列化对象。
-- 修改 main.js 后调用 reload_plugin 生效；运行中插件重载需用户确认授权。`
+- 修改 main.js 后调用 reload_plugin 生效；运行中插件重载需用户确认授权。
+- 插件构建命令把 obsidian 也 external：esbuild src/main.js --bundle --external:@deepseek-ai/cordis --external:obsidian --format=cjs --outfile=main.js`
 
 export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Object {
   return {
