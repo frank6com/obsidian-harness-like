@@ -52,19 +52,31 @@
 
 实现要点：`ToolRuntime` 构造需要 `ctx.systemPrompt`（最小垫片，接 agent-loop 后可去）；工具定义经兼容层包装（`output.schema` + `render` 投影）；未知工具返回错误结果而非抛出。**已知取舍**：官方包声明 `ctx.tools: ToolRuntime` 与自研门面类型冲突，自研服务键统一改 `dsh-` 命名空间（`sessionLog`/`toolsCompat`/`dsh/session/event`）——插件作者当前用 `ctx.toolsCompat`，Stage 3b 后迁移到官方 `ctx.tools`。
 
-### 3.3 sessions（会话）
+### 3.3 sessions（会话）— 迁移设计（Stage 4，侦察完成 2026-08-14，未实施）
 
 | | dsh 官方 | 本项目现状 |
 |---|---|---|
-| 服务 | `ctx.sessions: SessionStore`（事件溯源、内存存储、`session/created` 等事件） | `ctx.sessions: SessionLog`（自研追加式 JSONL） |
-| 事件 | `session/event`、`session/flush`（持久化是插件关切：订阅 + drain） | `session/event`（自研事件域，`session/meta`/`system/message` 等） |
+| 服务 | `ctx.sessions: SessionStore`（`create/prepare/enter/announce/flush/get/list/fork`；Session 实体含 `append`、`deriveMessages()`） | `ctx.sessionLog: SessionLog`（自研追加式 JSONL） |
+| 事件 | `session/created`、`session/disposed`、`session/event`（post-commit append feed）、`session/flush`（持久化 drain 点） | `dsh/session/event`（自研词汇） |
 
-**状态：待集成（Stage 4）**。阻碍：官方 `SessionEventMap` 词汇（`UserMessage`/`AssistantMessage`/`ToolResultMessage`）与自研 `SessionEvent` 不同，迁移波及 agent loop、ChatView、导出、buildMessages 全链路；`session/meta`（标题/绑定）与 `system/message`（错误持久化）是自研扩展，需映射或补充官方事件。**持久化订阅模式（迁移后）**：
+**词汇映射表（实测核对）**：
 
-```ts
-ctx.on('session/event', (e) => void sessionLog.append(e.sessionId, e))
-ctx.on('session/flush', () => void sessionLog.flush())
-```
+| 自研事件 | 官方事件 | 差异与迁移要点 |
+|---|---|---|
+| `turn/start {ts}` | `turn/start {turn}` | 官方带 turn 序号，无 ts/sessionId（sessionId 在 Session 对象上下文） |
+| `turn/end {ts}` | `turn/end {turn, reason}` | reason 必填（TurnEndReason） |
+| `user/message {content}` | `user/message: UserMessage` | 载荷是官方 Message（id/source/blocks），非纯文本——llm.ts 已有 LLMMessage↔官方 Message 转换可复用 |
+| `assistant/message {content}` | `assistant/message {turn, step, message: AssistantMessage, usage?}` | 需维护 turn/step 计数 |
+| `tool/call {id, tool, input}` | `tool/call {turn, step, callId, name, arguments: string}` | arguments 为 raw JSON 字符串（与 wire 一致） |
+| `tool/result {id, tool, ok, output, error}` | `tool/result {turn, step, message: ToolResultMessage, error?}` | 载荷为 ToolResultMessage |
+| `system/message`（错误/中止持久化） | 无 | **自研扩展**：SessionEventMap 为 merge-extensible，可注册 `dsh/system/message` 扩展事件 |
+| `session/meta`（标题/绑定） | 无 | **自研扩展**：同上，或改用官方 header 机制 |
+
+**持久化与恢复**：官方为内存 store + 插件持久化（订阅 `session/event` 追加 JSONL，`session/flush` 冲刷）；恢复路径依赖官方 seed/prepare 机制（注释提及 resume/fork/replay），需实测 `prepare` 从日志重建的可行性。
+
+**影响面（全链路）**：agent loop（turn/step 管理 + 官方消息构建）、持久化订阅器（官方事件→JSONL）、恢复路径、ChatView 读取与渲染、导出 Markdown、错误/标题/绑定持久化（扩展事件）。事件载荷从纯文本变为 Message 对象，UI 渲染需适配。
+
+**风险评估**：这是目前最大重构（核心聊天链路），无低风险子集；官方 Store 的 scope 过滤、seed 恢复、turn 语义均需实测；预计 3-4 个工作日。**建议**：llm/tools 已官方化，sessions 对齐对用户与插件作者的可见收益有限，优先推进用户可见功能（UX 清单），Stage 4 待功能面稳定后择机实施。
 
 ### 3.4 sandbox（沙箱）
 
