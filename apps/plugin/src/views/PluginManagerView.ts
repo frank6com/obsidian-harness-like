@@ -5,7 +5,7 @@
 
 import { ItemView, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
-import { GrantModal } from '../modals'
+import { ConfirmModal, GrantModal } from '../modals'
 
 export const PLUGIN_MANAGER_VIEW_TYPE = 'dsh-plugin-manager'
 
@@ -71,6 +71,7 @@ export class PluginManagerView extends ItemView {
 
     for (const id of ids) {
       const rec = this.ctx.pluginRuntime.get(id) ?? this.ctx.pluginRuntime.inspect(id)
+      const grant = this.ctx.approval.getGrant(id)
       const row = this.contentEl.createDiv({ cls: 'dsh-pm-row' })
       const info = row.createDiv({ cls: 'dsh-pm-info' })
       info.createDiv({
@@ -79,25 +80,55 @@ export class PluginManagerView extends ItemView {
       })
       info.createDiv({
         cls: `dsh-pm-status dsh-pm-status-${rec.status}`,
-        text: rec.error ? `错误: ${rec.error}` : rec.status,
+        text: rec.error
+          ? `错误: ${rec.error}`
+          : [
+              rec.status,
+              grant ? `· 已授权(${grant.mode === 'all' ? '双勾' : '单勾'} v${grant.version})` : '· 未授权',
+            ].join(' '),
       })
       const actions = row.createDiv({ cls: 'dsh-pm-actions' })
-      if (rec.status !== 'running') {
-        const run = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: '授权并加载' })
-        run.onclick = () => void this.ensureAndLoad(id)
-      } else {
+      if (rec.status === 'running') {
+        const reload = actions.createEl('button', { cls: 'dsh-btn', text: '重新加载' })
+        reload.onclick = () => void this.reload(id)
         const stop = actions.createEl('button', { cls: 'dsh-btn', text: '停止' })
         stop.onclick = () => {
           void this.ctx.pluginRuntime.stop(id)
           void this.refresh()
         }
-        const unload = actions.createEl('button', { cls: 'dsh-btn', text: '卸载' })
-        unload.onclick = () => {
-          void this.ctx.pluginRuntime.unload(id)
-          void this.refresh()
-        }
+      } else {
+        const run = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: '授权并加载' })
+        run.onclick = () => void this.ensureAndLoad(id)
       }
+      const remove = actions.createEl('button', { cls: 'dsh-btn', text: '删除' })
+      remove.onclick = () => void this.removePlugin(id)
     }
+  }
+
+  /** 重新加载（文件型插件的"更新"：停止 → 重新加载当前目录产物） */
+  private async reload(id: string): Promise<void> {
+    await this.ctx.pluginRuntime.stop(id)
+    const result = await this.ctx.pluginRuntime.load(id)
+    this.ctx.notice.notice(
+      result.status === 'running'
+        ? `插件已重新加载: ${id}`
+        : `加载失败: ${result.error ?? '未知错误'}`,
+    )
+    await this.refresh()
+  }
+
+  /** 删除插件目录（破坏性操作，需确认） */
+  private async removePlugin(id: string): Promise<void> {
+    const ok = await new ConfirmModal(
+      this.app,
+      `删除插件 ${id}？\n将删除 .obsidian/dsh-plugins/${id}/ 下的全部文件（含源码），无法恢复。`,
+      '删除',
+    ).ask()
+    if (!ok) return
+    await this.ctx.pluginRuntime.removeDir(id)
+    this.ctx.approval.revoke(id)
+    this.ctx.notice.notice(`插件已删除: ${id}`)
+    await this.refresh()
   }
 
   private async ensureAndLoad(id: string): Promise<void> {

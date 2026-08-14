@@ -15,6 +15,8 @@ import {
   type ToolExecution,
 } from '@dsh-obsidian/harness-base'
 import { attachCodeCopyButtons, renderMarkdown } from '../markdown'
+import { safeFileName, sessionToMarkdown } from '../export'
+import { ConfirmModal } from '../modals'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
 
@@ -416,9 +418,10 @@ export class ChatView extends ItemView {
       return
     }
     for (const s of list) {
-      const btn = this.listEl.createEl('button', {
-        cls: 'dsh-session-btn' + (s.id === this.currentSessionId ? ' is-active' : ''),
+      const row = this.listEl.createDiv({
+        cls: 'dsh-session-row' + (s.id === this.currentSessionId ? ' is-active' : ''),
       })
+      const btn = row.createEl('button', { cls: 'dsh-session-btn' })
       btn.createDiv({ text: s.title ?? s.id })
       btn.createDiv({
         cls: 'dsh-session-sub',
@@ -429,7 +432,49 @@ export class ChatView extends ItemView {
         void this.renderSession()
         void this.refreshSessions()
       }
+      // 悬浮操作：导出 / 删除
+      const actions = row.createDiv({ cls: 'dsh-session-actions' })
+      const exp = actions.createEl('button', { cls: 'dsh-session-action', text: '⤓', attr: { title: '导出为 Markdown' } })
+      exp.onclick = (ev) => {
+        ev.stopPropagation()
+        void this.exportSession(s.id, s.title)
+      }
+      const del = actions.createEl('button', { cls: 'dsh-session-action dsh-session-action-danger', text: '✕', attr: { title: '删除会话' } })
+      del.onclick = (ev) => {
+        ev.stopPropagation()
+        void this.deleteSession(s.id)
+      }
     }
+  }
+
+  private async exportSession(id: string, title?: string): Promise<void> {
+    try {
+      const [events, meta] = await Promise.all([this.ctx.sessions.read(id), this.ctx.sessions.readMeta(id)])
+      const md = sessionToMarkdown({ title: title ?? id, notePath: meta?.notePath ?? null }, events)
+      const fileName = safeFileName(title ?? id, id)
+      await this.ctx.vault.write(fileName, md)
+      this.ctx.notice.notice(`已导出: ${fileName}`)
+    } catch (err) {
+      this.ctx.notice.notice(`导出失败: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  private async deleteSession(id: string): Promise<void> {
+    const ok = await new ConfirmModal(
+      this.app,
+      `删除会话 ${id}？\n会话日志文件将被删除，无法恢复。`,
+      '删除',
+    ).ask()
+    if (!ok) return
+    await this.ctx.sessions.remove(id)
+    this.sessions.delete(id)
+    if (this.currentSessionId === id) {
+      this.currentSessionId = null
+      this.boundNote = null
+      this.renderBinding()
+      await this.renderSession()
+    }
+    await this.refreshSessions()
   }
 
   private async renderSession(): Promise<void> {

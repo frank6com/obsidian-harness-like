@@ -84,6 +84,50 @@ export class GrantModal extends Modal {
 
 export type WriteChoice = { choice: 'allow-once' | 'allow-session' | 'deny' }
 
+/** 通用确认弹窗（删除会话/删除插件等破坏性操作） */
+export class ConfirmModal extends Modal {
+  private resolveFn: (v: boolean) => void = () => {}
+  private settled = false
+
+  constructor(
+    app: App,
+    private message: string,
+    private okText = '确认',
+  ) {
+    super(app)
+  }
+
+  override onOpen(): void {
+    const { contentEl, titleEl } = this
+    titleEl.setText('确认操作')
+    contentEl.createEl('p', { text: this.message })
+    new Setting(contentEl).addButton((b) =>
+      b.setButtonText('取消').onClick(() => this.finish(false)),
+    )
+    new Setting(contentEl).addButton((b) =>
+      b.setButtonText(this.okText).setWarning().onClick(() => this.finish(true)),
+    )
+  }
+
+  override onClose(): void {
+    this.finish(false)
+  }
+
+  ask(): Promise<boolean> {
+    this.open()
+    return new Promise((resolve) => {
+      this.resolveFn = resolve
+    })
+  }
+
+  private finish(v: boolean): void {
+    if (this.settled) return
+    this.settled = true
+    this.resolveFn(v)
+    this.close()
+  }
+}
+
 export class WriteApprovalModal extends Modal {
   private resolveFn: (v: WriteChoice) => void = () => {}
   private settled = false

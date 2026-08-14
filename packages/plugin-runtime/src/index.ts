@@ -164,6 +164,12 @@ export class PluginRuntime {
     this.records.delete(id)
   }
 
+  /** 卸载并删除插件目录（破坏性操作，调用方需先确认） */
+  async removeDir(id: string): Promise<void> {
+    await this.unload(id)
+    await fs.promises.rm(path.join(this.opts.pluginsDir, id), { recursive: true, force: true })
+  }
+
   list(): PluginRecord[] {
     return [...this.records.values()]
   }
