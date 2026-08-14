@@ -8,6 +8,7 @@
 
 import * as path from 'path'
 import { Plugin, type Editor, type WorkspaceLeaf } from 'obsidian'
+import * as obsidianModule from 'obsidian'
 import * as cordis from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
 import { harnessServicesPlugin } from '@dsh-obsidian/harness-base'
@@ -27,6 +28,8 @@ declare function require(id: string): unknown
 
 const cordisShim = (id: string): unknown => {
   if (id === '@deepseek-ai/cordis') return cordis
+  // obsidian 由宿主显式注入（不依赖 bundle require 能否解析）——用户插件可安全 require('obsidian')
+  if (id === 'obsidian') return obsidianModule
   return require(id)
 }
 
