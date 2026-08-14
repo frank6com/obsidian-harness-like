@@ -3,6 +3,7 @@
  */
 
 import { App, Modal, Setting } from 'obsidian'
+import type { AgentMode, AgentPreset } from './settings'
 import type { GrantMode } from '@dsh-obsidian/harness-base'
 
 export type GrantChoice = { mode: GrantMode } | { cancel: true }
@@ -206,25 +207,50 @@ export class ModelPickModal extends Modal {
     this.picked = new Set(initial)
   }
 
+  private keyword = ''
+
   override onOpen(): void {
     const { contentEl, titleEl } = this
     titleEl.setText(`选择要添加的模型（${this.models.length} 个候选）`)
-    for (const m of this.models) {
-      new Setting(contentEl).setName(m).addToggle((t) =>
-        t.setValue(this.picked.has(m)).onChange((v) => {
-          if (v) this.picked.add(m)
-          else this.picked.delete(m)
-        }),
-      )
-    }
+
+    const search = contentEl.createEl('input', {
+      cls: 'dsh-modal-search',
+      attr: { placeholder: '搜索模型…' },
+    })
+    search.addEventListener('input', () => {
+      this.keyword = search.value.trim().toLowerCase()
+      this.renderList()
+    })
+
+    this.listEl = contentEl.createDiv({ cls: 'dsh-modal-list' })
+    this.renderList()
+
     new Setting(contentEl)
       .addButton((b) => b.setButtonText('全选').onClick(() => {
         this.models.forEach((m) => this.picked.add(m))
-        this.close()
-        this.open()
+        this.renderList()
       }))
       .addButton((b) => b.setButtonText('确认添加').setCta().onClick(() => this.finish()))
       .addButton((b) => b.setButtonText('取消').onClick(() => this.close()))
+  }
+
+  private listEl!: HTMLElement
+
+  private renderList(): void {
+    this.listEl.empty()
+    const visible = this.keyword
+      ? this.models.filter((m) => m.toLowerCase().includes(this.keyword))
+      : this.models
+    for (const m of visible) {
+      const row = this.listEl.createDiv({ cls: 'dsh-check-row' })
+      const cb = row.createEl('input', { type: 'checkbox' })
+      cb.checked = this.picked.has(m)
+      cb.onchange = () => {
+        if (cb.checked) this.picked.add(m)
+        else this.picked.delete(m)
+      }
+      row.createEl('span', { text: m })
+    }
   }
 
   override onClose(): void {
@@ -252,5 +278,124 @@ export class ModelPickModal extends Modal {
     if (this.settled) return
     this.settled = true
     this.resolveFn(v)
+  }
+}
+
+
+/** 智能体编辑弹窗（创建/编辑通用）：名称/描述/基础模式/能力勾选（checkbox） */
+export class AgentEditModal extends Modal {
+  private name: string
+  private description: string
+  private mode: AgentMode
+  private caps: Set<string>
+  private keyword = ''
+
+  constructor(
+    app: App,
+    private agent: AgentPreset,
+    private tools: string[],
+  ) {
+    super(app)
+    this.name = agent.name
+    this.description = agent.description ?? ''
+    this.mode = agent.mode
+    this.caps = new Set(agent.capabilities ?? [])
+  }
+
+  override onOpen(): void {
+    const { contentEl, titleEl } = this
+    titleEl.setText(this.agent.id.startsWith('agent-') ? '添加自定义智能体' : '编辑智能体')
+
+    new Setting(contentEl)
+      .setName('名称')
+      .addText((t) =>
+        t.setValue(this.name).onChange((v) => {
+          this.name = v
+        }),
+      )
+    new Setting(contentEl)
+      .setName('描述')
+      .addText((t) =>
+        t.setValue(this.description).onChange((v) => {
+          this.description = v
+        }),
+      )
+    new Setting(contentEl)
+      .setName('基础模式')
+      .setDesc('未勾选能力时按此模式过滤工具')
+      .addDropdown((d) =>
+        d
+          .addOption('chat', '对话模式')
+          .addOption('edit', '修编模式')
+          .addOption('create', '创造模式')
+          .setValue(this.mode)
+          .onChange((v) => {
+            this.mode = v as AgentMode
+          }),
+      )
+
+    new Setting(contentEl).setName('可调用的能力').setDesc('勾选 = 白名单（仅这些工具可用）；不勾选任何项 = 按基础模式默认')
+    const search = contentEl.createEl('input', {
+      cls: 'dsh-modal-search',
+      attr: { placeholder: '搜索能力…' },
+    })
+    search.addEventListener('input', () => {
+      this.keyword = search.value.trim().toLowerCase()
+      this.renderCaps()
+    })
+    this.capsEl = contentEl.createDiv({ cls: 'dsh-modal-list dsh-modal-list-tall' })
+    this.renderCaps()
+
+    new Setting(contentEl)
+      .addButton((b) =>
+        b.setButtonText('保存').setCta().onClick(() => {
+          this.agent.name = this.name.trim() || '未命名'
+          this.agent.description = this.description.trim() || undefined
+          this.agent.mode = this.mode
+          this.agent.capabilities = this.caps.size ? [...this.caps] : undefined
+          this.finish()
+        }),
+      )
+      .addButton((b) => b.setButtonText('取消').onClick(() => this.close()))
+  }
+
+  private capsEl!: HTMLElement
+
+  private renderCaps(): void {
+    this.capsEl.empty()
+    const visible = this.keyword
+      ? this.tools.filter((t) => t.toLowerCase().includes(this.keyword))
+      : this.tools
+    for (const t of visible) {
+      const row = this.capsEl.createDiv({ cls: 'dsh-check-row' })
+      const cb = row.createEl('input', { type: 'checkbox' })
+      cb.checked = this.caps.has(t)
+      cb.onchange = () => {
+        if (cb.checked) this.caps.add(t)
+        else this.caps.delete(t)
+      }
+      row.createEl('span', { text: t })
+    }
+  }
+
+  override onClose(): void {
+    this.finish()
+  }
+
+  private resolveFn: () => void = () => {}
+  private settled = false
+
+  ask(): Promise<void> {
+    this.open()
+    return new Promise((resolve) => {
+      this.resolveFn = resolve
+    })
+  }
+
+  private finish(): void {
+    if (this.settled) return
+    this.settled = true
+    this.resolveFn()
+    this.close()
   }
 }

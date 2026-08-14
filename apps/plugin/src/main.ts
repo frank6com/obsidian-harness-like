@@ -25,7 +25,7 @@ import {
   type DshSettings,
   type ProviderConfig,
 } from './settings'
-import { DshSettingsTab } from './settings-tab'
+import { DshSettingsTab, type TabId } from './settings-tab'
 import { WriteApprovalModal, GrantModal, ConfirmModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
 import { pluginDevToolsPlugin } from './tools/plugin-dev'
@@ -45,6 +45,7 @@ const cordisShim = (id: string): unknown => {
 export default class DshObsidianPlugin extends Plugin {
   override settings: DshSettings = defaultSettings()
   private ctx: Context | null = null
+  private settingsTab?: DshSettingsTab
   private fibers: Array<{ dispose(): Promise<void> }> = []
 
   override async onload(): Promise<void> {
@@ -206,7 +207,12 @@ export default class DshObsidianPlugin extends Plugin {
       name: '重载已授权的用户插件',
       callback: () => void this.loadUserPlugins(),
     })
-    this.addSettingTab(new DshSettingsTab(this.app, this, ctx))
+    this.settingsTab = new DshSettingsTab(this.app, this, ctx)
+    this.addSettingTab(this.settingsTab)
+    // 设置 UI 桥：对话面板可跳转到指定设置 tab
+    ctx.reflect.provide('dshSettingsUi', {
+      openTo: (tab: string) => this.settingsTab?.openTo(tab as TabId),
+    })
     this.addRibbonIcon('bot', '打开 dsh Chat', () => void this.activateView(CHAT_VIEW_TYPE))
 
     // 启动时加载已授权用户插件

@@ -759,3 +759,40 @@
   text-align: left;
   font-size: 12px;
 }
+
+/* 弹窗：搜索 + 滚动列表 + 勾选行 */
+.dsh-modal-search {
+  width: calc(100% - 24px);
+  margin: 0 12px 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.dsh-modal-list {
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0 12px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.dsh-modal-list-tall {
+  max-height: 220px;
+}
+
+.dsh-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.dsh-check-row:hover {
+  background: var(--background-modifier-hover);
+}

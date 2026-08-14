@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { shouldLog, selectSessionsToPrune, type SessionSummary } from '@dsh-obsidian/harness-base'
 import {
+  listVisibleAgents,
   migrateSettings,
   parseHeaderLines,
   parseModelId,
@@ -155,5 +156,17 @@ describe('parseModelId / 模式策略', () => {
     expect(modeAllows('edit', 'create_plugin')).toBe(false)
     expect(modeAllows('create', 'create_plugin')).toBe(true)
     expect(modeAllows('create', 'anything')).toBe(true)
+  })
+})
+
+describe('listVisibleAgents（启用过滤）', () => {
+  it('过滤 disabled 智能体', () => {
+    const agents = [
+      { id: 'a', name: 'A', mode: 'chat' as const, enabled: true },
+      { id: 'b', name: 'B', mode: 'edit' as const, enabled: false },
+      { id: 'c', name: 'C', mode: 'create' as const },
+    ]
+    const visible = listVisibleAgents(agents)
+    expect(visible.map((a) => a.id)).toEqual(['a', 'c'])
   })
 })

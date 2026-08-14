@@ -16,7 +16,7 @@ import {
 } from '@dsh-obsidian/harness-base'
 import { attachCodeCopyButtons, renderMarkdown } from '../markdown'
 import { agentAllows } from '../mode'
-import type { AgentPreset } from '../settings'
+import { listVisibleAgents, type AgentPreset } from '../settings'
 import { safeFileName, sessionToMarkdown } from '../export'
 import { ConfirmModal } from '../modals'
 
@@ -122,6 +122,14 @@ export class ChatView extends ItemView {
     this.modelSelect.addEventListener('change', () => {
       if (this.currentSessionId) this.sessionModels.set(this.currentSessionId, this.modelSelect.value)
     })
+    const manageModels = toolbar.createEl('button', {
+      cls: 'dsh-btn dsh-btn-icon',
+      text: '⚙',
+      attr: { title: '管理模型' },
+    })
+    manageModels.onclick = () => {
+      ;(this.ctx.get('dshSettingsUi') as { openTo(t: string): void } | undefined)?.openTo('model')
+    }
 
     // 底部：输入 + 发送/停止
     const footer = this.root.createDiv({ cls: 'dsh-chat-footer' })
@@ -473,9 +481,9 @@ export class ChatView extends ItemView {
     return `${p.id}/${p.models?.length ? p.models[0] : p.model ?? ''}`
   }
 
-  /** 当前激活的智能体预设 */
+  /** 当前激活的智能体预设（跳过已禁用的） */
   private activeAgent(): AgentPreset | undefined {
-    const agents = this.ctx.settings.get('agents', [] as AgentPreset[])
+    const agents = listVisibleAgents(this.ctx.settings.get('agents', [] as AgentPreset[]))
     const activeId = this.ctx.settings.get('activeAgentId', 'edit') as string
     return agents.find((a) => a.id === activeId) ?? agents[0]
   }
@@ -488,7 +496,7 @@ export class ChatView extends ItemView {
 
   /** 上拉选择智能体（Obsidian Menu） */
   private openAgentMenu(ev: MouseEvent): void {
-    const agents = this.ctx.settings.get('agents', [] as AgentPreset[])
+    const agents = listVisibleAgents(this.ctx.settings.get('agents', [] as AgentPreset[]))
     const activeId = this.ctx.settings.get('activeAgentId', 'edit') as string
     const menu = new Menu()
     for (const a of agents) {
@@ -506,7 +514,7 @@ export class ChatView extends ItemView {
     menu.addSeparator()
     menu.addItem((item) =>
       item.setTitle('管理智能体…').onClick(() => {
-        ;(this.app as unknown as { setting: { open(): void } }).setting.open()
+        ;(this.ctx.get('dshSettingsUi') as { openTo(t: string): void } | undefined)?.openTo('agent')
       }),
     )
     menu.showAtMouseEvent(ev)

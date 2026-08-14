@@ -6,15 +6,14 @@
 import { App, PluginSettingTab, Setting } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import type DshObsidianPlugin from './main'
-import { ConfirmModal, ModelPickModal } from './modals'
+import { AgentEditModal, ConfirmModal, ModelPickModal } from './modals'
 import { BUILTIN_AGENTS, type AgentMode, type AgentPreset } from './settings'
 
-type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
+export type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
 
 export class DshSettingsTab extends PluginSettingTab {
   private activeTab: TabId = 'model'
   private activeProviderId = ''
-  private editingAgentId = ''
 
   constructor(
     app: App,
@@ -22,6 +21,13 @@ export class DshSettingsTab extends PluginSettingTab {
     private ctx: Context,
   ) {
     super(app, plugin)
+  }
+
+  /** 打开 Obsidian 设置并定位到指定 tab */
+  openTo(tabId: TabId): void {
+    this.activeTab = tabId
+    ;(this.app as unknown as { setting: { open(): void } }).setting.open()
+    this.display()
   }
 
   override display(): void {
@@ -277,27 +283,39 @@ export class DshSettingsTab extends PluginSettingTab {
     const allTools = this.ctx.toolsCompat.list().map((t) => t.name)
 
     c.createEl('h4', { text: '内置智能体' })
+    c.createEl('p', {
+      cls: 'setting-item-description',
+      text: '启用开关控制该模式是否出现在对话面板的智能体选择中',
+    })
     for (const a of BUILTIN_AGENTS) {
       new Setting(c)
         .setName(a.name)
-        .setDesc(a.description ?? '')
+        .setDesc(`${a.description ?? ''}${a.id === activeId ? ' · ✓ 当前' : ''}`)
         .addToggle((t) =>
-          t.setValue(activeId === a.id).onChange(async (v) => {
-            if (v) {
+          t.setValue(a.enabled !== false).onChange(async (v) => {
+            a.enabled = v
+            if (!v && settings.activeAgentId === a.id) settings.activeAgentId = 'edit'
+            await this.plugin.saveSettings()
+            this.display()
+          }),
+        )
+        .addButton((b) =>
+          b
+            .setButtonText(a.id === activeId ? '✓ 当前' : '激活')
+            .setCta()
+            .onClick(async () => {
               settings.activeAgentId = a.id
+              a.enabled = true
               await this.plugin.saveSettings()
               this.display()
-            }
-          }),
+            }),
         )
     }
 
     c.createEl('h4', { text: '自定义智能体' })
-    const customs = settings.agents.filter(
-      (a) => !BUILTIN_AGENTS.some((b) => b.id === a.id),
-    )
+    const customs = settings.agents.filter((a) => !BUILTIN_AGENTS.some((b) => b.id === a.id))
     if (!customs.length) {
-      c.createEl('p', { cls: 'setting-item-description', text: '暂无自定义智能体。可创建并勾选可调用的能力。' })
+      c.createEl('p', { cls: 'setting-item-description', text: '暂无自定义智能体。点下方按钮添加，可在弹窗中勾选可调用的能力。' })
     }
     for (const a of customs) {
       const row = new Setting(c)
@@ -306,17 +324,24 @@ export class DshSettingsTab extends PluginSettingTab {
           `${a.description ?? ''} · ${a.capabilities?.length ? `${a.capabilities.length} 项能力` : '按模式默认'}${a.id === activeId ? ' · ✓ 当前' : ''}`,
         )
       row.addToggle((t) =>
-        t.setValue(activeId === a.id).onChange(async (v) => {
-          if (v) {
-            settings.activeAgentId = a.id
-            await this.plugin.saveSettings()
-            this.display()
-          }
+        t.setValue(a.enabled !== false).onChange(async (v) => {
+          a.enabled = v
+          if (!v && settings.activeAgentId === a.id) settings.activeAgentId = 'edit'
+          await this.plugin.saveSettings()
         }),
       )
       row.addButton((b) =>
-        b.setButtonText('编辑').onClick(() => {
-          this.editingAgentId = a.id
+        b.setButtonText(a.id === activeId ? '✓ 当前' : '激活').setCta().onClick(async () => {
+          settings.activeAgentId = a.id
+          a.enabled = true
+          await this.plugin.saveSettings()
+          this.display()
+        }),
+      )
+      row.addButton((b) =>
+        b.setButtonText('编辑').onClick(async () => {
+          await new AgentEditModal(this.app, a, allTools).ask()
+          await this.plugin.saveSettings()
           this.display()
         }),
       )
@@ -326,81 +351,18 @@ export class DshSettingsTab extends PluginSettingTab {
           if (!ok) return
           settings.agents = settings.agents.filter((x) => x.id !== a.id)
           if (settings.activeAgentId === a.id) settings.activeAgentId = 'edit'
-          if (this.editingAgentId === a.id) this.editingAgentId = ''
           await this.plugin.saveSettings()
           this.display()
         }),
       )
     }
     new Setting(c).addButton((b) =>
-      b.setButtonText('＋ 添加自定义智能体').onClick(() => {
+      b.setButtonText('＋ 添加自定义智能体').onClick(async () => {
         const id = `agent-${Date.now()}`
-        settings.agents.push({ id, name: '新智能体', mode: 'edit', description: '', capabilities: [] })
-        this.editingAgentId = id
-        this.display()
-      }),
-    )
-
-    // 编辑区
-    const editing = settings.agents.find((a) => a.id === this.editingAgentId)
-    if (editing) this.renderAgentEditor(c, editing, allTools)
-  }
-
-  private renderAgentEditor(c: HTMLElement, agent: AgentPreset, allTools: string[]): void {
-    const { settings } = this.plugin
-    c.createEl('h5', { text: `编辑：${agent.name}` })
-    new Setting(c)
-      .setName('名称')
-      .addText((t) =>
-        t.setValue(agent.name).onChange(async (v) => {
-          agent.name = v.trim() || '未命名'
-          await this.plugin.saveSettings()
-        }),
-      )
-    new Setting(c)
-      .setName('描述')
-      .addText((t) =>
-        t.setValue(agent.description ?? '').onChange(async (v) => {
-          agent.description = v.trim()
-          await this.plugin.saveSettings()
-        }),
-      )
-    new Setting(c)
-      .setName('基础模式')
-      .setDesc('未勾选能力时按此模式过滤工具')
-      .addDropdown((d) =>
-        d
-          .addOption('chat', '对话')
-          .addOption('edit', '修编')
-          .addOption('create', '创造')
-          .setValue(agent.mode)
-          .onChange(async (v) => {
-            agent.mode = v as AgentMode
-            await this.plugin.saveSettings()
-          }),
-      )
-    new Setting(c)
-      .setName('可调用的能力')
-      .setDesc('勾选 = 白名单（仅这些工具可用）；不勾选任何项 = 按基础模式默认')
-    const caps = agent.capabilities ?? []
-    for (const tool of allTools) {
-      new Setting(c)
-        .setName(tool)
-        .addToggle((t) =>
-          t.setValue(caps.includes(tool)).onChange(async (v) => {
-            if (v) {
-              if (!caps.includes(tool)) caps.push(tool)
-            } else {
-              agent.capabilities = caps.filter((x) => x !== tool)
-            }
-            agent.capabilities = caps.length ? caps : undefined
-            await this.plugin.saveSettings()
-          }),
-        )
-    }
-    new Setting(c).addButton((b) =>
-      b.setButtonText('完成').setCta().onClick(() => {
-        this.editingAgentId = ''
+        const agent: AgentPreset = { id, name: '新智能体', mode: 'edit', description: '', enabled: true }
+        settings.agents.push(agent)
+        await new AgentEditModal(this.app, agent, allTools).ask()
+        await this.plugin.saveSettings()
         this.display()
       }),
     )

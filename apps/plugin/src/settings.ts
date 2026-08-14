@@ -12,13 +12,20 @@ export interface AgentPreset {
   description?: string
   /** 自定义智能体：勾选的能力（工具名白名单）；空 = 按 mode 默认 */
   capabilities?: string[]
+  /** 是否在对话面板可选（默认 true） */
+  enabled?: boolean
 }
 
 export const BUILTIN_AGENTS: AgentPreset[] = [
-  { id: 'chat', name: '对话', mode: 'chat', description: '仅对话与读取信息' },
-  { id: 'edit', name: '修编', mode: 'edit', description: '可读写笔记（默认）' },
-  { id: 'create', name: '创造', mode: 'create', description: '完整能力（可创建插件）' },
+  { id: 'chat', name: '对话模式', mode: 'chat', description: '仅对话与读取信息' },
+  { id: 'edit', name: '修编模式', mode: 'edit', description: '可读写笔记（默认）' },
+  { id: 'create', name: '创造模式', mode: 'create', description: '完整能力（可创建插件）' },
 ]
+
+/** 对话面板可选的智能体（过滤已禁用） */
+export function listVisibleAgents(agents: AgentPreset[]): AgentPreset[] {
+  return agents.filter((a) => a.enabled !== false)
+}
 
 export const AGENT_MODE_LABELS: Record<AgentMode, string> = {
   chat: '对话',
@@ -185,8 +192,8 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): DshSe
     ? (r.agents as AgentPreset[]).filter((a) => a && typeof a.id === 'string')
     : []
   base.agents = agents.length
-    ? agents
-    : BUILTIN_AGENTS.map((a) => ({ ...a }))
+    ? agents.map((a) => ({ ...a, enabled: a.enabled !== false }))
+    : BUILTIN_AGENTS.map((a) => ({ ...a, enabled: true }))
   const legacyMode = (['chat', 'edit', 'create'] as const).includes(r.agentMode as never)
     ? (r.agentMode as AgentMode)
     : 'edit'
