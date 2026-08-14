@@ -19,7 +19,7 @@ function stubApi(overrides: Record<string, unknown> = {}) {
       on: () => ({ unref: () => {} }),
     },
     workspace: { getActiveFile: () => null, onFileOpen: () => ({ unref: () => {} }) },
-    commands: { addCommand: (c: { id: string }) => c, removeCommand: () => {} },
+    commands: { addCommand: (c: { id: string; name: string }) => c, removeCommand: () => {} },
     viewRegistry: { registerView: () => {}, unregisterView: () => {}, openView: () => {} },
     ribbon: { addRibbonIcon: () => ({ remove: () => {} }) },
     statusbar: { addStatusBarItem: () => ({ el: {} as HTMLElement, remove: () => {} }) },
