@@ -90,6 +90,11 @@ ctx.effect(() => [
   }),
 ])
 
+更多 UI 能力（与 Obsidian 原生插件对齐）：
+- 侧边栏图标：ctx.ribbon.addRibbonIcon('icon-id', '提示', () => { ... })（返回 disposer，包进 effect）
+- 底部状态栏：const item = ctx.statusbar.addStatusBarItem(); item.el.setText('...')（disposer = item.remove）
+- 设置页：ctx.settings.registerSettingTab(new (require('obsidian').PluginSettingTab)(...))——需在设置 Tab 的 display() 里渲染
+
 注意：
 - 所有注册必须包进 ctx.effect(() => [disposer1, disposer2])，插件停止时自动撤销。
 - 工具 execute 返回 JSON 可序列化对象。

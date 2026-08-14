@@ -6,7 +6,7 @@
  * 运行时仍然存在，此处以最小结构断言访问。
  */
 
-import { App, Notice, TFile, type EventRef, type WorkspaceLeaf } from 'obsidian'
+import { App, Notice, Plugin, TFile, type EventRef, type WorkspaceLeaf } from 'obsidian'
 import type { CommandsLike, ObsidianApiLike, ViewRegistryLike } from '@dsh-obsidian/obsidian-adapter'
 
 /** esbuild bundle 内可见的宿主 require（解析 node 内置模块 / electron / obsidian） */
@@ -17,7 +17,7 @@ interface AppLike {
   viewRegistry: ViewRegistryLike
 }
 
-export function toApiLike(app: App): ObsidianApiLike {
+export function toApiLike(app: App, plugin?: Plugin): ObsidianApiLike {
   const appLike = app as unknown as AppLike
   const cmdApi = appLike.commands
   const viewApi = appLike.viewRegistry
@@ -118,6 +118,33 @@ export function toApiLike(app: App): ObsidianApiLike {
           void leaf.setViewState({ type, active: true })
         }
         app.workspace.revealLeaf(leaf)
+      },
+    },
+    ribbon: {
+      addRibbonIcon(icon, title, callback) {
+        // workspace.addRibbonIcon 在 1.13 类型面外，运行时存在
+        const ws = app.workspace as unknown as {
+          addRibbonIcon(i: string, t: string, cb: () => void): HTMLElement
+        }
+        const el = ws.addRibbonIcon(icon, title, callback)
+        return { remove: () => el.remove() }
+      },
+    },
+    statusbar: {
+      addStatusBarItem() {
+        // workspace.addStatusBarItem 在 1.13 类型面外，运行时存在
+        const ws = app.workspace as unknown as { addStatusBarItem(): HTMLElement }
+        const el = ws.addStatusBarItem()
+        return { el, remove: () => el.remove() }
+      },
+    },
+    settingsUi: {
+      addSettingTab(tab) {
+        // app.addSettingTab 在 1.13 类型面外，运行时存在
+        if (plugin) {
+          const appLike = app as unknown as { addSettingTab(p: Plugin, t: unknown): void }
+          appLike.addSettingTab(plugin, tab)
+        }
       },
     },
     notice: {

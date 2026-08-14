@@ -49,6 +49,21 @@ export interface ViewRegistryLike {
   openView(type: string): void
 }
 
+/** 侧边栏 ribbon 图标（插件可注册） */
+export interface RibbonLike {
+  addRibbonIcon(icon: string, title: string, callback: () => void): { remove(): void }
+}
+
+/** 底部状态栏（插件可注册条目） */
+export interface StatusbarLike {
+  addStatusBarItem(): { el: HTMLElement; remove(): void }
+}
+
+/** 设置页注册（插件可注册自己的设置 Tab） */
+export interface SettingsUiLike {
+  addSettingTab(tab: unknown): void
+}
+
 export interface NoticeLike {
   notice(message: string, timeout?: number): void
 }
@@ -58,6 +73,9 @@ export interface ObsidianApiLike {
   workspace: WorkspaceLike
   commands: CommandsLike
   viewRegistry: ViewRegistryLike
+  ribbon: RibbonLike
+  statusbar: StatusbarLike
+  settingsUi: SettingsUiLike
   notice: NoticeLike
   /** 打开外部目标：http(s) 走系统浏览器，本地路径走默认应用（由桥接层实现） */
   openTarget(target: string): Promise<void>

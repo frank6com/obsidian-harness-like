@@ -38,6 +38,15 @@ function stubApi(): ObsidianApiLike {
       unregisterView: () => {},
       openView: () => {},
     },
+    ribbon: {
+      addRibbonIcon: () => ({ remove: () => {} }),
+    },
+    statusbar: {
+      addStatusBarItem: () => ({ el: {} as HTMLElement, remove: () => {} }),
+    },
+    settingsUi: {
+      addSettingTab: () => {},
+    },
     notice: { notice: () => {} },
     openTarget: async () => {},
   }

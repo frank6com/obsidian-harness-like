@@ -135,7 +135,10 @@ export class ViewsService {
 export class SettingsService {
   private data: Record<string, unknown>
 
-  constructor(io: SettingsIO) {
+  constructor(
+    io: SettingsIO,
+    private api: ObsidianApiLike,
+  ) {
     const loaded = io.load()
     this.data = loaded && typeof loaded === 'object' ? (loaded as Record<string, unknown>) : {}
     this.io = io
@@ -150,6 +153,30 @@ export class SettingsService {
   set(key: string, value: unknown): void {
     this.data[key] = value
     this.io.save(this.data)
+  }
+
+  /** 注册插件自己的设置页（SettingsTab）；随宿主插件卸载自动移除 */
+  registerSettingTab(tab: unknown): void {
+    this.api.settingsUi.addSettingTab(tab)
+  }
+}
+
+/** 侧边栏 ribbon 图标服务（插件可注册，随 fiber 卸载自动移除） */
+export class RibbonService {
+  constructor(private api: ObsidianApiLike) {}
+
+  addRibbonIcon(icon: string, title: string, callback: () => void): () => void {
+    const handle = this.api.ribbon.addRibbonIcon(icon, title, callback)
+    return () => handle.remove()
+  }
+}
+
+/** 底部状态栏服务（插件可注册条目） */
+export class StatusbarService {
+  constructor(private api: ObsidianApiLike) {}
+
+  addStatusBarItem(): { el: HTMLElement; remove(): void } {
+    return this.api.statusbar.addStatusBarItem()
   }
 }
 
@@ -174,8 +201,13 @@ export function obsidianAdapterPlugin(
       const workspace = new WorkspaceService(api, ctx)
       const commands = new CommandsService(api)
       const views = new ViewsService(api)
-      const settings = new SettingsService(settingsIO ?? { load: () => ({}), save: () => {} })
+      const settings = new SettingsService(
+        settingsIO ?? { load: () => ({}), save: () => {} },
+        api,
+      )
       const notice = new NoticeService(api)
+      const ribbon = new RibbonService(api)
+      const statusbar = new StatusbarService(api)
 
       ctx.reflect.provide('vault', vault)
       ctx.reflect.provide('editor', editor)
@@ -183,6 +215,8 @@ export function obsidianAdapterPlugin(
       ctx.reflect.provide('commands', commands)
       ctx.reflect.provide('views', views)
       ctx.reflect.provide('settings', settings)
+      ctx.reflect.provide('ribbon', ribbon)
+      ctx.reflect.provide('statusbar', statusbar)
       ctx.reflect.provide('notice', notice)
     },
   }
@@ -196,6 +230,8 @@ declare module '@deepseek-ai/cordis' {
     commands: CommandsService
     views: ViewsService
     settings: SettingsService
+    ribbon: RibbonService
+    statusbar: StatusbarService
     notice: NoticeService
   }
   interface Events {

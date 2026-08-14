@@ -52,7 +52,7 @@ export default class DshObsidianPlugin extends Plugin {
     const ctx = new cordis.Context()
     this.ctx = ctx
 
-    const apiLike = toApiLike(this.app)
+    const apiLike = toApiLike(this.app, this)
 
     this.fibers.push(
       ctx.plugin(
