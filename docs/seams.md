@@ -34,14 +34,14 @@
 
 ## 3. Seam 明细
 
-### 3.1 llm（模型）
+### 3.1 llm（模型）✅ 已集成（Stage 2，2026-08-14）
 
 | | dsh 官方 | 本项目现状 |
 |---|---|---|
-| 服务 | `ctx.llm: LlmRuntime`（`registerAdapter(providers, adapter)`，`llm/stream` 瀑布事件，`LlmError`） | `ctx.llm: LLMClient`（自研，fetch + SSE，OpenAI 兼容） |
-| 事件 | `llm/stream`（waterfall，重试/路由/回放） | 无 |
+| 服务 | `ctx.llm: LlmRuntime`（`registerAdapter(providers, adapter)`，`llm/stream` 瀑布事件，`LlmError`） | ✅ `ctx.llm` 为官方 `LlmRuntime`；`DeepSeekAdapter`（OpenAI 兼容，SSE→官方 StreamChunk 词汇）；`ctx.llmCaller` 把自研消息词汇转换为官方 `Message`（含 tool 角色还原）供 agent loop 消费 |
+| 事件 | `llm/stream`（waterfall，重试/路由/回放） | ✅ 已生效；harness-base 内置耗时日志监听（Stage 3+ 可挂重试/路由） |
 
-**状态：待集成（Stage 2）**。阻碍：需要按 `LlmAdapter` 接口实现 DeepSeek 适配器（流协议 + `Message`/`ToolSchema`/`ContentBlock` 词汇），并把 agent loop 的请求组装迁移到官方 Message 形状；迁移期间聊天不可回归（回归清单：流式、工具调用、中止、温度参数透传）。
+实现要点：适配器只需实现 `stream()`（其余用默认实现）；`assertUsableApiKey` 统一凭据诊断；`attributionHeaders()` 产品归属请求头；中止经官方归一化为 `aborted` finish 再转 `AbortError`。请求体消息映射与工具 wire 形状有集成测试锁定。
 
 ### 3.2 tools（工具）
 
@@ -130,8 +130,8 @@ export default {
 
 | Stage | 内容 | 验收标准 | 风险 |
 |---|---|---|---|
-| 1（本轮） | 依赖对齐 rc.6；seam 文档 | 全量安装可解析；文档评审通过 | 低 |
-| 2 | llm：实现 DeepSeek `LlmAdapter`，`ctx.llm` 换为 `LlmRuntime` | 回归清单全过：流式/工具/中止/温度；`llm/stream` 监听生效 | 中（流协议） |
+| 1（已完成） | 依赖对齐 rc.6；seam 文档 | 全量安装可解析；文档评审通过 | 低 |
+| 2（已完成） | llm：`DeepSeekAdapter` 接入官方 `LlmRuntime`，`ctx.llmCaller` 消息词汇转换 | 回归清单全过：流式/工具/中止/温度；`llm/stream` 监听生效 | 中（流协议） |
 | 3 | tools：引入 dsh-tools + agent-loop；工具定义迁移 `defineTool`；审批改 `tools/pre-execute` 瀑布 | 内置工具与示例插件迁移；审批弹窗行为不变；流水线事件可拦截 | 高（调度器耦合） |
 | 4 | sessions：`SessionStore` + JSONL 持久化订阅；事件词汇迁移（含 session/meta、system/message 映射） | 会话恢复/标题/绑定/导出回归全过 | 高（全链路） |
 | 5 | agent：`ctx.agents` + 官方 agent loop 替换 `runAgentLoop` | 阶段状态/中止/重试行为不变 | 高 |

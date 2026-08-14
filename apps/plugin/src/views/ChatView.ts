@@ -327,7 +327,7 @@ export class ChatView extends ItemView {
 
       await runAgentLoop({
         sessionId,
-        llm: this.ctx.llm,
+        llm: this.ctx.llmCaller,
         tools: this.ctx.tools,
         executeTool: (name, input) => this.executeTool(name, input),
         onEvent: sink,

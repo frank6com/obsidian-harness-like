@@ -5,11 +5,12 @@
  */
 
 import type { Context, Plugin } from '@deepseek-ai/cordis'
+import { LlmRuntime } from '@deepseek-ai/dsh-llm'
 import { ApprovalService, type ApprovalStore } from './approval'
 import { SandboxPolicy, type SandboxScope } from './sandbox'
 import { SessionLog } from './session-log'
 import { ToolRegistry } from './tools'
-import { LLMClient } from './llm'
+import { DeepSeekAdapter, createLlmCaller, type LlmCaller } from './llm'
 import type { LLMConfig, SessionEvent } from './types'
 
 export * from './types'
@@ -35,13 +36,34 @@ export function harnessServicesPlugin(cfg: HarnessConfig): Plugin.Object {
       const approval = new ApprovalService(cfg.approvalStore)
       const sessions = new SessionLog(cfg.sessionDir)
       const tools = new ToolRegistry()
-      const llm = new LLMClient(cfg.getLLMConfig)
+
+      // llm seam（Stage 2）：官方 LlmRuntime + DeepSeek 适配器
+      const llmRuntime = new LlmRuntime(ctx)
+      llmRuntime.registerAdapter(
+        ['deepseek'],
+        new DeepSeekAdapter(() => cfg.getLLMConfig()),
+      )
+      const llmCaller = createLlmCaller(llmRuntime, () => cfg.getLLMConfig())
+
+      // llm/stream 瀑布监听：可观测性（Stage 3+ 可挂重试/路由）
+      ctx.on(
+        'llm/stream',
+        async function* (options, next) {
+          const t0 = Date.now()
+          console.info(`[dsh] llm/stream ${options.provider}/${options.model}`)
+          try {
+            yield* next()
+          } finally {
+            console.info(`[dsh] llm/stream 完成 ${Date.now() - t0}ms`)
+          }
+        },
+      )
 
       ctx.reflect.provide('sandbox', sandbox)
       ctx.reflect.provide('approval', approval)
       ctx.reflect.provide('sessions', sessions)
       ctx.reflect.provide('tools', tools)
-      ctx.reflect.provide('llm', llm)
+      ctx.reflect.provide('llmCaller', llmCaller)
     },
   }
 }
@@ -60,7 +82,8 @@ declare module '@deepseek-ai/cordis' {
     approval: ApprovalService
     sessions: SessionLog
     tools: ToolRegistry
-    llm: LLMClient
+    /** 官方 LlmRuntime（dsh-llm 自带类型增强），agent loop 经 llmCaller 消费 */
+    llmCaller: LlmCaller
   }
   interface Events {
     'session/event': (e: SessionEvent) => void

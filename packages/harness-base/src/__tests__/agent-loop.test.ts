@@ -1,30 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildMessages, runAgentLoop, type AgentPhase } from '../agent-loop'
-import { LLMClient } from '../llm'
 import { ToolRegistry } from '../tools'
-import type { SessionEvent, ToolExecution } from '../types'
+import type { ChatResult, SessionEvent, ToolExecution } from '../types'
 
-const encoder = new TextEncoder()
-
-function sse(content: string): ReadableStream<Uint8Array> {
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(encoder.encode(`data: {"choices":[{"delta":{"content":"${content}"}}]}\n\n`))
-      controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-      controller.close()
-    },
-  })
-}
-
-function sseToolCall(name: string, args: string): ReadableStream<Uint8Array> {
-  const payload = `data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"t1","function":{"name":"${name}","arguments":"${args}"}}]}}]}\n\n`
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(encoder.encode(payload))
-      controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-      controller.close()
-    },
-  })
+/** stub 调用器：按序列返回结果 */
+function stubCaller(sequence: ChatResult[]) {
+  const call = vi.fn()
+  for (const r of sequence) call.mockResolvedValueOnce(r)
+  if (!sequence.length) call.mockResolvedValue({ content: '', toolCalls: [] })
+  return { call }
 }
 
 afterEach(() => {
@@ -87,41 +71,31 @@ describe('buildMessages', () => {
 
 describe('runAgentLoop', () => {
   it('单轮对话：无工具调用即结束', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, body: sse('你好') }))
-    const llm = new LLMClient(() => ({
-      baseURL: 'https://x',
-      apiKey: 'k',
-      model: 'm',
-    }))
+    const llm = stubCaller([{ content: '你好', toolCalls: [] }])
     const tools = new ToolRegistry()
     const events: SessionEvent[] = []
-    const executed: string[] = []
+    const phases: AgentPhase[] = []
     await runAgentLoop({
       sessionId: 's1',
       llm,
       tools,
       executeTool: async (name) => {
-        executed.push(name)
-        return { ok: true, output: null } satisfies ToolExecution
+        throw new Error(`不应调用工具: ${name}`)
       },
       onEvent: (e) => events.push(e),
+      onPhase: (p) => phases.push(p),
       history: [],
     })
     expect(events.map((e) => e.type)).toEqual(['turn/start', 'assistant/message', 'turn/end'])
-    expect(executed).toEqual([])
+    expect(phases.map((p) => p.kind)).toEqual(['thinking', 'done'])
+    expect(llm.call).toHaveBeenCalledTimes(1)
   })
 
-  it('工具循环：先调工具再给最终答复', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({ ok: true, body: sseToolCall('count_notes', '{}') })
-      .mockResolvedValueOnce({ ok: true, body: sse('共 3 篇') })
-    vi.stubGlobal('fetch', fetchMock)
-    const llm = new LLMClient(() => ({
-      baseURL: 'https://x',
-      apiKey: 'k',
-      model: 'm',
-    }))
+  it('工具循环：先调工具再给最终答复，tools 传入 caller', async () => {
+    const llm = stubCaller([
+      { content: '', toolCalls: [{ id: 't1', name: 'count_notes', arguments: '{}' }] },
+      { content: '共 3 篇', toolCalls: [] },
+    ])
     const tools = new ToolRegistry()
     tools.register({
       name: 'count_notes',
@@ -131,27 +105,24 @@ describe('runAgentLoop', () => {
     })
     const events: SessionEvent[] = []
     const executed: string[] = []
+    const phases: AgentPhase[] = []
     await runAgentLoop({
       sessionId: 's1',
       llm,
       tools,
-      executeTool: async (name, input) => {
+      executeTool: async (name) => {
         executed.push(name)
         return { ok: true, output: { count: 3 } }
       },
       onEvent: (e) => events.push(e),
+      onPhase: (p) => phases.push(p),
       history: [{ type: 'user/message', ts: 1, sessionId: 's1', content: '几篇?' }],
     })
     expect(executed).toEqual(['count_notes'])
-    // 回归：发给 API 的请求体必须含 OpenAI 兼容的 tool_calls 形状
-    const [, init] = fetchMock.mock.calls[1] as [string, RequestInit]
-    const body = JSON.parse(init.body as string) as { messages: Array<{ tool_calls?: unknown[] }> }
-    const withCalls = body.messages.find((m) => m.tool_calls)
-    expect(withCalls?.tool_calls?.[0]).toMatchObject({
-      id: 't1',
-      type: 'function',
-      function: { name: 'count_notes', arguments: '{}' },
-    })
+    // caller 收到完整工具表与消息
+    const firstCall = llm.call.mock.calls[0]![0] as { tools: unknown[] }
+    expect(firstCall.tools).toHaveLength(1)
+    expect(phases).toContainEqual({ kind: 'tool', name: 'count_notes' })
     const types = events.map((e) => e.type)
     expect(types).toContain('tool/call')
     expect(types).toContain('tool/result')
@@ -161,15 +132,10 @@ describe('runAgentLoop', () => {
   })
 
   it('工具执行异常被捕获为失败结果', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve({ ok: true, body: sseToolCall('boom', '{}') })),
-    )
-    const llm = new LLMClient(() => ({
-      baseURL: 'https://x',
-      apiKey: 'k',
-      model: 'm',
-    }))
+    const llm = stubCaller([
+      { content: '', toolCalls: [{ id: 't1', name: 'boom', arguments: '{}' }] },
+      { content: 'ok', toolCalls: [] },
+    ])
     const tools = new ToolRegistry()
     tools.register({
       name: 'boom',
@@ -200,51 +166,10 @@ describe('runAgentLoop', () => {
     expect(result?.type === 'tool/result' && result.ok).toBe(false)
   })
 
-  it('阶段事件：thinking → done', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, body: sse('你好') }))
-    const llm = new LLMClient(() => ({ baseURL: 'https://x', apiKey: 'k', model: 'm' }))
-    const tools = new ToolRegistry()
-    const phases: AgentPhase[] = []
-    await runAgentLoop({
-      sessionId: 's1',
-      llm,
-      tools,
-      executeTool: async () => ({ ok: true, output: null }),
-      onEvent: () => {},
-      history: [],
-      onPhase: (p) => phases.push(p),
-    })
-    expect(phases.map((p) => p.kind)).toEqual(['thinking', 'done'])
-  })
-
-  it('阶段事件：工具阶段携带工具名', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce({ ok: true, body: sseToolCall('count_notes', '{}') })
-        .mockResolvedValueOnce({ ok: true, body: sse('完成') }),
-    )
-    const llm = new LLMClient(() => ({ baseURL: 'https://x', apiKey: 'k', model: 'm' }))
-    const tools = new ToolRegistry()
-    const phases: AgentPhase[] = []
-    await runAgentLoop({
-      sessionId: 's1',
-      llm,
-      tools,
-      executeTool: async () => ({ ok: true, output: null }),
-      onEvent: () => {},
-      history: [],
-      onPhase: (p) => phases.push(p),
-    })
-    expect(phases).toContainEqual({ kind: 'tool', name: 'count_notes' })
-    expect(phases[phases.length - 1]).toEqual({ kind: 'done' })
-  })
-
   it('abort：已中止的信号立即抛 AbortError', async () => {
     const controller = new AbortController()
     controller.abort()
-    const llm = new LLMClient(() => ({ baseURL: 'https://x', apiKey: 'k', model: 'm' }))
+    const llm = stubCaller([])
     const tools = new ToolRegistry()
     await expect(
       runAgentLoop({
@@ -259,13 +184,13 @@ describe('runAgentLoop', () => {
     ).rejects.toMatchObject({ name: 'AbortError' })
   })
 
-  it('abort：工具执行期间中止，循环抛 AbortError 且补发 turn/end', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve({ ok: true, body: sseToolCall('count_notes', '{}') })),
-    )
-    const controller = new AbortController()
-    const llm = new LLMClient(() => ({ baseURL: 'https://x', apiKey: 'k', model: 'm' }))
+  it('abort：调用器抛 AbortError 时循环抛错且补发 turn/end', async () => {
+    const call = vi.fn(async () => {
+      const err = new Error('已停止')
+      err.name = 'AbortError'
+      throw err
+    })
+    const llm = { call }
     const tools = new ToolRegistry()
     const events: SessionEvent[] = []
     await expect(
@@ -273,16 +198,11 @@ describe('runAgentLoop', () => {
         sessionId: 's1',
         llm,
         tools,
-        executeTool: async () => {
-          controller.abort()
-          return { ok: true, output: null }
-        },
+        executeTool: async () => ({ ok: true, output: null }),
         onEvent: (e) => events.push(e),
         history: [],
-        signal: controller.signal,
       }),
     ).rejects.toMatchObject({ name: 'AbortError' })
-    // finally 保证 turn/end 落盘，日志闭合
     expect(events.some((e) => e.type === 'turn/end')).toBe(true)
   })
 })

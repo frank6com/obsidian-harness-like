@@ -7,7 +7,7 @@
  */
 
 import type { LLMMessage, OpenAIToolCall, SessionEvent, ToolCall, ToolExecution } from './types'
-import { LLMClient, type LLMTool } from './llm'
+import type { LlmCaller } from './llm'
 import { ToolRegistry } from './tools'
 
 export type AgentPhase =
@@ -17,7 +17,7 @@ export type AgentPhase =
 
 export interface AgentRunContext {
   sessionId: string
-  llm: LLMClient
+  llm: LlmCaller
   tools: ToolRegistry
   /** 工具执行钩子：由宿主注入沙箱 + 审批 + UI 弹窗 */
   executeTool(name: string, input: Record<string, unknown>): Promise<ToolExecution>
@@ -107,19 +107,6 @@ export function buildMessages(history: SessionEvent[], system?: string): LLMMess
   return out
 }
 
-export function toLLMTools(tools: ToolDefLike[]): LLMTool[] {
-  return tools.map((t) => ({
-    type: 'function',
-    function: { name: t.name, description: t.description, parameters: t.input },
-  }))
-}
-
-interface ToolDefLike {
-  name: string
-  description: string
-  input: Record<string, unknown>
-}
-
 export async function runAgentLoop(ac: AgentRunContext): Promise<void> {
   const maxTurns = ac.maxTurns ?? 8
   const messages = buildMessages(ac.history, ac.system)
@@ -138,9 +125,9 @@ export async function runAgentLoop(ac: AgentRunContext): Promise<void> {
       throwIfAborted()
       ac.onPhase?.({ kind: 'thinking' })
 
-      const res = await ac.llm.chat({
+      const res = await ac.llm.call({
         messages,
-        tools: toLLMTools(ac.tools.list()),
+        tools: ac.tools.list(),
         signal,
         onDelta: ac.onStream,
       })
