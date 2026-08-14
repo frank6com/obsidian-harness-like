@@ -141,6 +141,14 @@ export class ChatView extends ItemView {
 
     this.disposers.push(this.ctx.on('dsh/session/event', (e) => this.onSessionEvent(e)))
     this.disposers.push(this.ctx.on('dsh/waiting-approval', () => this.setPhase({ kind: 'waiting' })))
+    this.disposers.push(
+      this.ctx.on('dsh/settings-updated', () => {
+        const prev = this.modelSelect.value
+        this.buildModelOptions()
+        if (prev) this.modelSelect.value = prev
+        this.refreshAgentBtn()
+      }),
+    )
     await this.refreshSessions()
     this.renderBinding()
     this.setPhase({ kind: 'idle' })

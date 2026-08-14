@@ -252,6 +252,8 @@ export default class DshObsidianPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings)
+    // 广播设置变更：对话面板刷新模型/智能体选择
+    this.ctx?.emit('dsh/settings-updated', 'all')
   }
 
   private async loadUserPlugins(): Promise<void> {

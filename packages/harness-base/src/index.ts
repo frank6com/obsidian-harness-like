@@ -117,5 +117,7 @@ declare module '@deepseek-ai/cordis' {
     'dsh/session/event': (e: SessionEvent) => void
     /** 宿主打开审批弹窗（UI 阶段状态联动） */
     'dsh/waiting-approval': (targetPath: string) => void
+    /** 设置保存后广播（对话面板据此刷新模型/智能体选择） */
+    'dsh/settings-updated': (key: string) => void
   }
 }
