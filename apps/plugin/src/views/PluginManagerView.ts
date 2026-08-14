@@ -9,10 +9,16 @@ import { GrantModal } from '../modals'
 
 export const PLUGIN_MANAGER_VIEW_TYPE = 'dsh-plugin-manager'
 
+export interface PluginManagerOptions {
+  /** 在系统文件管理器中打开目录（如插件目录） */
+  openFolder(path: string): void
+}
+
 export class PluginManagerView extends ItemView {
   constructor(
     leaf: WorkspaceLeaf,
     private ctx: Context,
+    private options: PluginManagerOptions,
   ) {
     super(leaf)
   }
@@ -43,12 +49,22 @@ export class PluginManagerView extends ItemView {
     const bar = this.contentEl.createDiv({ cls: 'dsh-pm-bar' })
     const reload = bar.createEl('button', { cls: 'dsh-btn', text: '刷新' })
     reload.onclick = () => void this.refresh()
+    const openDir = bar.createEl('button', { cls: 'dsh-btn', text: '打开插件目录' })
+    openDir.onclick = () => this.options.openFolder(this.ctx.sandbox.scope.pluginsDir)
 
     const ids = await this.ctx.pluginRuntime.discover()
     if (!ids.length) {
-      this.contentEl.createDiv({
-        cls: 'dsh-pm-empty',
-        text: '还没有用户插件。将示例插件复制到 .obsidian/dsh-plugins/ 后点刷新。',
+      const empty = this.contentEl.createDiv({ cls: 'dsh-pm-empty' })
+      empty.createEl('p', { text: '还没有用户插件。三步开始：' })
+      const steps = empty.createEl('ol')
+      steps.createEl('li', {
+        text: '把插件目录复制到 .obsidian/dsh-plugins/<id>/（目录需含 package.json 与编译产物 main.js）',
+      })
+      steps.createEl('li', { text: '点上方"刷新"或"打开插件目录"确认文件就位' })
+      steps.createEl('li', { text: '点"授权并加载"，选择信任范围（单勾=仅此版本 / 双勾=信任后续）' })
+      empty.createEl('p', {
+        cls: 'dsh-pm-hint',
+        text: '内置示例：apps/plugin/examples/my-first-plugin/（仓库内，含预编译产物，可直接复制）',
       })
       return
     }

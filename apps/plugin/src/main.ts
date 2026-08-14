@@ -122,7 +122,9 @@ export default class DshObsidianPlugin extends Plugin {
 
     // 视图与命令
     this.registerView(CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, ctx))
-    this.registerView(PLUGIN_MANAGER_VIEW_TYPE, (leaf) => new PluginManagerView(leaf, ctx))
+    this.registerView(PLUGIN_MANAGER_VIEW_TYPE, (leaf) =>
+      new PluginManagerView(leaf, ctx, { openFolder: (p) => void apiLike.openTarget(p) }),
+    )
     this.addCommand({
       id: 'open-chat',
       name: '打开 dsh Chat 面板',

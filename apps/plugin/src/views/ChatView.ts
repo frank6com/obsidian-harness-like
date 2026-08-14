@@ -79,6 +79,8 @@ export class ChatView extends ItemView {
     const collapseBtn = header.createEl('button', { cls: 'dsh-btn dsh-btn-icon', text: '☰' })
     collapseBtn.onclick = () => this.toggleSessionList()
     header.createSpan({ cls: 'dsh-chat-title', text: 'dsh Chat' })
+    const newBtn = header.createEl('button', { cls: 'dsh-btn', text: '＋ 新会话' })
+    newBtn.onclick = () => this.newSession()
     this.boundEl = header.createSpan({ cls: 'dsh-bound' })
     const bindBtn = header.createEl('button', { cls: 'dsh-btn', text: '绑定当前笔记' })
     const toggle = header.createDiv({ cls: 'dsh-toggle' })
@@ -391,6 +393,16 @@ export class ChatView extends ItemView {
 
   // ---------- 会话列表 / 绑定 / 输入 ----------
 
+  /** 开始新会话：回到空状态，绑定清零 */
+  private newSession(): void {
+    this.currentSessionId = null
+    this.boundNote = null
+    this.renderBinding()
+    void this.renderSession()
+    void this.refreshSessions()
+    this.inputEl.focus()
+  }
+
   private toggleSessionList(): void {
     this.listCollapsed = !this.listCollapsed
     this.root.classList.toggle('is-collapsed', this.listCollapsed)
@@ -426,7 +438,10 @@ export class ChatView extends ItemView {
     this.streamingText = ''
     this.toolCards.clear()
     const id = this.currentSessionId
-    if (!id) return
+    if (!id) {
+      this.renderWelcome()
+      return
+    }
     const events = await this.ctx.sessions.read(id)
     if (!events.length) {
       this.renderWelcome()
