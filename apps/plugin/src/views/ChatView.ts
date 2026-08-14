@@ -6,7 +6,7 @@
  * 流式光标、错误重试、列表可收起、发送中禁用与中止。
  */
 
-import { ItemView, WorkspaceLeaf } from 'obsidian'
+import { ItemView, MarkdownRenderer, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import {
   runAgentLoop,
@@ -144,11 +144,14 @@ export class ChatView extends ItemView {
     if (e.type === 'assistant/message') {
       if (this.streamingEl) {
         this.streamingEl.classList.remove('dsh-msg-streaming')
-        this.streamingEl.textContent = e.content
+        this.renderMarkdown(this.streamingEl, e.content)
+        this.addCopyButton(this.streamingEl, e.content)
         this.streamingEl = null
       } else {
         this.appendMessage('assistant', e.content)
       }
+    } else if (e.type === 'system/message') {
+      this.appendMessage('system', e.content)
     } else if (e.type === 'tool/call') {
       this.renderToolCall(e.id, e.tool, e.input)
     } else if (e.type === 'tool/result') {
@@ -203,15 +206,42 @@ export class ChatView extends ItemView {
 
   private appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
     const el = this.messagesEl.createDiv({ cls: `dsh-msg dsh-msg-${role}` })
-    el.textContent = content
+    if (role === 'assistant') {
+      this.renderMarkdown(el, content)
+    } else {
+      el.textContent = content
+    }
+    this.addCopyButton(el, content)
     this.scrollToBottom()
     return el
   }
 
+  /** 用 Obsidian 原生渲染器渲染 Markdown（带主题样式、安全处理） */
+  private renderMarkdown(el: HTMLElement, markdown: string): void {
+    el.empty()
+    MarkdownRenderer.render(this.app, markdown, el, '', this).catch(() => {
+      // 渲染失败（如视图已关闭）回退纯文本
+      el.textContent = markdown
+    })
+  }
+
+  private addCopyButton(el: HTMLElement, text: string): void {
+    const btn = el.createSpan({ cls: 'dsh-copy-btn', text: '复制' })
+    btn.onclick = (ev) => {
+      ev.stopPropagation()
+      void navigator.clipboard.writeText(text).then(() => {
+        btn.setText('已复制')
+        setTimeout(() => btn.setText('复制'), 1200)
+      })
+    }
+  }
+
   private appendStream(delta: string): void {
     if (!this.streamingEl) {
-      this.streamingEl = this.appendMessage('assistant', '')
-      this.streamingEl.classList.add('dsh-msg-streaming')
+      // 流式气泡用纯文本（避免 textContent 覆盖已渲染子元素）；结束后再渲染 Markdown
+      this.streamingEl = this.messagesEl.createDiv({
+        cls: 'dsh-msg dsh-msg-assistant dsh-msg-streaming',
+      })
     }
     this.streamingText += delta
     this.streamingEl.textContent = this.streamingText
@@ -297,12 +327,13 @@ export class ChatView extends ItemView {
         signal,
       })
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        this.appendMessage('system', '已停止')
-        this.setPhase({ kind: 'stopped' })
-      } else {
-        const msg = err instanceof Error ? err.message : String(err)
-        this.appendMessage('system', `错误: ${msg}`)
+      const failed = err instanceof Error && err.name === 'AbortError'
+      const content = failed ? '已停止' : `错误: ${err instanceof Error ? err.message : String(err)}`
+      // 持久化系统消息（重载后仍在；并进入模型上下文，避免"上一问悬空被顺带回答"）
+      const ev: SessionEvent = { type: 'system/message', ts: Date.now(), sessionId, content }
+      void this.ctx.sessions.append(sessionId, ev)
+      this.ctx.emit('session/event', ev)
+      if (!failed) {
         this.lastFailed = { sessionId, text }
         const row = this.messagesEl.createDiv({ cls: 'dsh-retry-row' })
         const btn = row.createEl('button', { cls: 'dsh-btn', text: '重试' })
@@ -391,6 +422,7 @@ export class ChatView extends ItemView {
     for (const e of events) {
       if (e.type === 'user/message') this.appendMessage('user', e.content)
       else if (e.type === 'assistant/message') this.appendMessage('assistant', e.content)
+      else if (e.type === 'system/message') this.appendMessage('system', e.content)
       else if (e.type === 'tool/call') this.renderToolCall(e.id, e.tool, e.input)
       else if (e.type === 'tool/result') {
         this.renderToolResult(e.id, e.tool, e.ok, e.error, e.output)

@@ -101,12 +101,54 @@
 }
 
 .dsh-msg {
+  position: relative;
   padding: 8px 10px;
   border-radius: 8px;
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 13px;
   line-height: 1.5;
+}
+
+/* 消息复制按钮（悬浮显示） */
+.dsh-copy-btn {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  padding: 0 6px;
+  line-height: 1.6;
+  z-index: 1;
+}
+
+.dsh-msg:hover .dsh-copy-btn {
+  opacity: 1;
+}
+
+/* 已渲染 Markdown 的气泡内排版 */
+.dsh-msg-assistant :is(p, ul, ol, table, blockquote) {
+  margin: 0 0 6px;
+}
+
+.dsh-msg-assistant :is(h1, h2, h3, h4) {
+  font-size: 1.05em;
+  margin: 4px 0;
+}
+
+.dsh-msg-assistant pre {
+  margin: 4px 0;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.dsh-msg-assistant :last-child {
+  margin-bottom: 0;
 }
 
 .dsh-msg-user {

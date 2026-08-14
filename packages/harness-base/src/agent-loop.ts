@@ -67,6 +67,9 @@ export function buildMessages(history: SessionEvent[], system?: string): LLMMess
       out.push({ role: 'user', content: e.content })
     } else if (e.type === 'assistant/message') {
       out.push({ role: 'assistant', content: e.content })
+    } else if (e.type === 'system/message') {
+      // 持久化的系统提示（如上一轮失败/中止），进入模型上下文
+      out.push({ role: 'system', content: e.content })
     } else if (e.type === 'tool/call') {
       pending.add(e.id)
       out.push({

@@ -24,6 +24,12 @@ export type SessionEvent =
   | { type: 'turn/end'; ts: number; sessionId: string }
   | { type: 'user/message'; ts: number; sessionId: string; content: string }
   | { type: 'assistant/message'; ts: number; sessionId: string; content: string }
+  | {
+      type: 'system/message'
+      ts: number
+      sessionId: string
+      content: string
+    }
   | { type: 'tool/call'; ts: number; sessionId: string; id: string; tool: string; input: unknown }
   | {
       type: 'tool/result'

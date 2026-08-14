@@ -56,6 +56,16 @@ describe('buildMessages', () => {
     expect(msgs[4]).toMatchObject({ role: 'assistant', content: '完成了' })
   })
 
+  it('system/message 进入模型上下文（role=system）', () => {
+    const history: SessionEvent[] = [
+      { type: 'user/message', ts: 1, sessionId: 's', content: 'Q1' },
+      { type: 'system/message', ts: 2, sessionId: 's', content: '错误: LLM 请求失败 400' },
+      { type: 'user/message', ts: 3, sessionId: 's', content: 'Q2' },
+    ]
+    const msgs = buildMessages(history)
+    expect(msgs[1]).toMatchObject({ role: 'system', content: '错误: LLM 请求失败 400' })
+  })
+
   it('孤儿 tool/result（无前置 tool/call）被丢弃', () => {
     const history: SessionEvent[] = [
       { type: 'tool/result', ts: 1, sessionId: 's', id: 'orphan', tool: 'x', ok: true, output: 1 },
