@@ -191,3 +191,66 @@ export class WriteApprovalModal extends Modal {
     this.close()
   }
 }
+
+
+/** 模型勾选弹窗：从端点获取的候选模型中勾选确认后加入列表 */
+export class ModelPickModal extends Modal {
+  private picked: Set<string>
+
+  constructor(
+    app: App,
+    private models: string[],
+    initial: Set<string>,
+  ) {
+    super(app)
+    this.picked = new Set(initial)
+  }
+
+  override onOpen(): void {
+    const { contentEl, titleEl } = this
+    titleEl.setText(`选择要添加的模型（${this.models.length} 个候选）`)
+    for (const m of this.models) {
+      new Setting(contentEl).setName(m).addToggle((t) =>
+        t.setValue(this.picked.has(m)).onChange((v) => {
+          if (v) this.picked.add(m)
+          else this.picked.delete(m)
+        }),
+      )
+    }
+    new Setting(contentEl)
+      .addButton((b) => b.setButtonText('全选').onClick(() => {
+        this.models.forEach((m) => this.picked.add(m))
+        this.close()
+        this.open()
+      }))
+      .addButton((b) => b.setButtonText('确认添加').setCta().onClick(() => this.finish()))
+      .addButton((b) => b.setButtonText('取消').onClick(() => this.close()))
+  }
+
+  override onClose(): void {
+    this.resolve({ cancel: true })
+  }
+
+  private resolveFn: (v: { models: string[] } | { cancel: true }) => void = () => {}
+  private settled = false
+
+  ask(): Promise<{ models: string[] } | { cancel: true }> {
+    this.open()
+    return new Promise((resolve) => {
+      this.resolveFn = resolve
+    })
+  }
+
+  private finish(): void {
+    if (this.settled) return
+    this.settled = true
+    this.resolveFn({ models: [...this.picked] })
+    this.close()
+  }
+
+  private resolve(v: { models: string[] } | { cancel: true }): void {
+    if (this.settled) return
+    this.settled = true
+    this.resolveFn(v)
+  }
+}

@@ -752,3 +752,10 @@
 .dsh-model-input {
   flex: 1;
 }
+
+/* 智能体上拉按钮 */
+.dsh-agent-btn {
+  min-width: 88px;
+  text-align: left;
+  font-size: 12px;
+}

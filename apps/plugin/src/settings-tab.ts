@@ -6,14 +6,15 @@
 import { App, PluginSettingTab, Setting } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import type DshObsidianPlugin from './main'
-import { ConfirmModal } from './modals'
-import type { AgentMode } from './settings'
+import { ConfirmModal, ModelPickModal } from './modals'
+import { BUILTIN_AGENTS, type AgentMode, type AgentPreset } from './settings'
 
 type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
 
 export class DshSettingsTab extends PluginSettingTab {
   private activeTab: TabId = 'model'
   private activeProviderId = ''
+  private editingAgentId = ''
 
   constructor(
     app: App,
@@ -152,10 +153,15 @@ export class DshSettingsTab extends PluginSettingTab {
                 this.ctx.notice.notice('端点未返回模型列表，请手动添加')
                 return
               }
-              p.models = [...new Set([...p.models, ...fetched])]
+              const picked = await new ModelPickModal(this.app, fetched, new Set()).ask()
+              if ('cancel' in picked || !picked.models.length) {
+                this.ctx.notice.notice('未选择模型')
+                return
+              }
+              p.models = [...new Set([...p.models, ...picked.models])]
               await this.plugin.saveSettings()
               this.display()
-              this.ctx.notice.notice(`已添加 ${fetched.length} 个模型`)
+              this.ctx.notice.notice(`已添加 ${picked.models.length} 个模型`)
             } catch (err) {
               this.ctx.notice.notice(`获取模型失败: ${err instanceof Error ? err.message : String(err)}`)
             }
@@ -263,29 +269,141 @@ export class DshSettingsTab extends PluginSettingTab {
     return (data.data ?? []).map((m) => m.id ?? '').filter(Boolean)
   }
 
-  // ---------- 智能体模式 ----------
+  // ---------- 智能体 ----------
 
   private renderAgentTab(c: HTMLElement): void {
     const { settings } = this.plugin
-    const modes: Array<{ id: AgentMode; label: string; desc: string }> = [
-      { id: 'chat', label: '对话模式', desc: '仅对话与读取信息（只读工具）' },
-      { id: 'edit', label: '修编模式', desc: '可创建和编辑笔记等（默认）' },
-      { id: 'create', label: '创造模式', desc: '完整能力，可创建/修改插件（唯一能创建插件的模式）' },
-    ]
-    for (const m of modes) {
+    const activeId = settings.activeAgentId
+    const allTools = this.ctx.toolsCompat.list().map((t) => t.name)
+
+    c.createEl('h4', { text: '内置智能体' })
+    for (const a of BUILTIN_AGENTS) {
       new Setting(c)
-        .setName(m.label)
-        .setDesc(m.desc)
+        .setName(a.name)
+        .setDesc(a.description ?? '')
         .addToggle((t) =>
-          t.setValue(settings.agentMode === m.id).onChange(async (v) => {
+          t.setValue(activeId === a.id).onChange(async (v) => {
             if (v) {
-              settings.agentMode = m.id
+              settings.activeAgentId = a.id
               await this.plugin.saveSettings()
               this.display()
             }
           }),
         )
     }
+
+    c.createEl('h4', { text: '自定义智能体' })
+    const customs = settings.agents.filter(
+      (a) => !BUILTIN_AGENTS.some((b) => b.id === a.id),
+    )
+    if (!customs.length) {
+      c.createEl('p', { cls: 'setting-item-description', text: '暂无自定义智能体。可创建并勾选可调用的能力。' })
+    }
+    for (const a of customs) {
+      const row = new Setting(c)
+        .setName(a.name)
+        .setDesc(
+          `${a.description ?? ''} · ${a.capabilities?.length ? `${a.capabilities.length} 项能力` : '按模式默认'}${a.id === activeId ? ' · ✓ 当前' : ''}`,
+        )
+      row.addToggle((t) =>
+        t.setValue(activeId === a.id).onChange(async (v) => {
+          if (v) {
+            settings.activeAgentId = a.id
+            await this.plugin.saveSettings()
+            this.display()
+          }
+        }),
+      )
+      row.addButton((b) =>
+        b.setButtonText('编辑').onClick(() => {
+          this.editingAgentId = a.id
+          this.display()
+        }),
+      )
+      row.addButton((b) =>
+        b.setButtonText('删除').setWarning().onClick(async () => {
+          const ok = await new ConfirmModal(this.app, `删除智能体 ${a.name}？`, '删除').ask()
+          if (!ok) return
+          settings.agents = settings.agents.filter((x) => x.id !== a.id)
+          if (settings.activeAgentId === a.id) settings.activeAgentId = 'edit'
+          if (this.editingAgentId === a.id) this.editingAgentId = ''
+          await this.plugin.saveSettings()
+          this.display()
+        }),
+      )
+    }
+    new Setting(c).addButton((b) =>
+      b.setButtonText('＋ 添加自定义智能体').onClick(() => {
+        const id = `agent-${Date.now()}`
+        settings.agents.push({ id, name: '新智能体', mode: 'edit', description: '', capabilities: [] })
+        this.editingAgentId = id
+        this.display()
+      }),
+    )
+
+    // 编辑区
+    const editing = settings.agents.find((a) => a.id === this.editingAgentId)
+    if (editing) this.renderAgentEditor(c, editing, allTools)
+  }
+
+  private renderAgentEditor(c: HTMLElement, agent: AgentPreset, allTools: string[]): void {
+    const { settings } = this.plugin
+    c.createEl('h5', { text: `编辑：${agent.name}` })
+    new Setting(c)
+      .setName('名称')
+      .addText((t) =>
+        t.setValue(agent.name).onChange(async (v) => {
+          agent.name = v.trim() || '未命名'
+          await this.plugin.saveSettings()
+        }),
+      )
+    new Setting(c)
+      .setName('描述')
+      .addText((t) =>
+        t.setValue(agent.description ?? '').onChange(async (v) => {
+          agent.description = v.trim()
+          await this.plugin.saveSettings()
+        }),
+      )
+    new Setting(c)
+      .setName('基础模式')
+      .setDesc('未勾选能力时按此模式过滤工具')
+      .addDropdown((d) =>
+        d
+          .addOption('chat', '对话')
+          .addOption('edit', '修编')
+          .addOption('create', '创造')
+          .setValue(agent.mode)
+          .onChange(async (v) => {
+            agent.mode = v as AgentMode
+            await this.plugin.saveSettings()
+          }),
+      )
+    new Setting(c)
+      .setName('可调用的能力')
+      .setDesc('勾选 = 白名单（仅这些工具可用）；不勾选任何项 = 按基础模式默认')
+    const caps = agent.capabilities ?? []
+    for (const tool of allTools) {
+      new Setting(c)
+        .setName(tool)
+        .addToggle((t) =>
+          t.setValue(caps.includes(tool)).onChange(async (v) => {
+            if (v) {
+              if (!caps.includes(tool)) caps.push(tool)
+            } else {
+              agent.capabilities = caps.filter((x) => x !== tool)
+            }
+            agent.capabilities = caps.length ? caps : undefined
+            await this.plugin.saveSettings()
+          }),
+        )
+    }
+    new Setting(c).addButton((b) =>
+      b.setButtonText('完成').setCta().onClick(() => {
+        this.editingAgentId = ''
+        this.display()
+      }),
+    )
   }
 
   // ---------- 审批 ----------

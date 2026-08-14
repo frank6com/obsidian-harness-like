@@ -3,6 +3,23 @@ import type { GrantRecord, LogLevel } from '@dsh-obsidian/harness-base'
 /** 智能体模式（对齐 dsh 的预设模式） */
 export type AgentMode = 'chat' | 'edit' | 'create'
 
+/** 智能体预设：内置（chat/edit/create）或用户自定义 */
+export interface AgentPreset {
+  id: string
+  name: string
+  /** 基础模式（决定默认工具范围） */
+  mode: AgentMode
+  description?: string
+  /** 自定义智能体：勾选的能力（工具名白名单）；空 = 按 mode 默认 */
+  capabilities?: string[]
+}
+
+export const BUILTIN_AGENTS: AgentPreset[] = [
+  { id: 'chat', name: '对话', mode: 'chat', description: '仅对话与读取信息' },
+  { id: 'edit', name: '修编', mode: 'edit', description: '可读写笔记（默认）' },
+  { id: 'create', name: '创造', mode: 'create', description: '完整能力（可创建插件）' },
+]
+
 export const AGENT_MODE_LABELS: Record<AgentMode, string> = {
   chat: '对话',
   edit: '修编',
@@ -36,8 +53,10 @@ export interface DshSettings {
   providers: ProviderConfig[]
   /** 默认模型（"providerId/model" 粒度），新会话兜底 */
   defaultModelId: string
-  /** 智能体模式：chat=仅对话/只读；edit=可读写笔记；create=完整能力（含插件创建） */
-  agentMode: AgentMode
+  /** 智能体预设列表（内置 + 自定义） */
+  agents: AgentPreset[]
+  /** 当前激活的智能体 id */
+  activeAgentId: string
   /** 写操作审批默认模式（ask = 每次询问；deny = 默认拒绝） */
   approvalDefault: 'ask' | 'deny'
   /** 目录级审批白名单：这些目录下的写操作免审批（vault 相对路径，如 Inbox） */
@@ -71,7 +90,8 @@ export function defaultSettings(): DshSettings {
   return {
     providers: [{ ...DEFAULT_PROVIDER, models: [...DEFAULT_PROVIDER.models] }],
     defaultModelId: 'deepseek/deepseek-chat',
-    agentMode: 'edit',
+    agents: BUILTIN_AGENTS.map((a) => ({ ...a })),
+    activeAgentId: 'edit',
     approvalDefault: 'ask',
     writeAllowDirs: [],
     toolPolicy: [],
@@ -160,9 +180,22 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): DshSe
     base.defaultModelId = `${first.id}/${first.models[0] ?? 'deepseek-chat'}`
   }
 
-  base.agentMode = (['chat', 'edit', 'create'] as const).includes(r.agentMode as never)
+  // 智能体：agents 数组优先，其次旧 agentMode 迁移
+  const agents = Array.isArray(r.agents)
+    ? (r.agents as AgentPreset[]).filter((a) => a && typeof a.id === 'string')
+    : []
+  base.agents = agents.length
+    ? agents
+    : BUILTIN_AGENTS.map((a) => ({ ...a }))
+  const legacyMode = (['chat', 'edit', 'create'] as const).includes(r.agentMode as never)
     ? (r.agentMode as AgentMode)
     : 'edit'
+  base.activeAgentId =
+    typeof r.activeAgentId === 'string' && base.agents.some((a) => a.id === r.activeAgentId)
+      ? (r.activeAgentId as string)
+      : typeof r.activeAgentId === 'string'
+        ? (r.activeAgentId as string)
+        : legacyMode
   base.approvalDefault = r.approvalDefault === 'deny' ? 'deny' : 'ask'
   base.writeAllowDirs = Array.isArray(r.writeAllowDirs) ? (r.writeAllowDirs as string[]) : []
   base.toolPolicy = Array.isArray(r.toolPolicy) ? (r.toolPolicy as string[]) : []

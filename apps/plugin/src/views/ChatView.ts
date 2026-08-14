@@ -6,7 +6,7 @@
  * 流式光标、错误重试、列表可收起、发送中禁用与中止。
  */
 
-import { ItemView, WorkspaceLeaf } from 'obsidian'
+import { ItemView, Menu, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import {
   runAgentLoop,
@@ -15,8 +15,8 @@ import {
   type ToolExecution,
 } from '@dsh-obsidian/harness-base'
 import { attachCodeCopyButtons, renderMarkdown } from '../markdown'
-import { modeAllows } from '../mode'
-import type { AgentMode } from '../settings'
+import { agentAllows } from '../mode'
+import type { AgentPreset } from '../settings'
 import { safeFileName, sessionToMarkdown } from '../export'
 import { ConfirmModal } from '../modals'
 
@@ -40,7 +40,7 @@ export class ChatView extends ItemView {
   private sessions = new Map<string, SessionMeta>()
   private sessionModels = new Map<string, string>()
   private modelSelect!: HTMLSelectElement
-  private modeBtns!: Map<string, HTMLButtonElement>
+  private agentBtn!: HTMLButtonElement
   private root!: HTMLElement
   private listEl!: HTMLElement
   private messagesEl!: HTMLElement
@@ -111,30 +111,12 @@ export class ChatView extends ItemView {
     // 阶段状态条（思考/工具/等待审批/已停止）
     this.phaseEl = this.root.createDiv({ cls: 'dsh-phase', text: '' })
 
-    // 工具栏：智能体模式（分段控件）+ 模型选择（成熟 AI 工具的输入区布局）
+    // 工具栏：智能体（上拉选择）+ 模型选择（成熟 AI 工具的输入区布局）
     const toolbar = this.root.createDiv({ cls: 'dsh-chat-toolbar' })
-    const modeGroup = toolbar.createDiv({ cls: 'dsh-mode-group' })
-    const modes: Array<{ id: AgentMode; label: string; title: string }> = [
-      { id: 'chat', label: '对话', title: '仅对话与读取信息' },
-      { id: 'edit', label: '修编', title: '可读写笔记（默认）' },
-      { id: 'create', label: '创造', title: '完整能力（可创建插件）' },
-    ]
-    const currentMode = this.ctx.settings.get('agentMode', 'edit') as AgentMode
-    this.modeBtns = new Map()
-    for (const m of modes) {
-      const btn = modeGroup.createEl('button', {
-        cls: 'dsh-mode-btn' + (m.id === currentMode ? ' is-active' : ''),
-        attr: { title: m.title },
-        text: m.label,
-      })
-      this.modeBtns.set(m.id, btn)
-      btn.onclick = () => {
-        if ((this.ctx.settings.get('agentMode', 'edit') as AgentMode) === m.id) return
-        this.ctx.settings.set('agentMode', m.id)
-        for (const [id, el] of this.modeBtns!) el.classList.toggle('is-active', id === m.id)
-        this.ctx.notice.notice(`已切换到「${m.label}」模式：${m.title}`)
-      }
-    }
+    this.agentBtn = toolbar.createEl('button', { cls: 'dsh-btn dsh-agent-btn' })
+    this.refreshAgentBtn()
+    this.agentBtn.onclick = (e) => this.openAgentMenu(e)
+
     this.modelSelect = toolbar.createEl('select', { cls: 'dsh-model-select' })
     this.buildModelOptions()
     this.modelSelect.addEventListener('change', () => {
@@ -366,13 +348,13 @@ export class ChatView extends ItemView {
 
       const streaming = this.ctx.settings.get('streamingEnabled', true)
 
-      const mode = this.ctx.settings.get('agentMode', 'edit') as AgentMode
+      const agent = this.activeAgent()
 
       await runAgentLoop({
         sessionId,
         llm: this.ctx.llmCaller,
         tools: {
-          list: () => this.ctx.toolsCompat.list().filter((t) => modeAllows(mode, t.name)),
+          list: () => this.ctx.toolsCompat.list().filter((t) => agentAllows(agent, t.name)),
         },
         executeTool: (name, input) => this.executeTool(name, input),
         onEvent: sink,
@@ -407,9 +389,9 @@ export class ChatView extends ItemView {
   }
 
   private async executeTool(name: string, input: Record<string, unknown>): Promise<ToolExecution> {
-    const mode = this.ctx.settings.get('agentMode', 'edit') as AgentMode
-    if (!modeAllows(mode, name)) {
-      return { ok: false, error: `当前「${mode}」模式不允许使用工具 ${name}` }
+    const agent = this.activeAgent()
+    if (!agentAllows(agent, name)) {
+      return { ok: false, error: `当前智能体「${agent?.name ?? '未知'}」不允许使用工具 ${name}` }
     }
     try {
       const result = await this.ctx.toolsCompat.execute({
@@ -481,6 +463,45 @@ export class ChatView extends ItemView {
     const p = providers.find((x) => x.id === defaultId) ?? providers[0]
     if (!p) return ''
     return `${p.id}/${p.models?.length ? p.models[0] : p.model ?? ''}`
+  }
+
+  /** 当前激活的智能体预设 */
+  private activeAgent(): AgentPreset | undefined {
+    const agents = this.ctx.settings.get('agents', [] as AgentPreset[])
+    const activeId = this.ctx.settings.get('activeAgentId', 'edit') as string
+    return agents.find((a) => a.id === activeId) ?? agents[0]
+  }
+
+  private refreshAgentBtn(): void {
+    const agent = this.activeAgent()
+    this.agentBtn.setText(`${agent?.name ?? '智能体'} ▾`)
+    this.agentBtn.setAttr('title', agent?.description ?? '')
+  }
+
+  /** 上拉选择智能体（Obsidian Menu） */
+  private openAgentMenu(ev: MouseEvent): void {
+    const agents = this.ctx.settings.get('agents', [] as AgentPreset[])
+    const activeId = this.ctx.settings.get('activeAgentId', 'edit') as string
+    const menu = new Menu()
+    for (const a of agents) {
+      menu.addItem((item) =>
+        item
+          .setTitle(a.description ? `${a.name} — ${a.description}` : a.name)
+          .setChecked(a.id === activeId)
+          .onClick(() => {
+            this.ctx.settings.set('activeAgentId', a.id)
+            this.refreshAgentBtn()
+            this.ctx.notice.notice(`已切换到智能体「${a.name}」${a.description ? '：' + a.description : ''}`)
+          }),
+      )
+    }
+    menu.addSeparator()
+    menu.addItem((item) =>
+      item.setTitle('管理智能体…').onClick(() => {
+        ;(this.app as unknown as { setting: { open(): void } }).setting.open()
+      }),
+    )
+    menu.showAtMouseEvent(ev)
   }
 
   /** 开始新会话：回到空状态，绑定清零 */
