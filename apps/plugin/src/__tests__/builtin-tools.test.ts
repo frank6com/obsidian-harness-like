@@ -113,9 +113,10 @@ describe('open_in_browser（沙箱 + 绝对路径）', () => {
 describe('insert_to_editor', () => {
   it('无活动编辑器时报错', async () => {
     const { ctx } = await setup()
-    await expect(
+    // execute 为同步函数，同步抛错；agent 循环内由 executeTool 的 try/catch 兜底
+    expect(() =>
       ctx.tools.get('insert_to_editor')!.execute({ content: 'x' }),
-    ).rejects.toThrow('当前没有打开的编辑器')
+    ).toThrow('当前没有打开的编辑器')
   })
 
   it('有编辑器时插入到光标处', async () => {
