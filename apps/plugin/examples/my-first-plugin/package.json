@@ -1,0 +1,13 @@
+{
+  "name": "my-first-plugin",
+  "version": "0.0.1",
+  "description": "dsh-obsidian 示例插件：注册一个工具和一条命令",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --external:@deepseek-ai/cordis --format=cjs --platform=node --outfile=main.js"
+  },
+  "dsh": {
+    "id": "my-first-plugin",
+    "version": "0.0.1",
+    "entry": "main.js"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "dsh-obsidian",
+  "name": "dsh-obsidian",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "DeepSeek Harness for Obsidian：在 Obsidian 内运行 Cordis 插件体系与 agent，用户插件可直接扩展命令、工具与面板。",
+  "author": "dsh-obsidian",
+  "isDesktopOnly": true
+}

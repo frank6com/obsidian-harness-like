@@ -1,0 +1,866 @@
+[
+  {
+    "name": "AGENTS.md",
+    "path": "packages/AGENTS.md",
+    "sha": "eb75c9acb895035abb1901876e889a5eff29e2cd",
+    "size": 5876,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/AGENTS.md?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/AGENTS.md",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/eb75c9acb895035abb1901876e889a5eff29e2cd",
+    "download_url": "https://raw.githubusercontent.com/deepseek-ai/deepseek-harness/master/packages/AGENTS.md",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/AGENTS.md?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/eb75c9acb895035abb1901876e889a5eff29e2cd",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/AGENTS.md"
+    }
+  },
+  {
+    "name": "CLAUDE.md",
+    "path": "packages/CLAUDE.md",
+    "sha": "47dc3e3d863cfb5727b87d785d09abf9743c0a72",
+    "size": 9,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/CLAUDE.md?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/CLAUDE.md",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/47dc3e3d863cfb5727b87d785d09abf9743c0a72",
+    "download_url": "https://raw.githubusercontent.com/deepseek-ai/deepseek-harness/master/packages/CLAUDE.md",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/CLAUDE.md?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/47dc3e3d863cfb5727b87d785d09abf9743c0a72",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/CLAUDE.md"
+    }
+  },
+  {
+    "name": "README.i18n.yaml",
+    "path": "packages/README.i18n.yaml",
+    "sha": "cdc54282343b10ace79a53aedea217e216e34747",
+    "size": 418,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/README.i18n.yaml?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/README.i18n.yaml",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/cdc54282343b10ace79a53aedea217e216e34747",
+    "download_url": "https://raw.githubusercontent.com/deepseek-ai/deepseek-harness/master/packages/README.i18n.yaml",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/README.i18n.yaml?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/cdc54282343b10ace79a53aedea217e216e34747",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/README.i18n.yaml"
+    }
+  },
+  {
+    "name": "README.md",
+    "path": "packages/README.md",
+    "sha": "7904ec1fea8dbab361fcd90b2b32f1c743ce5537",
+    "size": 7776,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/README.md?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/README.md",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/7904ec1fea8dbab361fcd90b2b32f1c743ce5537",
+    "download_url": "https://raw.githubusercontent.com/deepseek-ai/deepseek-harness/master/packages/README.md",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/README.md?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/7904ec1fea8dbab361fcd90b2b32f1c743ce5537",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/README.md"
+    }
+  },
+  {
+    "name": "README.zh.md",
+    "path": "packages/README.zh.md",
+    "sha": "c39b65dad7e9c277779a85d7327982597628e007",
+    "size": 7517,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/README.zh.md?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/README.zh.md",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/c39b65dad7e9c277779a85d7327982597628e007",
+    "download_url": "https://raw.githubusercontent.com/deepseek-ai/deepseek-harness/master/packages/README.zh.md",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/README.zh.md?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/blobs/c39b65dad7e9c277779a85d7327982597628e007",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/README.zh.md"
+    }
+  },
+  {
+    "name": "acp",
+    "path": "packages/acp",
+    "sha": "bf333fc6a05083e194889bcd7e3ee063fd7209bb",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/acp?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/acp",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/bf333fc6a05083e194889bcd7e3ee063fd7209bb",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/acp?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/bf333fc6a05083e194889bcd7e3ee063fd7209bb",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/acp"
+    }
+  },
+  {
+    "name": "api",
+    "path": "packages/api",
+    "sha": "63183c42baf6161cce48a36d939faf08a91d1b76",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/api?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/api",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/63183c42baf6161cce48a36d939faf08a91d1b76",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/api?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/63183c42baf6161cce48a36d939faf08a91d1b76",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/api"
+    }
+  },
+  {
+    "name": "attachment",
+    "path": "packages/attachment",
+    "sha": "1077221043cf12d19f205cff8b2ce24b92b98847",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/attachment?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/attachment",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/1077221043cf12d19f205cff8b2ce24b92b98847",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/attachment?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/1077221043cf12d19f205cff8b2ce24b92b98847",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/attachment"
+    }
+  },
+  {
+    "name": "boot",
+    "path": "packages/boot",
+    "sha": "42abbabec8de54eb5bcf0e3959965ce59fbf7b2c",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/boot?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/boot",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/42abbabec8de54eb5bcf0e3959965ce59fbf7b2c",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/boot?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/42abbabec8de54eb5bcf0e3959965ce59fbf7b2c",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/boot"
+    }
+  },
+  {
+    "name": "bundle",
+    "path": "packages/bundle",
+    "sha": "cdb4e1ff7a88acef887afc966e5424941a846c2b",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/bundle?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/bundle",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/cdb4e1ff7a88acef887afc966e5424941a846c2b",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/bundle?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/cdb4e1ff7a88acef887afc966e5424941a846c2b",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/bundle"
+    }
+  },
+  {
+    "name": "client",
+    "path": "packages/client",
+    "sha": "b18872e93713f16f30f2830d0d88210968cd4363",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/client?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/client",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/b18872e93713f16f30f2830d0d88210968cd4363",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/client?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/b18872e93713f16f30f2830d0d88210968cd4363",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/client"
+    }
+  },
+  {
+    "name": "code-runtime",
+    "path": "packages/code-runtime",
+    "sha": "98211ec4d17028bc02385232c93f54b95e54208d",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/code-runtime?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/code-runtime",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/98211ec4d17028bc02385232c93f54b95e54208d",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/code-runtime?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/98211ec4d17028bc02385232c93f54b95e54208d",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/code-runtime"
+    }
+  },
+  {
+    "name": "compaction",
+    "path": "packages/compaction",
+    "sha": "7f896c68efe50463c5441eff07014791d0395278",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/compaction?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/compaction",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/7f896c68efe50463c5441eff07014791d0395278",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/compaction?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/7f896c68efe50463c5441eff07014791d0395278",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/compaction"
+    }
+  },
+  {
+    "name": "context",
+    "path": "packages/context",
+    "sha": "73c3fcf80b20e503830cbfde17aeb01e57e2b6eb",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/context?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/context",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/73c3fcf80b20e503830cbfde17aeb01e57e2b6eb",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/context?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/73c3fcf80b20e503830cbfde17aeb01e57e2b6eb",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/context"
+    }
+  },
+  {
+    "name": "core",
+    "path": "packages/core",
+    "sha": "88d795a542270ca0671181f7c4b6fd4d0334af36",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/core?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/core",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/88d795a542270ca0671181f7c4b6fd4d0334af36",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/core?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/88d795a542270ca0671181f7c4b6fd4d0334af36",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/core"
+    }
+  },
+  {
+    "name": "credentials",
+    "path": "packages/credentials",
+    "sha": "f213f9f200b0c390f20c4cfba811c13155816be6",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/credentials?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/credentials",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/f213f9f200b0c390f20c4cfba811c13155816be6",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/credentials?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/f213f9f200b0c390f20c4cfba811c13155816be6",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/credentials"
+    }
+  },
+  {
+    "name": "e2b",
+    "path": "packages/e2b",
+    "sha": "df5e6a2ddd33fb2e85ca7ebc8f69748b6eaeaae4",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/e2b?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/e2b",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/df5e6a2ddd33fb2e85ca7ebc8f69748b6eaeaae4",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/e2b?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/df5e6a2ddd33fb2e85ca7ebc8f69748b6eaeaae4",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/e2b"
+    }
+  },
+  {
+    "name": "examples",
+    "path": "packages/examples",
+    "sha": "93d8c5ab601cfa16f25e5576946852ccc5627144",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/examples?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/examples",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/93d8c5ab601cfa16f25e5576946852ccc5627144",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/examples?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/93d8c5ab601cfa16f25e5576946852ccc5627144",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/examples"
+    }
+  },
+  {
+    "name": "extensions",
+    "path": "packages/extensions",
+    "sha": "145537ba8a254ae1c08a929f7aa9c2601f3e7da8",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/extensions?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/extensions",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/145537ba8a254ae1c08a929f7aa9c2601f3e7da8",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/extensions?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/145537ba8a254ae1c08a929f7aa9c2601f3e7da8",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/extensions"
+    }
+  },
+  {
+    "name": "feedback",
+    "path": "packages/feedback",
+    "sha": "763a6ea8f48de0f7d8451ca0424f9bc7c029b0ab",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/feedback?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/feedback",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/763a6ea8f48de0f7d8451ca0424f9bc7c029b0ab",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/feedback?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/763a6ea8f48de0f7d8451ca0424f9bc7c029b0ab",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/feedback"
+    }
+  },
+  {
+    "name": "fs",
+    "path": "packages/fs",
+    "sha": "f4ef60ea162112717e6f8af6337d83e52c9f5842",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/fs?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/fs",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/f4ef60ea162112717e6f8af6337d83e52c9f5842",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/fs?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/f4ef60ea162112717e6f8af6337d83e52c9f5842",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/fs"
+    }
+  },
+  {
+    "name": "goal",
+    "path": "packages/goal",
+    "sha": "b55e4143bf433785b0b66f368fb9cc2841078a67",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/goal?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/goal",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/b55e4143bf433785b0b66f368fb9cc2841078a67",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/goal?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/b55e4143bf433785b0b66f368fb9cc2841078a67",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/goal"
+    }
+  },
+  {
+    "name": "guard",
+    "path": "packages/guard",
+    "sha": "f5d758cedcf42d442411468dcba198c6f730084a",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/guard?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/guard",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/f5d758cedcf42d442411468dcba198c6f730084a",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/guard?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/f5d758cedcf42d442411468dcba198c6f730084a",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/guard"
+    }
+  },
+  {
+    "name": "hooks",
+    "path": "packages/hooks",
+    "sha": "77cbc8d15bf603fdf0d7b4ee07460456fde5cbfc",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/hooks?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/hooks",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/77cbc8d15bf603fdf0d7b4ee07460456fde5cbfc",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/hooks?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/77cbc8d15bf603fdf0d7b4ee07460456fde5cbfc",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/hooks"
+    }
+  },
+  {
+    "name": "host",
+    "path": "packages/host",
+    "sha": "09b25afbe568fbdeb49b42dc5ca09bc9c8083dde",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/host?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/host",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/09b25afbe568fbdeb49b42dc5ca09bc9c8083dde",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/host?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/09b25afbe568fbdeb49b42dc5ca09bc9c8083dde",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/host"
+    }
+  },
+  {
+    "name": "identity",
+    "path": "packages/identity",
+    "sha": "ba10fa6c5e08d1361909c7a22b4d19e33444d9de",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/identity?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/identity",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/ba10fa6c5e08d1361909c7a22b4d19e33444d9de",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/identity?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/ba10fa6c5e08d1361909c7a22b4d19e33444d9de",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/identity"
+    }
+  },
+  {
+    "name": "interaction",
+    "path": "packages/interaction",
+    "sha": "cb01e4ec0ca5d609eda160c92e68dc5e0cfaa0dc",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/interaction?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/interaction",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/cb01e4ec0ca5d609eda160c92e68dc5e0cfaa0dc",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/interaction?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/cb01e4ec0ca5d609eda160c92e68dc5e0cfaa0dc",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/interaction"
+    }
+  },
+  {
+    "name": "jobs",
+    "path": "packages/jobs",
+    "sha": "8e2926fec47d61d26c8ed66950610bc234e361f4",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/jobs?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/jobs",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/8e2926fec47d61d26c8ed66950610bc234e361f4",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/jobs?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/8e2926fec47d61d26c8ed66950610bc234e361f4",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/jobs"
+    }
+  },
+  {
+    "name": "llm",
+    "path": "packages/llm",
+    "sha": "49feb70292bace6ccd002cbf1131becd70ac8fa2",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/llm?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/llm",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/49feb70292bace6ccd002cbf1131becd70ac8fa2",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/llm?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/49feb70292bace6ccd002cbf1131becd70ac8fa2",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/llm"
+    }
+  },
+  {
+    "name": "lsp",
+    "path": "packages/lsp",
+    "sha": "58d810d48f5b099f85eee52e9709f1cca1639b58",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/lsp?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/lsp",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/58d810d48f5b099f85eee52e9709f1cca1639b58",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/lsp?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/58d810d48f5b099f85eee52e9709f1cca1639b58",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/lsp"
+    }
+  },
+  {
+    "name": "mcp",
+    "path": "packages/mcp",
+    "sha": "a174f3b97b099dde08f557b2c4a38b0da1846dc8",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/mcp?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/a174f3b97b099dde08f557b2c4a38b0da1846dc8",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/mcp?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/a174f3b97b099dde08f557b2c4a38b0da1846dc8",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp"
+    }
+  },
+  {
+    "name": "plan",
+    "path": "packages/plan",
+    "sha": "9ae34df43e1a4d5d6746166cbf21bf431d5cded1",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/plan?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/plan",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/9ae34df43e1a4d5d6746166cbf21bf431d5cded1",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/plan?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/9ae34df43e1a4d5d6746166cbf21bf431d5cded1",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/plan"
+    }
+  },
+  {
+    "name": "preset",
+    "path": "packages/preset",
+    "sha": "fc2a4ec6aa466570e26b0a9f64f5b9a3a2cf1693",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/preset?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/preset",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/fc2a4ec6aa466570e26b0a9f64f5b9a3a2cf1693",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/preset?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/fc2a4ec6aa466570e26b0a9f64f5b9a3a2cf1693",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/preset"
+    }
+  },
+  {
+    "name": "runtime-diagnostics",
+    "path": "packages/runtime-diagnostics",
+    "sha": "40d5b40186faddabe6273e9432c68869b370a80d",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/runtime-diagnostics?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/runtime-diagnostics",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/40d5b40186faddabe6273e9432c68869b370a80d",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/runtime-diagnostics?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/40d5b40186faddabe6273e9432c68869b370a80d",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/runtime-diagnostics"
+    }
+  },
+  {
+    "name": "sandbox",
+    "path": "packages/sandbox",
+    "sha": "427328fef79b5483a5184a5f82dcbd4a2020b809",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/sandbox?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/sandbox",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/427328fef79b5483a5184a5f82dcbd4a2020b809",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/sandbox?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/427328fef79b5483a5184a5f82dcbd4a2020b809",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/sandbox"
+    }
+  },
+  {
+    "name": "schedule",
+    "path": "packages/schedule",
+    "sha": "73dd2f24c70d439d2d2f44f8a43c2d914b08b475",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/schedule?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/schedule",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/73dd2f24c70d439d2d2f44f8a43c2d914b08b475",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/schedule?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/73dd2f24c70d439d2d2f44f8a43c2d914b08b475",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/schedule"
+    }
+  },
+  {
+    "name": "sdk",
+    "path": "packages/sdk",
+    "sha": "fb5fa68a77d86a8c10e0c3c881c932364e7e323b",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/sdk?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/sdk",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/fb5fa68a77d86a8c10e0c3c881c932364e7e323b",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/sdk?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/fb5fa68a77d86a8c10e0c3c881c932364e7e323b",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/sdk"
+    }
+  },
+  {
+    "name": "session-query",
+    "path": "packages/session-query",
+    "sha": "d831d57ef6d590a290bb610ab2b2f4e042418226",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/session-query?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/session-query",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/d831d57ef6d590a290bb610ab2b2f4e042418226",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/session-query?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/d831d57ef6d590a290bb610ab2b2f4e042418226",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/session-query"
+    }
+  },
+  {
+    "name": "session",
+    "path": "packages/session",
+    "sha": "fb748bdc9c76e28f0e26a39cfa1477504f8c11e8",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/session?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/session",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/fb748bdc9c76e28f0e26a39cfa1477504f8c11e8",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/session?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/fb748bdc9c76e28f0e26a39cfa1477504f8c11e8",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/session"
+    }
+  },
+  {
+    "name": "settings",
+    "path": "packages/settings",
+    "sha": "95edd138ddd5eb827c9420169238f08d615fe8d1",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/settings?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/settings",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/95edd138ddd5eb827c9420169238f08d615fe8d1",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/settings?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/95edd138ddd5eb827c9420169238f08d615fe8d1",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/settings"
+    }
+  },
+  {
+    "name": "shell",
+    "path": "packages/shell",
+    "sha": "bffddda93746cbf6ec8be93793ac099715470e38",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/shell?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/shell",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/bffddda93746cbf6ec8be93793ac099715470e38",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/shell?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/bffddda93746cbf6ec8be93793ac099715470e38",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/shell"
+    }
+  },
+  {
+    "name": "skill",
+    "path": "packages/skill",
+    "sha": "87706ae345487dee4c6f23e5d12e85f6f59a2a52",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/skill?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/skill",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/87706ae345487dee4c6f23e5d12e85f6f59a2a52",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/skill?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/87706ae345487dee4c6f23e5d12e85f6f59a2a52",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/skill"
+    }
+  },
+  {
+    "name": "spill",
+    "path": "packages/spill",
+    "sha": "b10b45fcd63a46f580292581f19d4bd5ea6252e4",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/spill?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/spill",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/b10b45fcd63a46f580292581f19d4bd5ea6252e4",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/spill?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/b10b45fcd63a46f580292581f19d4bd5ea6252e4",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/spill"
+    }
+  },
+  {
+    "name": "storage",
+    "path": "packages/storage",
+    "sha": "e0499476a3f0f4e1a0bc10799e43202572314356",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/storage?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/storage",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/e0499476a3f0f4e1a0bc10799e43202572314356",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/storage?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/e0499476a3f0f4e1a0bc10799e43202572314356",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/storage"
+    }
+  },
+  {
+    "name": "subagent",
+    "path": "packages/subagent",
+    "sha": "132a0027bbcf13dded917e4fb9ba602f91a778b4",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/subagent?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/subagent",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/132a0027bbcf13dded917e4fb9ba602f91a778b4",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/subagent?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/132a0027bbcf13dded917e4fb9ba602f91a778b4",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/subagent"
+    }
+  },
+  {
+    "name": "subprocess",
+    "path": "packages/subprocess",
+    "sha": "3f3bf494ec59ef9cfe1071be367279a27741c748",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/subprocess?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/subprocess",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/3f3bf494ec59ef9cfe1071be367279a27741c748",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/subprocess?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/3f3bf494ec59ef9cfe1071be367279a27741c748",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/subprocess"
+    }
+  },
+  {
+    "name": "terminal",
+    "path": "packages/terminal",
+    "sha": "fbf0d26d1bc4c5a79d3eff1badd443d0485dfa6d",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/terminal?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/terminal",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/fbf0d26d1bc4c5a79d3eff1badd443d0485dfa6d",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/terminal?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/fbf0d26d1bc4c5a79d3eff1badd443d0485dfa6d",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/terminal"
+    }
+  },
+  {
+    "name": "test-support",
+    "path": "packages/test-support",
+    "sha": "e317f8da52f703e681b4c360a2332e0c62e54371",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/test-support?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/test-support",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/e317f8da52f703e681b4c360a2332e0c62e54371",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/test-support?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/e317f8da52f703e681b4c360a2332e0c62e54371",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/test-support"
+    }
+  },
+  {
+    "name": "todo",
+    "path": "packages/todo",
+    "sha": "1bb5b88dd94dbc59ff829d72fb510cb592f90e43",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/todo?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/todo",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/1bb5b88dd94dbc59ff829d72fb510cb592f90e43",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/todo?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/1bb5b88dd94dbc59ff829d72fb510cb592f90e43",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/todo"
+    }
+  },
+  {
+    "name": "typert",
+    "path": "packages/typert",
+    "sha": "bb6fd587b9e9f6dc642387940c4f4fd5c25d596b",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/typert?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/typert",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/bb6fd587b9e9f6dc642387940c4f4fd5c25d596b",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/typert?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/bb6fd587b9e9f6dc642387940c4f4fd5c25d596b",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/typert"
+    }
+  },
+  {
+    "name": "util",
+    "path": "packages/util",
+    "sha": "46f297c6e7722e3dc375bcbb80d1cb034bdea64d",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/util?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/util",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/46f297c6e7722e3dc375bcbb80d1cb034bdea64d",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/util?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/46f297c6e7722e3dc375bcbb80d1cb034bdea64d",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/util"
+    }
+  },
+  {
+    "name": "web",
+    "path": "packages/web",
+    "sha": "f88fada38a31c130d5c59375e37803bd5f69abcc",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/web?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/web",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/f88fada38a31c130d5c59375e37803bd5f69abcc",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/web?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/f88fada38a31c130d5c59375e37803bd5f69abcc",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/web"
+    }
+  },
+  {
+    "name": "workflow",
+    "path": "packages/workflow",
+    "sha": "0529da9f51db5f0fd85bc7c6e50bff2c4aec14d9",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/workflow?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/workflow",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/0529da9f51db5f0fd85bc7c6e50bff2c4aec14d9",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/workflow?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/0529da9f51db5f0fd85bc7c6e50bff2c4aec14d9",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/workflow"
+    }
+  },
+  {
+    "name": "workspace",
+    "path": "packages/workspace",
+    "sha": "bf243f7aa4b0f61b43875b6a1c1b957e2928e48e",
+    "size": 0,
+    "url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/workspace?ref=master",
+    "html_url": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/workspace",
+    "git_url": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/bf243f7aa4b0f61b43875b6a1c1b957e2928e48e",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/deepseek-ai/deepseek-harness/contents/packages/workspace?ref=master",
+      "git": "https://api.github.com/repos/deepseek-ai/deepseek-harness/git/trees/bf243f7aa4b0f61b43875b6a1c1b957e2928e48e",
+      "html": "https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/workspace"
+    }
+  }
+]

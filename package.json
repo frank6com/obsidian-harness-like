@@ -1,0 +1,20 @@
+{
+  "name": "dsh-obsidian",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "scripts": {
+    "build": "pnpm --filter dsh-obsidian-plugin build",
+    "dev": "pnpm --filter dsh-obsidian-plugin dev",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p packages/harness-base/tsconfig.json && tsc --noEmit -p packages/obsidian-adapter/tsconfig.json && tsc --noEmit -p packages/plugin-runtime/tsconfig.json && tsc --noEmit -p apps/plugin/tsconfig.json"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
