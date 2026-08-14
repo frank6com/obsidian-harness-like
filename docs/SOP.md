@@ -16,16 +16,21 @@
 
 ## 2. 每日开发循环
 
+**主流程（项目内测试库，零污染）**：
+
 ```sh
-pnpm dev                      # esbuild watch，输出 apps/plugin/dist/main.js（终端 1）
-pnpm link:vault <dev-vault>   # 文件级软链接入测试 vault（幂等；可设 DEV_VAULT 环境变量）
+pnpm init:vault      # 首次：初始化 dev-vault/（示例笔记+示例插件+同步产物）
+open -a Obsidian dev-vault
+pnpm dev             # watch 构建；onEnd 钩子自动把产物同步进 dev-vault 插件目录
 ```
 
-1. `link:vault` 在 vault 侧建立真实插件目录，仅软链 `main.js` / `manifest.json` / `styles.css` / `versions.json` 四个产物——**禁止目录级软链**（会把 `data.json` 穿透进仓库）。
-2. hot-reload 自动重载；对软链不敏感时手动 `Cmd+R` 或使用 hot-reload 的重载命令。
-3. DevTools（`Cmd+Opt+I`）查看 console；常见问题见 §6。
-4. 提交前：`pnpm lint && pnpm test` + 手动验收清单（§5）。
-5. 提交信息规范：`feat|fix|chore(dsh-obsidian|adapter|runtime|ui|docs): 摘要`，中英文均可，附上游版本号（涉及升级时）。
+1. `dev-vault/` 整体被 gitignore；`data.json`、会话（`.obsidian/dsh/`）、示例插件全部落在其中，仓库保持纯净。
+2. 改代码 → esbuild 自动构建并同步 → hot-reload 自动重载；不生效时手动 `Cmd+R`。
+3. 禁止把项目根目录当作 vault 打开（Obsidian 不允许嵌套 vault）；dev-vault 可随时删除重建。
+4. **备选（接真实 vault）**：`pnpm link:vault <vault>` 做文件级软链（禁止目录级软链，会把 `data.json` 穿透进仓库）。
+5. DevTools（`Cmd+Opt+I`）查看 console；常见问题见 §6。
+6. 提交前：`pnpm lint && pnpm test` + 手动验收清单（§5）。
+7. 提交信息规范：`feat|fix|chore(dsh-obsidian|adapter|runtime|ui|docs): 摘要`，中英文均可，附上游版本号（涉及升级时）。
 
 ## 3. 编码规范
 

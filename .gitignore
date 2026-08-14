@@ -5,3 +5,5 @@ dist/
 *.tsbuildinfo
 # Obsidian 插件运行时数据（即使误写也不入库）
 data.json
+# 项目内 Obsidian 测试库（整体忽略）
+dev-vault/

@@ -40,16 +40,25 @@ pnpm test         # vitest 全量
 pnpm build        # 产物构建
 ```
 
-**接入测试 vault（推荐：文件级软链，零复制、不污染仓库）**：
+**项目内测试库（推荐主流程）**：`dev-vault/` 是项目内的 Obsidian 测试库，整个目录被 gitignore 忽略——构建产物、`data.json`、会话、示例插件全部落在其中，仓库零污染：
+
+```sh
+pnpm init:vault           # 初始化 dev-vault（示例笔记 + 示例插件 + 首次构建同步）
+open -a Obsidian dev-vault   # 用 Obsidian 打开测试库
+pnpm dev                  # watch 构建，构建后自动同步产物到 dev-vault 插件目录
+```
+
+构建后的四个产物由 esbuild 的 onEnd 钩子自动写入 `dev-vault/.obsidian/plugins/dsh-obsidian/`（`DEV_VAULT_DIR` 环境变量可改目录），所以日常就是：改代码 → 自动构建 → Obsidian 重载（配合 obsidian-hot-reload 自动刷新）。
+
+**接入真实 vault（替代方案）**：文件级软链，零复制、数据留在 vault 侧：
 
 ```sh
 pnpm dev                      # 终端 1：watch 构建
-pnpm link:vault /path/to/vault   # 把四个产物以软链接入 vault（重复执行幂等）
+pnpm link:vault /path/to/vault   # 把四个产物以软链接入 vault（幂等）
 ```
 
-`link:vault` 在 vault 的 `.obsidian/plugins/dsh-obsidian/` 建立真实目录，只软链 `main.js` / `manifest.json` / `styles.css` / `versions.json`；Obsidian 写入的 `data.json` 会作为真实文件留在 vault 侧，项目目录始终干净。之后在 Obsidian 里重载插件即可看到最新代码（配合 obsidian-hot-reload；若热重载对软链不敏感，用 `Cmd+R` 或 hot-reload 的重载命令）。
-
-> 旧做法（目录级软链）会把 `data.json` 穿透进项目目录，已废弃；如已使用，先删除 vault 侧旧软链再执行 `link:vault`。
+> 注意：`link:vault` 是文件级软链，`data.json` 会在 vault 侧生成真实文件；不要使用目录级软链（会把 `data.json` 穿透进仓库）。
+> 注意：dev-vault 是**可丢弃的测试库**（已 gitignore），不要把真实笔记放进去；也不要再把项目根目录作为 Obsidian vault 打开（Obsidian 不允许 vault 嵌套，dev-vault 在其中会被拒绝）。
 
 ## 仓库结构
 

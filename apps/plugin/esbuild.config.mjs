@@ -1,6 +1,41 @@
 import esbuild from 'esbuild'
+import * as fs from 'fs'
+import * as path from 'path'
+import { fileURLToPath } from 'url'
 
 const watch = process.argv.includes('--watch')
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+const DEV_VAULT_DIR = path.resolve(
+  ROOT,
+  process.env.DEV_VAULT_DIR || 'dev-vault',
+)
+const PLUGIN_DIR = path.join(DEV_VAULT_DIR, '.obsidian', 'plugins', 'dsh-obsidian')
+
+/** 构建后把四个产物同步进 dev-vault 的插件目录（dev-vault 不存在则跳过） */
+function syncDevVault() {
+  if (!fs.existsSync(DEV_VAULT_DIR)) return
+  fs.mkdirSync(PLUGIN_DIR, { recursive: true })
+  for (const name of ['main.js', 'manifest.json', 'styles.css', 'versions.json']) {
+    const src = path.join(ROOT, 'apps', 'plugin', name === 'main.js' ? 'dist/main.js' : name)
+    fs.copyFileSync(src, path.join(PLUGIN_DIR, name))
+  }
+  console.log(`[sync] 产物已同步 → ${PLUGIN_DIR}`)
+}
+
+const syncPlugin = {
+  name: 'sync-dev-vault',
+  setup(build) {
+    build.onEnd((result) => {
+      if (result.errors.length) return
+      try {
+        syncDevVault()
+      } catch (err) {
+        console.warn('[sync] 同步失败:', err)
+      }
+    })
+  },
+}
 
 const options = {
   entryPoints: ['src/main.ts'],
@@ -13,12 +48,13 @@ const options = {
   external: ['obsidian', 'electron'],
   sourcemap: 'inline',
   logLevel: 'info',
+  plugins: [syncPlugin],
 }
 
 if (watch) {
   const ctx = await esbuild.context(options)
   await ctx.watch()
-  console.log('[esbuild] watching…')
+  console.log('[esbuild] watching…（构建后自动同步 dev-vault）')
 } else {
   await esbuild.build(options)
   console.log('[esbuild] built dist/main.js')
