@@ -569,8 +569,7 @@
 }
 
 /* 审批弹窗 */
-.dsh-modal-scope {
-  padding: 0 8px 8px;
+.dsh-modal-scope {  padding: 0 8px 8px;
   color: var(--text-normal);
   font-size: 13px;
 }
@@ -596,4 +595,84 @@
   word-break: break-word;
   background: var(--background-secondary);
   color: var(--text-muted);
+}
+
+/* ===== 设置页 tabs ===== */
+.dsh-settings-nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.dsh-settings-tab {
+  padding: 4px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dsh-settings-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.dsh-settings-tab.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+/* 模型提供方：侧向列表 + 表单 */
+.dsh-provider-layout {
+  display: flex;
+  gap: 16px;
+}
+
+.dsh-provider-list {
+  width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--background-modifier-border);
+  padding-right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dsh-provider-item {
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.dsh-provider-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dsh-provider-item.is-active {
+  border-color: var(--interactive-accent);
+}
+
+.dsh-provider-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.dsh-provider-add {
+  margin-top: 4px;
+  text-align: center;
+}
+
+.dsh-provider-form {
+  flex: 1;
+  min-width: 0;
 }

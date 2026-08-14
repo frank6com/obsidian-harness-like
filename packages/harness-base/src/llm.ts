@@ -122,6 +122,7 @@ export class DeepSeekAdapter extends LlmAdapter {
         'content-type': 'application/json',
         authorization: `Bearer ${apiKey}`,
         ...attributionHeaders(),
+        ...(cfg.extraHeaders ?? {}),
       },
       body: JSON.stringify(body),
       signal: options.signal,

@@ -16,7 +16,14 @@ import { isPathInDirs } from './policy'
 import { obsidianAdapterPlugin } from '@dsh-obsidian/obsidian-adapter'
 import { runtimePlugin } from '@dsh-obsidian/plugin-runtime'
 import { toApiLike } from './obsidian-bridge'
-import { DEFAULT_SETTINGS, type DshSettings } from './settings'
+import {
+  defaultSettings,
+  migrateSettings,
+  parseHeaderLines,
+  parseToolPolicy,
+  type DshSettings,
+  type ProviderConfig,
+} from './settings'
 import { DshSettingsTab } from './settings-tab'
 import { WriteApprovalModal, GrantModal, ConfirmModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
@@ -35,7 +42,7 @@ const cordisShim = (id: string): unknown => {
 }
 
 export default class DshObsidianPlugin extends Plugin {
-  override settings: DshSettings = { ...DEFAULT_SETTINGS }
+  override settings: DshSettings = defaultSettings()
   private ctx: Context | null = null
   private fibers: Array<{ dispose(): Promise<void> }> = []
 
@@ -69,12 +76,24 @@ export default class DshObsidianPlugin extends Plugin {
         }),
       ),
     )
-    // 工具审批（tools/pre-execute 瀑布）：写操作走白名单 + 沙箱 + 弹窗
+    // 工具审批（tools/pre-execute 瀑布）：工具级策略 + 白名单 + 沙箱 + 弹窗
     const approveTool = async (request: {
       name: string
       arguments: unknown
       signal: AbortSignal
     }): Promise<'allow' | 'deny'> => {
+      // 工具级策略覆盖（toolPolicy 配置）
+      const policy = parseToolPolicy(this.settings.toolPolicy).get(request.name)
+      if (policy === 'deny') return 'deny'
+      if (policy === 'allow') return 'allow'
+      if (policy === 'ask') {
+        const ok = await new ConfirmModal(
+          this.app,
+          `agent 请求执行工具 ${request.name}`,
+          '允许',
+        ).ask()
+        return ok ? 'allow' : 'deny'
+      }
       if (request.name !== 'write_note') return 'allow'
       const args = request.arguments as { path?: string; content?: string }
       const targetPath = String(args.path ?? '')
@@ -104,13 +123,17 @@ export default class DshObsidianPlugin extends Plugin {
               void this.saveSettings()
             },
           },
-          getLLMConfig: () => ({
-            baseURL: this.settings.baseURL,
-            apiKey: this.settings.apiKey,
-            model: this.settings.model,
-            temperature: this.settings.temperature,
-            maxTokens: this.settings.maxTokens,
-          }),
+          getLLMConfig: () => {
+            const p = this.activeProvider()
+            return {
+              baseURL: p.baseURL,
+              apiKey: p.apiKey,
+              model: p.model,
+              temperature: p.temperature,
+              maxTokens: p.maxTokens,
+              extraHeaders: parseHeaderLines(p.extraHeaders),
+            }
+          },
           approveTool,
           logLevel: this.settings.logLevel,
         }),
@@ -203,7 +226,13 @@ export default class DshObsidianPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const data = await this.loadData()
-    this.settings = { ...DEFAULT_SETTINGS, ...(data ?? {}) }
+    this.settings = migrateSettings(data as Record<string, unknown> | undefined)
+  }
+
+  /** 当前激活的模型提供方 */
+  private activeProvider(): ProviderConfig {
+    const active = this.settings.providers.find((p) => p.id === this.settings.activeProviderId)
+    return active ?? this.settings.providers[0] ?? defaultSettings().providers[0]!
   }
 
   async saveSettings(): Promise<void> {

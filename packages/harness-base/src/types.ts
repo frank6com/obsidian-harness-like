@@ -64,6 +64,8 @@ export interface LLMConfig {
   temperature?: number
   /** 最大输出 token 数，0 或不设置则不限制 */
   maxTokens?: number
+  /** 自定义请求头（如网关鉴权），合并进每次模型请求 */
+  extraHeaders?: Record<string, string>
 }
 
 export interface LLMMessage {

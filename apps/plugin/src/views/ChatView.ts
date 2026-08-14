@@ -212,7 +212,7 @@ export class ChatView extends ItemView {
 
   private appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
     const el = this.messagesEl.createDiv({ cls: `dsh-msg dsh-msg-${role}` })
-    if (role === 'assistant') {
+    if (role === 'assistant' && this.ctx.settings.get('renderMarkdown', true)) {
       this.renderMarkdown(el, content)
     } else {
       el.textContent = content
@@ -328,13 +328,15 @@ export class ChatView extends ItemView {
         this.ctx.emit('dsh/session/event', e)
       }
 
+      const streaming = this.ctx.settings.get('streamingEnabled', true)
+
       await runAgentLoop({
         sessionId,
         llm: this.ctx.llmCaller,
         tools: this.ctx.toolsCompat,
         executeTool: (name, input) => this.executeTool(name, input),
         onEvent: sink,
-        onStream: (delta) => this.appendStream(delta),
+        onStream: streaming ? (delta) => this.appendStream(delta) : undefined,
         onPhase: (phase) => this.setPhase(phase),
         history,
         system,
