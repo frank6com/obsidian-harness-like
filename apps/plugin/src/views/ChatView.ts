@@ -122,7 +122,7 @@ export class ChatView extends ItemView {
     this.sendBtn = footer.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: '发送' })
     this.sendBtn.onclick = () => void this.onSendClick()
 
-    this.disposers.push(this.ctx.on('session/event', (e) => this.onSessionEvent(e)))
+    this.disposers.push(this.ctx.on('dsh/session/event', (e) => this.onSessionEvent(e)))
     this.disposers.push(this.ctx.on('dsh/waiting-approval', () => this.setPhase({ kind: 'waiting' })))
     await this.refreshSessions()
     this.renderBinding()
@@ -272,7 +272,7 @@ export class ChatView extends ItemView {
       this.currentSessionId = sessionId
       this.sessions.set(sessionId, { notePath: this.boundNote })
       // 会话元信息（标题 + 绑定笔记）落盘，重启后仍可恢复
-      void this.ctx.sessions.append(sessionId, {
+      void this.ctx.sessionLog.append(sessionId, {
         type: 'session/meta',
         ts: Date.now(),
         sessionId,
@@ -293,14 +293,14 @@ export class ChatView extends ItemView {
     const signal = this.abortController.signal
     try {
       if (!skipAppend) {
-        await this.ctx.sessions.append(sessionId, {
+        await this.ctx.sessionLog.append(sessionId, {
           type: 'user/message',
           ts: Date.now(),
           sessionId,
           content: text,
         } satisfies SessionEvent)
       }
-      const history = (await this.ctx.sessions.read(sessionId)).filter(
+      const history = (await this.ctx.sessionLog.read(sessionId)).filter(
         (e) => e.type !== 'turn/start' && e.type !== 'turn/end',
       )
       let noteCtx = ''
@@ -321,14 +321,14 @@ export class ChatView extends ItemView {
         .join('\n\n')
 
       const sink = (e: SessionEvent): void => {
-        void this.ctx.sessions.append(e.sessionId, e)
-        this.ctx.emit('session/event', e)
+        void this.ctx.sessionLog.append(e.sessionId, e)
+        this.ctx.emit('dsh/session/event', e)
       }
 
       await runAgentLoop({
         sessionId,
         llm: this.ctx.llmCaller,
-        tools: this.ctx.tools,
+        tools: this.ctx.toolsCompat,
         executeTool: (name, input) => this.executeTool(name, input),
         onEvent: sink,
         onStream: (delta) => this.appendStream(delta),
@@ -342,8 +342,8 @@ export class ChatView extends ItemView {
       const content = failed ? '已停止' : `错误: ${err instanceof Error ? err.message : String(err)}`
       // 持久化系统消息（重载后仍在；并进入模型上下文，避免"上一问悬空被顺带回答"）
       const ev: SessionEvent = { type: 'system/message', ts: Date.now(), sessionId, content }
-      void this.ctx.sessions.append(sessionId, ev)
-      this.ctx.emit('session/event', ev)
+      void this.ctx.sessionLog.append(sessionId, ev)
+      this.ctx.emit('dsh/session/event', ev)
       if (!failed) {
         this.lastFailed = { sessionId, text }
         const row = this.messagesEl.createDiv({ cls: 'dsh-retry-row' })
@@ -361,11 +361,15 @@ export class ChatView extends ItemView {
   }
 
   private async executeTool(name: string, input: Record<string, unknown>): Promise<ToolExecution> {
-    const tool = this.ctx.tools.get(name)
-    if (!tool) return { ok: false, error: `未知工具: ${name}` }
     try {
-      const output = await tool.execute(input)
-      return { ok: true, output }
+      const result = await this.ctx.toolsCompat.execute({
+        callId: `call_${Math.random().toString(36).slice(2, 10)}` as never,
+        name,
+        arguments: input,
+        signal: this.abortController?.signal ?? new AbortController().signal,
+      })
+      if (result.isError) return { ok: false, error: result.error.message }
+      return { ok: true, output: result.value }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
@@ -412,7 +416,7 @@ export class ChatView extends ItemView {
 
   private async refreshSessions(): Promise<void> {
     this.listEl.empty()
-    const list = await this.ctx.sessions.list()
+    const list = await this.ctx.sessionLog.list()
     if (!list.length) {
       this.listEl.createDiv({ cls: 'dsh-session-empty', text: '还没有会话' })
       return
@@ -449,7 +453,7 @@ export class ChatView extends ItemView {
 
   private async exportSession(id: string, title?: string): Promise<void> {
     try {
-      const [events, meta] = await Promise.all([this.ctx.sessions.read(id), this.ctx.sessions.readMeta(id)])
+      const [events, meta] = await Promise.all([this.ctx.sessionLog.read(id), this.ctx.sessionLog.readMeta(id)])
       const md = sessionToMarkdown({ title: title ?? id, notePath: meta?.notePath ?? null }, events)
       const fileName = safeFileName(title ?? id, id)
       await this.ctx.vault.write(fileName, md)
@@ -466,7 +470,7 @@ export class ChatView extends ItemView {
       '删除',
     ).ask()
     if (!ok) return
-    await this.ctx.sessions.remove(id)
+    await this.ctx.sessionLog.remove(id)
     this.sessions.delete(id)
     if (this.currentSessionId === id) {
       this.currentSessionId = null
@@ -487,13 +491,13 @@ export class ChatView extends ItemView {
       this.renderWelcome()
       return
     }
-    const events = await this.ctx.sessions.read(id)
+    const events = await this.ctx.sessionLog.read(id)
     if (!events.length) {
       this.renderWelcome()
       return
     }
     // 恢复绑定：内存 map 优先，其次会话元信息
-    const meta = await this.ctx.sessions.readMeta(id)
+    const meta = await this.ctx.sessionLog.readMeta(id)
     if (!this.sessions.has(id) && meta) {
       this.sessions.set(id, { notePath: meta.notePath })
       this.boundNote = meta.notePath

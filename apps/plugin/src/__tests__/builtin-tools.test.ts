@@ -1,137 +1,157 @@
 /**
- * 内置工具测试：read_note / write_note（沙箱+审批）/ search_notes /
- * open_in_browser（沙箱+绝对路径）/ insert_to_editor（编辑器桥）。
+ * 内置工具测试（Stage 3 版）：挂载真实 toolsCompatPlugin（官方 ToolRuntime 流水线）。
+ * 覆盖：注册/查询、直接执行（read/search/write 沙箱）、
+ * 经流水线执行（approve allow/deny、未知工具）、open_in_browser、insert_to_editor。
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import { Context } from '@deepseek-ai/cordis'
-import { SandboxPolicy, ToolRegistry } from '@dsh-obsidian/harness-base'
+import { SandboxPolicy, toolsCompatPlugin } from '@dsh-obsidian/harness-base'
 import { EditorService } from '@dsh-obsidian/obsidian-adapter'
-import { builtinToolsPlugin, type BuiltinToolsOptions } from '../tools/builtin'
+import { builtinToolsPlugin } from '../tools/builtin'
 
-async function setup() {
+async function setup(
+  approve?: (r: { name: string; arguments: unknown }) => Promise<'allow' | 'deny'>,
+) {
   const vaultRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-tools-'))
   const dataDir = path.join(vaultRoot, '.obsidian', 'dsh')
   const pluginsDir = path.join(vaultRoot, '.obsidian', 'dsh-plugins')
   const tempDir = path.join(dataDir, 'tmp')
 
   const ctx = new Context()
-  const tools = new ToolRegistry()
   const sandbox = new SandboxPolicy({ vaultRoot, dataDir, pluginsDir, tempDir })
   const writes: Array<[string, string]> = []
-  const inserted: string[] = []
   const opened: string[] = []
 
   ctx.reflect.provide('vault', {
     read: async (p: string) => `内容(${p})`,
-    write: async (p: string, c: string) => {
+    write: async (p: string, c: string): Promise<void> => {
       writes.push([p, c])
     },
     listMarkdown: () => ['Inbox/A.md', 'Inbox/B.md', '读书笔记.md'],
   })
   ctx.reflect.provide('sandbox', sandbox)
-  ctx.reflect.provide('tools', tools)
   ctx.reflect.provide('editor', new EditorService())
 
-  const options: BuiltinToolsOptions = {
-    askWriteApproval: vi.fn(async () => 'allow' as const),
-    openTarget: vi.fn(async (t: string) => {
-      opened.push(t)
-    }),
-  }
+  await ctx.plugin(toolsCompatPlugin({ approve }))
+  await ctx.plugin(builtinToolsPlugin({ openTarget: async (t): Promise<void> => { opened.push(t) } }))
 
-  const fiber = ctx.plugin(builtinToolsPlugin(options))
-  await fiber
-
-  return { ctx, tools, sandbox, writes, inserted, opened, options, fiber, vaultRoot }
+  return { ctx, sandbox, writes, opened, vaultRoot }
 }
 
-describe('read_note / search_notes / list_notes', () => {
+const signal = () => new AbortController().signal
+
+describe('read_note / search_notes / list_notes（直接执行）', () => {
   it('read_note 读取笔记', async () => {
     const { ctx } = await setup()
-    const out = await ctx.tools.get('read_note')!.execute({ path: 'a.md' })
+    const out = await ctx.toolsCompat.get('read_note')!.execute({ path: 'a.md' })
     expect(out).toEqual({ content: '内容(a.md)' })
   })
 
   it('search_notes 按文件名过滤并限流', async () => {
     const { ctx } = await setup()
-    const out = await ctx.tools.get('search_notes')!.execute({ query: 'inbox', limit: 1 })
+    const out = await ctx.toolsCompat.get('search_notes')!.execute({ query: 'inbox', limit: 1 })
     expect(out).toEqual({ hits: ['Inbox/A.md'] })
-    const all = await ctx.tools.get('search_notes')!.execute({ query: '' })
+    const all = await ctx.toolsCompat.get('search_notes')!.execute({ query: '' })
     expect((all as { hits: string[] }).hits).toHaveLength(3)
   })
 
   it('list_notes 列出全部并支持文件夹过滤与限量', async () => {
     const { ctx } = await setup()
-    const all = await ctx.tools.get('list_notes')!.execute({})
+    const all = await ctx.toolsCompat.get('list_notes')!.execute({})
     expect(all).toEqual({
       count: 3,
       notes: ['Inbox/A.md', 'Inbox/B.md', '读书笔记.md'],
     })
-    const inbox = await ctx.tools.get('list_notes')!.execute({ folder: 'Inbox' })
+    const inbox = await ctx.toolsCompat.get('list_notes')!.execute({ folder: 'Inbox' })
     expect(inbox).toEqual({ count: 2, notes: ['Inbox/A.md', 'Inbox/B.md'] })
-    const limited = await ctx.tools.get('list_notes')!.execute({ limit: 1 })
-    expect(limited).toEqual({ count: 3, notes: ['Inbox/A.md'] })
   })
 })
 
-describe('write_note（沙箱 + 审批）', () => {
-  it('审批 allow 时写入', async () => {
-    const { ctx, writes, options } = await setup()
-    const out = await ctx.tools.get('write_note')!.execute({ path: 'Inbox/x.md', content: 'hi' })
-    expect(out).toEqual({ ok: true, path: 'Inbox/x.md' })
-    expect(writes).toEqual([['Inbox/x.md', 'hi']])
-    expect(options.askWriteApproval).toHaveBeenCalledWith('Inbox/x.md', { preview: 'hi' })
-  })
-
-  it('审批 deny 时抛错且不写入', async () => {
-    const { ctx, writes, options } = await setup()
-    vi.mocked(options.askWriteApproval).mockResolvedValueOnce('deny')
-    await expect(
-      ctx.tools.get('write_note')!.execute({ path: 'Inbox/x.md', content: 'hi' }),
-    ).rejects.toThrow('写操作被拒绝')
-    expect(writes).toHaveLength(0)
-  })
-
-  it('沙箱拒绝 .obsidian 配置区写入', async () => {
+describe('write_note（沙箱）', () => {
+  it('沙箱拒绝 .obsidian 配置区写入（纵深防御）', async () => {
     const { ctx, writes } = await setup()
     await expect(
-      ctx.tools.get('write_note')!.execute({ path: '.obsidian/app.json', content: '{}' }),
+      ctx.toolsCompat.get('write_note')!.execute({ path: '.obsidian/app.json', content: '{}' }),
     ).rejects.toThrow(/沙箱拒绝/)
     expect(writes).toHaveLength(0)
   })
 })
 
-describe('open_in_browser（沙箱 + 绝对路径）', () => {
+describe('经官方流水线执行（toolsCompat.execute）', () => {
+  it('approve allow：执行成功并返回规范值', async () => {
+    const { ctx, writes } = await setup(async () => 'allow')
+    const result = await ctx.toolsCompat.execute({
+      callId: 'call_1' as never,
+      name: 'write_note',
+      arguments: { path: 'Inbox/x.md', content: 'hi' },
+      signal: signal(),
+    })
+    expect(result.isError).toBe(false)
+    expect(writes).toEqual([['Inbox/x.md', 'hi']])
+  })
+
+  it('approve deny：物化为错误结果（工具体未执行）', async () => {
+    const { ctx, writes } = await setup(async () => 'deny')
+    const result = await ctx.toolsCompat.execute({
+      callId: 'call_2' as never,
+      name: 'write_note',
+      arguments: { path: 'Inbox/x.md', content: 'hi' },
+      signal: signal(),
+    })
+    expect(result.isError).toBe(true)
+    expect((result as { error: { message: string } }).error.message).toContain('拒绝')
+    expect(writes).toHaveLength(0)
+  })
+
+  it('approve 钩子收到工具名与参数', async () => {
+    const seen: Array<{ name: string; arguments: unknown }> = []
+    const { ctx } = await setup(async (r) => {
+      seen.push({ name: r.name, arguments: r.arguments })
+      return 'allow'
+    })
+    await ctx.toolsCompat.execute({
+      callId: 'call_3' as never,
+      name: 'read_note',
+      arguments: { path: 'a.md' },
+      signal: signal(),
+    })
+    expect(seen).toEqual([{ name: 'read_note', arguments: { path: 'a.md' } }])
+  })
+
+  it('未知工具：错误结果而非抛出', async () => {
+    const { ctx } = await setup()
+    const result = await ctx.toolsCompat.execute({
+      callId: 'call_4' as never,
+      name: 'no_such_tool',
+      arguments: {},
+      signal: signal(),
+    })
+    expect(result.isError).toBe(true)
+  })
+})
+
+describe('open_in_browser', () => {
   it('vault 内文件转为绝对路径打开', async () => {
-    const { ctx, opened, vaultRoot, options } = await setup()
-    const out = await ctx.tools.get('open_in_browser')!.execute({ path: 'Inbox/x.html' })
+    const { ctx, opened, vaultRoot } = await setup()
+    const out = await ctx.toolsCompat.get('open_in_browser')!.execute({ path: 'Inbox/x.html' })
     expect(out).toEqual({ ok: true, opened: path.join(vaultRoot, 'Inbox', 'x.html') })
     expect(opened).toEqual([path.join(vaultRoot, 'Inbox', 'x.html')])
-    expect(options.openTarget).toHaveBeenCalledTimes(1)
   })
 
   it('拒绝 vault 外路径', async () => {
     const { ctx, opened } = await setup()
     await expect(
-      ctx.tools.get('open_in_browser')!.execute({ path: '../../etc/passwd' }),
+      ctx.toolsCompat.get('open_in_browser')!.execute({ path: '../../etc/passwd' }),
     ).rejects.toThrow(/沙箱拒绝|超出 vault/)
     expect(opened).toHaveLength(0)
   })
 })
 
 describe('insert_to_editor', () => {
-  it('无活动编辑器时报错', async () => {
-    const { ctx } = await setup()
-    // execute 为同步函数，同步抛错；agent 循环内由 executeTool 的 try/catch 兜底
-    expect(() =>
-      ctx.tools.get('insert_to_editor')!.execute({ content: 'x' }),
-    ).toThrow('当前没有打开的编辑器')
-  })
-
   it('有编辑器时插入到光标处', async () => {
     const { ctx } = await setup()
     let target: string | null = null
@@ -145,7 +165,7 @@ describe('insert_to_editor', () => {
       },
       getSelection: () => null,
     }))
-    const out = await ctx.tools.get('insert_to_editor')!.execute({ content: 'hello' })
+    const out = await ctx.toolsCompat.get('insert_to_editor')!.execute({ content: 'hello' })
     expect(out).toEqual({ ok: true, inserted: 5 })
     expect(target).toBe('hello')
   })

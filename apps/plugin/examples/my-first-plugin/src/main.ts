@@ -15,12 +15,12 @@ import type { Context } from '@deepseek-ai/cordis'
 
 export default {
   name: 'my-first-plugin',
-  inject: ['commands', 'tools', 'vault', 'workspace', 'notice'],
+  inject: ['commands', 'toolsCompat', 'vault', 'workspace', 'notice'],
   apply(ctx: Context) {
     // 注册全部包进 ctx.effect：插件停止时逆序撤销（Cordis 可逆副作用纪律）
     ctx.effect(() => [
       // 1) 工具：统计 vault 中的 markdown 笔记数
-      ctx.tools.register({
+      ctx.toolsCompat.register({
         name: 'count_notes',
         description: '统计 vault 中的 markdown 笔记数量',
         input: { type: 'object', properties: {} },

@@ -43,26 +43,14 @@
 
 实现要点：适配器只需实现 `stream()`（其余用默认实现）；`assertUsableApiKey` 统一凭据诊断；`attributionHeaders()` 产品归属请求头；中止经官方归一化为 `aborted` finish 再转 `AbortError`。请求体消息映射与工具 wire 形状有集成测试锁定。
 
-### 3.2 tools（工具）
+### 3.2 tools（工具）✅ 已集成（Stage 3，2026-08-14）
 
 | | dsh 官方 | 本项目现状 |
 |---|---|---|
-| 服务 | `ctx.tools: ToolRuntime`（defineTool + pre/guard/around/post/result 流水线） | `ctx.tools: ToolRegistry`（自研注册表） |
-| 事件 | `tools/pre-execute`（waterfall，allow/deny/ask）、`tools/execute`、`tools/post-execute` | 无（审批走宿主钩子 `askWriteApproval`） |
+| 服务 | `ctx.tools: ToolRuntime`（defineTool + pre/guard/around/post/result 流水线） | ✅ 官方 `ToolRuntime` 已挂载；兼容门面 `ctx.toolsCompat`（自研 ToolDef 定义 → 官方 ToolDefinition 包装，execute 走官方流水线）；`ctx.tools` 官方键留给 Stage 3b |
+| 事件 | `tools/pre-execute`（waterfall，allow/deny/ask）、`tools/execute`、`tools/post-execute` | ✅ `tools/pre-execute` 已生效：**写审批已从宿主钩子迁移为瀑布监听器**（sandbox 策略 + 审批弹窗 → allow/deny；deny 物化为错误结果） |
 
-**状态：待集成（Stage 3）**。阻碍：`ToolRuntime` 与 `dsh-agent-loop` 的并行调度器强耦合（`TOOL_RUNTIME_SCHEDULER`），需同时引入 agent-loop；工具定义 API 迁移（`defineTool` + schemastery schema vs 当前 `ToolDef`）。
-
-**迁移后的审批形态（预告）**：写审批将从宿主钩子改为 `tools/pre-execute` 瀑布监听器：
-
-```ts
-ctx.on('tools/pre-execute', async (exec, next) => {
-  if (exec.name === 'write_note') {
-    const decision = await askWriteApproval(exec.arguments.path)
-    if (decision === 'deny') return { approved: false, reason: '用户拒绝' }
-  }
-  return next()
-})
-```
+实现要点：`ToolRuntime` 构造需要 `ctx.systemPrompt`（最小垫片，接 agent-loop 后可去）；工具定义经兼容层包装（`output.schema` + `render` 投影）；未知工具返回错误结果而非抛出。**已知取舍**：官方包声明 `ctx.tools: ToolRuntime` 与自研门面类型冲突，自研服务键统一改 `dsh-` 命名空间（`sessionLog`/`toolsCompat`/`dsh/session/event`）——插件作者当前用 `ctx.toolsCompat`，Stage 3b 后迁移到官方 `ctx.tools`。
 
 ### 3.3 sessions（会话）
 
@@ -132,6 +120,7 @@ export default {
 |---|---|---|---|
 | 1（已完成） | 依赖对齐 rc.6；seam 文档 | 全量安装可解析；文档评审通过 | 低 |
 | 2（已完成） | llm：`DeepSeekAdapter` 接入官方 `LlmRuntime`，`ctx.llmCaller` 消息词汇转换 | 回归清单全过：流式/工具/中止/温度；`llm/stream` 监听生效 | 中（流协议） |
+| 3（已完成） | tools：官方 `ToolRuntime` 挂载 + 兼容门面 `toolsCompat`；审批迁移 `tools/pre-execute` 瀑布 | 回归清单全过；approve allow/deny/未知工具测试通过；自定义服务键改 dsh- 命名空间 | 高（类型冲突已解决：键重命名） |
 | 3 | tools：引入 dsh-tools + agent-loop；工具定义迁移 `defineTool`；审批改 `tools/pre-execute` 瀑布 | 内置工具与示例插件迁移；审批弹窗行为不变；流水线事件可拦截 | 高（调度器耦合） |
 | 4 | sessions：`SessionStore` + JSONL 持久化订阅；事件词汇迁移（含 session/meta、system/message 映射） | 会话恢复/标题/绑定/导出回归全过 | 高（全链路） |
 | 5 | agent：`ctx.agents` + 官方 agent loop 替换 `runAgentLoop` | 阶段状态/中止/重试行为不变 | 高 |

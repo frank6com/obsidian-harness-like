@@ -25,11 +25,11 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 var main_default = {
   name: "my-first-plugin",
-  inject: ["commands", "tools", "vault", "workspace", "notice"],
+  inject: ["commands", "toolsCompat", "vault", "workspace", "notice"],
   apply(ctx) {
     ctx.effect(() => [
       // 1) 工具：统计 vault 中的 markdown 笔记数
-      ctx.tools.register({
+      ctx.toolsCompat.register({
         name: "count_notes",
         description: "\u7EDF\u8BA1 vault \u4E2D\u7684 markdown \u7B14\u8BB0\u6570\u91CF",
         input: { type: "object", properties: {} },

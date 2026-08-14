@@ -5,11 +5,8 @@
 
 import * as path from 'path'
 import type { Plugin } from '@deepseek-ai/cordis'
-import type { WriteDecision } from '@dsh-obsidian/harness-base'
 
 export interface BuiltinToolsOptions {
-  /** 写操作审批钩子：返回 allow / deny（内部处理弹窗与会话级开关）；meta 携带内容预览 */
-  askWriteApproval(targetPath: string, meta?: { preview?: string }): Promise<WriteDecision>
   /** 打开外部目标（系统浏览器 / 默认应用） */
   openTarget(target: string): Promise<void>
 }
@@ -17,11 +14,11 @@ export interface BuiltinToolsOptions {
 export function builtinToolsPlugin(opts: BuiltinToolsOptions): Plugin.Object {
   return {
     name: 'builtin-vault-tools',
-    inject: ['vault', 'sandbox', 'tools', 'editor'],
+    inject: ['vault', 'sandbox', 'toolsCompat', 'editor'],
     apply(ctx) {
       // 全部注册包进单个 effect：fiber 卸载时逆序撤销（Cordis 可逆副作用纪律）
       ctx.effect(() => [
-        ctx.tools.register({
+        ctx.toolsCompat.register({
           name: 'read_note',
           description: '读取 vault 中一篇笔记的完整内容',
           input: {
@@ -35,7 +32,7 @@ export function builtinToolsPlugin(opts: BuiltinToolsOptions): Plugin.Object {
           },
         }),
 
-        ctx.tools.register({
+        ctx.toolsCompat.register({
           name: 'write_note',
           description: '写入或覆盖 vault 中的一篇笔记（需审批）',
           input: {
@@ -49,15 +46,14 @@ export function builtinToolsPlugin(opts: BuiltinToolsOptions): Plugin.Object {
           async execute(input) {
             const path = String(input.path ?? '')
             const content = String(input.content ?? '')
+            // 纵深防御：审批在 tools/pre-execute 瀑布（harness 配置 approveTool），此处再守沙箱
             ctx.sandbox.assertWrite(path)
-            const decision = await opts.askWriteApproval(path, { preview: content.slice(0, 200) })
-            if (decision === 'deny') throw new Error('写操作被拒绝')
             await ctx.vault.write(path, content)
             return { ok: true, path }
           },
         }),
 
-        ctx.tools.register({
+        ctx.toolsCompat.register({
           name: 'list_notes',
           description: '列出 vault 中全部 markdown 笔记路径（可按文件夹过滤、限量）',
           input: {
@@ -76,7 +72,7 @@ export function builtinToolsPlugin(opts: BuiltinToolsOptions): Plugin.Object {
           },
         }),
 
-        ctx.tools.register({
+        ctx.toolsCompat.register({
           name: 'open_in_browser',
           description: '在系统默认浏览器中打开 vault 内的文件（如 HTML 笔记）',
           input: {
@@ -94,7 +90,7 @@ export function builtinToolsPlugin(opts: BuiltinToolsOptions): Plugin.Object {
           },
         }),
 
-        ctx.tools.register({
+        ctx.toolsCompat.register({
           name: 'insert_to_editor',
           description: '把文本插入当前编辑器光标处（用户可见、可撤销，无需审批）',
           input: {
@@ -112,7 +108,7 @@ export function builtinToolsPlugin(opts: BuiltinToolsOptions): Plugin.Object {
           },
         }),
 
-        ctx.tools.register({
+        ctx.toolsCompat.register({
           name: 'search_notes',
           description: '按文件名/标题搜索笔记（v1：文件名匹配，无全文索引）',
           input: {

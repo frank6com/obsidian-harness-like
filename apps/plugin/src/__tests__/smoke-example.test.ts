@@ -34,7 +34,7 @@ describe('示例插件真实产物冒烟', () => {
     const added: string[] = []
     const notices: string[] = []
 
-    ctx.reflect.provide('tools', tools)
+    ctx.reflect.provide('toolsCompat', tools)
     ctx.reflect.provide('vault', { listMarkdown: () => ['a.md', 'b.md'] })
     ctx.reflect.provide('workspace', { getActiveFile: () => 'a.md' })
     ctx.reflect.provide('commands', {

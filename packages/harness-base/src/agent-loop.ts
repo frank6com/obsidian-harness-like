@@ -6,7 +6,7 @@
  * 持久事件经 onEvent 落盘；流式增量经 onStream 直达 UI（不落盘）。
  */
 
-import type { LLMMessage, OpenAIToolCall, SessionEvent, ToolCall, ToolExecution } from './types'
+import type { LLMMessage, OpenAIToolCall, SessionEvent, ToolCall, ToolDef, ToolExecution } from './types'
 import type { LlmCaller } from './llm'
 import { ToolRegistry } from './tools'
 
@@ -18,7 +18,8 @@ export type AgentPhase =
 export interface AgentRunContext {
   sessionId: string
   llm: LlmCaller
-  tools: ToolRegistry
+  /** 工具表（schemas 进入提示词）；执行经宿主 executeTool 钩子走官方流水线 */
+  tools: { list(): ToolDef[] }
   /** 工具执行钩子：由宿主注入沙箱 + 审批 + UI 弹窗 */
   executeTool(name: string, input: Record<string, unknown>): Promise<ToolExecution>
   /** 持久化事件（写入会话日志） */

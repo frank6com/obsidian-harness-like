@@ -67,7 +67,7 @@ async function bootHarness() {
     ctx.plugin(runtimePlugin({ pluginsDir: path.join(root, '.obsidian', 'dsh-plugins'), require: () => undefined })),
     ctx.plugin(
       builtinToolsPlugin({
-        askWriteApproval: async () => 'allow',
+        
         openTarget: async () => {},
       }),
     ),
@@ -81,15 +81,15 @@ describe('harness 装配启动', () => {
     const ctx = await bootHarness()
     expect(ctx.get('sandbox')).toBeDefined()
     expect(ctx.get('approval')).toBeDefined()
-    expect(ctx.get('sessions')).toBeDefined()
-    expect(ctx.get('tools')).toBeDefined()
+    expect(ctx.get('sessionLog')).toBeDefined()
+    expect(ctx.get('toolsCompat')).toBeDefined()
     expect(ctx.get('llmCaller')).toBeDefined()
     expect(ctx.get('llm')).toBeDefined()
     expect(ctx.get('vault')).toBeDefined()
     expect(ctx.get('pluginRuntime')).toBeDefined()
     // 内置工具已注册
-    expect(ctx.get('tools')?.get('read_note')).toBeDefined()
-    expect(ctx.get('tools')?.get('list_notes')).toBeDefined()
+    expect(ctx.get('toolsCompat')?.get('read_note')).toBeDefined()
+    expect(ctx.get('toolsCompat')?.get('list_notes')).toBeDefined()
   })
 
   it('llmCaller 无 key 时给出明确诊断而非崩溃', async () => {

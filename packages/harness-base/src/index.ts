@@ -9,8 +9,8 @@ import { LlmRuntime } from '@deepseek-ai/dsh-llm'
 import { ApprovalService, type ApprovalStore } from './approval'
 import { SandboxPolicy, type SandboxScope } from './sandbox'
 import { SessionLog } from './session-log'
-import { ToolRegistry } from './tools'
 import { DeepSeekAdapter, createLlmCaller, type LlmCaller } from './llm'
+import { toolsCompatPlugin, type ToolApprovalRequest, type ToolCompatFacade } from './dsh-tools'
 import type { LLMConfig, SessionEvent } from './types'
 
 export * from './types'
@@ -19,6 +19,7 @@ export * from './approval'
 export * from './session-log'
 export * from './tools'
 export * from './llm'
+export * from './dsh-tools'
 export * from './agent-loop'
 
 export interface HarnessConfig {
@@ -26,6 +27,8 @@ export interface HarnessConfig {
   sessionDir: string
   approvalStore: ApprovalStore
   getLLMConfig(): LLMConfig
+  /** 工具执行审批钩子（tools/pre-execute 瀑布）；默认放行 */
+  approveTool?(request: ToolApprovalRequest): Promise<'allow' | 'deny'>
 }
 
 export function harnessServicesPlugin(cfg: HarnessConfig): Plugin.Object {
@@ -35,7 +38,6 @@ export function harnessServicesPlugin(cfg: HarnessConfig): Plugin.Object {
       const sandbox = new SandboxPolicy(cfg.sandbox)
       const approval = new ApprovalService(cfg.approvalStore)
       const sessions = new SessionLog(cfg.sessionDir)
-      const tools = new ToolRegistry()
 
       // llm seam（Stage 2）：官方 LlmRuntime + DeepSeek 适配器
       const llmRuntime = new LlmRuntime(ctx)
@@ -59,11 +61,14 @@ export function harnessServicesPlugin(cfg: HarnessConfig): Plugin.Object {
         },
       )
 
+      // tools seam（Stage 3）：官方 ToolRuntime + 审批瀑布
+      ctx.plugin(toolsCompatPlugin({ approve: cfg.approveTool }))
+
       ctx.reflect.provide('sandbox', sandbox)
       ctx.reflect.provide('approval', approval)
-      ctx.reflect.provide('sessions', sessions)
-      ctx.reflect.provide('tools', tools)
+      ctx.reflect.provide('sessionLog', sessions)
       ctx.reflect.provide('llmCaller', llmCaller)
+      // toolsCompat 由 toolsCompatPlugin 提供（同一门面对象，类型归属我方）
     },
   }
 }
@@ -71,8 +76,8 @@ export function harnessServicesPlugin(cfg: HarnessConfig): Plugin.Object {
 /** 广播工具：把事件写入日志并同步发到事件总线（UI 订阅渲染） */
 export function sessionEventSink(ctx: Context): (e: SessionEvent) => void {
   return (e) => {
-    void ctx.sessions.append(e.sessionId, e)
-    ctx.emit('session/event', e)
+    void ctx.sessionLog.append(e.sessionId, e)
+    ctx.emit('dsh/session/event', e)
   }
 }
 
@@ -80,13 +85,16 @@ declare module '@deepseek-ai/cordis' {
   interface Context {
     sandbox: SandboxPolicy
     approval: ApprovalService
-    sessions: SessionLog
-    tools: ToolRegistry
+    /** 自研会话日志（官方 dsh-session 的 ctx.sessions 留给 Stage 4 迁移） */
+    sessionLog: SessionLog
     /** 官方 LlmRuntime（dsh-llm 自带类型增强），agent loop 经 llmCaller 消费 */
     llmCaller: LlmCaller
+    /** 工具兼容门面（Stage 3：官方 ToolRuntime 流水线 + 本地定义映射；官方 ctx.tools 留给 3b） */
+    toolsCompat: ToolCompatFacade
   }
   interface Events {
-    'session/event': (e: SessionEvent) => void
+    /** 自研会话事件（官方 session/event 词汇留给 Stage 4） */
+    'dsh/session/event': (e: SessionEvent) => void
     /** 宿主打开审批弹窗（UI 阶段状态联动） */
     'dsh/waiting-approval': (targetPath: string) => void
   }

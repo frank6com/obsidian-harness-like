@@ -10,7 +10,7 @@ import * as path from 'path'
 import { Plugin, type Editor, type WorkspaceLeaf } from 'obsidian'
 import * as cordis from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
-import { harnessServicesPlugin, type WriteDecision } from '@dsh-obsidian/harness-base'
+import { harnessServicesPlugin } from '@dsh-obsidian/harness-base'
 import { obsidianAdapterPlugin } from '@dsh-obsidian/obsidian-adapter'
 import { runtimePlugin } from '@dsh-obsidian/plugin-runtime'
 import { toApiLike } from './obsidian-bridge'
@@ -64,6 +64,27 @@ export default class DshObsidianPlugin extends Plugin {
         }),
       ),
     )
+    // 工具审批（tools/pre-execute 瀑布）：写操作走沙箱 + 弹窗
+    const approveTool = async (request: {
+      name: string
+      arguments: unknown
+      signal: AbortSignal
+    }): Promise<'allow' | 'deny'> => {
+      if (request.name !== 'write_note') return 'allow'
+      const args = request.arguments as { path?: string; content?: string }
+      const targetPath = String(args.path ?? '')
+      const decision = ctx.sandbox.decide(targetPath, 'write')
+      if (!decision.allowed) return 'deny'
+      const mode = ctx.approval.decideWrite(this.settings.approvalDefault)
+      if (mode === 'allow') return 'allow'
+      ctx.emit('dsh/waiting-approval', targetPath)
+      const r = await new WriteApprovalModal(this.app, targetPath, {
+        preview: String(args.content ?? '').slice(0, 200),
+      }).ask()
+      if (r.choice === 'allow-session') ctx.approval.setSessionAllow(true)
+      return r.choice === 'deny' ? 'deny' : 'allow'
+    }
+
     this.fibers.push(
       ctx.plugin(
         harnessServicesPlugin({
@@ -83,6 +104,7 @@ export default class DshObsidianPlugin extends Plugin {
             temperature: this.settings.temperature,
             maxTokens: this.settings.maxTokens,
           }),
+          approveTool,
         }),
       ),
     )
@@ -104,20 +126,8 @@ export default class DshObsidianPlugin extends Plugin {
       }
     })
 
-    // 写操作审批钩子（内置工具调用）
-    const askWriteApproval = async (
-      targetPath: string,
-      meta?: { preview?: string },
-    ): Promise<WriteDecision> => {
-      const decision = ctx.approval.decideWrite(this.settings.approvalDefault)
-      if (decision === 'allow') return 'allow'
-      ctx.emit('dsh/waiting-approval', targetPath)
-      const r = await new WriteApprovalModal(this.app, targetPath, meta).ask()
-      if (r.choice === 'allow-session') ctx.approval.setSessionAllow(true)
-      return r.choice === 'deny' ? 'deny' : 'allow'
-    }
     this.fibers.push(
-      ctx.plugin(builtinToolsPlugin({ askWriteApproval, openTarget: (t) => apiLike.openTarget(t) })),
+      ctx.plugin(builtinToolsPlugin({ openTarget: (t) => apiLike.openTarget(t) })),
     )
 
     // 视图与命令
