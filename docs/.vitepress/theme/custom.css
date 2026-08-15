@@ -1,7 +1,14 @@
-/* 首页 hero：主标题外的层级统一缩小 */
+/* 首页 hero 字号层级：主标题 > 副标题 > 描述 */
+.VPHero .heading .name {
+  font-size: 56px;
+}
+.VPHero .heading .text {
+  font-size: 26px;
+  line-height: 1.4;
+}
 .VPHero .tagline {
-  font-size: 22px;
-  line-height: 1.5;
+  font-size: 17px;
+  line-height: 1.6;
 }
 .VPHero .description {
   font-size: 16px;
