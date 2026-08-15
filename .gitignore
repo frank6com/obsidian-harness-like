@@ -7,3 +7,6 @@ dist/
 data.json
 # 项目内 Obsidian 测试库（整体忽略）
 dev-vault/
+# 开发文档与调研材料（仅保留本地，不上传仓库）
+docs/
+research/

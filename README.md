@@ -2,7 +2,7 @@
 
 **An Obsidian implementation inspired by DeepSeek Harness** — run a Cordis plugin system and an AI agent inside Obsidian. The agent reads and writes your notes, calls tools and goes through approvals; you (or the agent) can write your own Cordis plugins to extend Obsidian's commands, tools, panels, ribbon icons, status bar and settings tabs.
 
-> **Status: beta (v0.5.0)** — core features are complete; the UI supports Chinese & English (and can follow Obsidian's language).
+> **Status: beta (v0.9.0)** — core features are complete; the UI supports Chinese & English (and can follow Obsidian's language).
 
 [English](#en) · [中文](#zh)
 
@@ -126,7 +126,7 @@ MIT（首个发布版将附带 LICENSE 文件）。
 
 ## 开发 / Development（面向贡献者）
 
-> 使用者可直接跳过本节。开发文档详见 [docs/design.md](docs/design.md)（设计）、[docs/SOP.md](docs/SOP.md)（开发/发布规范）、[docs/HANDOVER.md](docs/HANDOVER.md)（约束与交接）。
+> 使用者可直接跳过本节。开发文档（设计 / 开发发布规范 / 交接约束）仅保留在仓库本地的 `docs/` 目录，不随 GitHub 仓库分发。
 
 ```sh
 pnpm install
