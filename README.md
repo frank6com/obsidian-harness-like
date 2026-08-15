@@ -26,6 +26,12 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 - **Agents & models** — three built-in agent modes (Chat / Edit / Create) plus custom agents with capability whitelists; multiple model providers with per-model defaults (OpenAI-compatible endpoints).
 - **Privacy** — requests go only to the endpoints you configure; zero telemetry; everything runs locally.
 
+### Screenshots
+
+![Chat panel](screenshots/chat.png)
+![Settings — Models tab](screenshots/settings.png)
+![Plugin Manager](screenshots/plugin-manager.png)
+
 ### Installation
 
 > Now available on the [Obsidian community plugin directory](https://community.obsidian.md/plugins/harness-like): in Obsidian go to Settings → Community plugins → Browse → search "Harness Like".
@@ -86,6 +92,12 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 - **创造模式**：在对话里让 agent 帮你 `create_plugin` → `write_plugin_file` → `reload_plugin`，插件从无到有全程对话内完成。
 - **智能体与模型**：内置对话/修编/创造三种模式 + 自定义智能体（能力白名单勾选）；多模型提供方、模型级默认（OpenAI 兼容端点）。
 - **隐私**：请求只发往你配置的端点；零遥测；全部本地运行。
+
+### 界面截图
+
+![对话面板](screenshots/chat.png)
+![设置 — 模型](screenshots/settings.png)
+![插件管理器](screenshots/plugin-manager.png)
 
 ### 安装
 
