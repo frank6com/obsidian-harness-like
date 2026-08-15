@@ -121,6 +121,10 @@
   display: block;
   width: 100%;
   text-align: left;
+  /* 关键：覆盖 Obsidian 全局 button 的 height: var(--input-height)（固定 ~30px），
+     否则两行内容（标题+子行）会溢出按钮底部，子行显示在行框外面 */
+  height: auto;
+  min-height: 0;
   padding: 6px 8px;
   margin-bottom: 4px;
   border-radius: 6px;
@@ -196,6 +200,7 @@
   color: var(--text-muted);
   cursor: pointer;
   font-size: 11px;
+  height: auto; /* 覆盖 Obsidian 全局 button 固定高度，保持小尺寸 */
   line-height: 1.4;
   padding: 0 4px;
 }
