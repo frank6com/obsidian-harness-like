@@ -66,7 +66,8 @@ module.exports = {
 
 可用服务（inject 声明）：toolsCompat（注册工具）、commands（注册命令）、views（注册/打开自定义面板）、
 vault（读写笔记）、editor（当前编辑器）、workspace（活跃文件）、notice（通知）、ribbon（侧边栏图标）、
-statusbar（状态栏）、settings（设置/设置页）、sandbox、approval、sessionLog、llmCaller。
+statusbar（状态栏）、settings（设置/设置页）、sandbox、approval、sessionLog、llmCaller、
+dshI18n（覆盖主插件界面文案，翻译插件用）。
 可用事件（ctx.on）：dsh/session/event（会话事件）、vault/modify|create|delete|rename、
 workspace/file-open、dsh/waiting-approval（审批弹窗打开）。
 
@@ -109,6 +110,22 @@ module.exports = {
 更多 UI 能力（与 Obsidian 原生插件对齐）：
 - 底部状态栏：const item = ctx.statusbar.addStatusBarItem(); item.el.setText('...')（disposer = item.remove）
 - 设置页：ctx.settings.registerSettingTab(new (require('obsidian').PluginSettingTab)(...))——需在设置 Tab 的 display() 里渲染
+
+翻译插件（覆盖主插件界面文案，键级覆盖 zh/en，插件停止自动还原）：
+
+module.exports = {
+  name: 'my-translation',
+  inject: ['dshI18n'],
+  apply(ctx) {
+    ctx.effect(() => [
+      ctx.dshI18n.registerLocale('en', {
+        'chat.send': 'Send it!',
+        'chat.header.newSession': '＋ New Conversation',
+        // ...按需覆盖任意文案 key；不写 key 则保持主插件原文
+      }),
+    ])
+  },
+}
 
 注意：
 - 工具 execute 返回 JSON 可序列化对象。

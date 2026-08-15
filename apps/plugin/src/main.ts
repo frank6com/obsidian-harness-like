@@ -26,7 +26,7 @@ import {
   type ProviderConfig,
 } from './settings'
 import { HarnessLikeSettingsTab, type TabId } from './settings-tab'
-import { getLanguage, resolveLanguage, setLanguage, t } from './i18n'
+import { getLanguage, registerLocale, resolveLanguage, setLanguage, t } from './i18n'
 import { WriteApprovalModal, GrantModal, ConfirmModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
 import { pluginDevToolsPlugin } from './tools/plugin-dev'
@@ -154,18 +154,14 @@ export default class HarnessLikePlugin extends Plugin {
         }),
       ),
     )
-    this.fibers.push(
-      ctx.plugin(
-        runtimePlugin({
-          pluginsDir,
-          require: cordisShim,
-          // 命令命名空间：以主插件 id/名起始（Harness Like: 命令（子插件id）），命令面板可快速查找
-          hostId: this.manifest.id,
-          hostName: this.manifest.name,
-        }),
-      ),
-    )
+    this.fibers.push(ctx.plugin(runtimePlugin({ pluginsDir, require: cordisShim, hostId: this.manifest.id, hostName: this.manifest.name })))
     await Promise.all(this.fibers)
+
+    // 翻译扩展点：用户插件通过 inject: ['dshI18n'] + registerLocale(lang, dict)
+    // 覆盖主插件界面文案（返回 disposer，插件停止时自动移除）
+    ctx.reflect.provide('dshI18n', {
+      registerLocale,
+    })
 
     // 编辑器桥：把 Obsidian 的 activeEditor 暴露为 ctx.editor
     ctx.editor.setProvider(() => {

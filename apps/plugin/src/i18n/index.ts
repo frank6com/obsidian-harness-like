@@ -20,6 +20,9 @@ export type LanguagePreference = 'auto' | Language
 
 const dictionaries: Record<Language, Record<string, string>> = { zh, en }
 
+/** 用户插件注册的扩展文案（覆盖内置），按语言分组、按注册顺序栈式存储（后注册优先）；插件停止时移除自己的注册 */
+const extra: Record<Language, Array<Record<string, string>>> = { zh: [], en: [] }
+
 let current: Language = resolveLanguage('auto')
 
 /** 读取 Obsidian 应用语言（localStorage['language']，缺失回退 navigator.language） */
@@ -58,16 +61,41 @@ export function getLanguage(): Language {
   return current
 }
 
-/** 取当前语言文案；缺失时回退中文，再回退 key 本身 */
+/**
+ * 注册语言覆盖（翻译扩展点，供用户插件调用）：
+ * 把 dict 按 key 覆盖到 lang 的内置文案；返回 disposer，插件停止时移除本插件的注册。
+ * 同一 key 多插件注册时后注册者优先；任一插件卸载只移除自己的注册，其余仍生效。
+ * 查找链变为：扩展文案（后注册优先）→ 内置字典 → key 本身。
+ */
+export function registerLocale(lang: Language, dict: Record<string, string>): () => void {
+  extra[lang].push(dict)
+  return () => {
+    const idx = extra[lang].indexOf(dict)
+    if (idx !== -1) extra[lang].splice(idx, 1)
+  }
+}
+
+/** 取当前语言文案；查找顺序：扩展文案（后注册优先）→ 内置 zh/en → key 本身 */
 export function t(key: string, vars?: Record<string, string | number>): string {
   const table = dictionaries[current] ?? zh
-  let text = table[key] ?? zh[key] ?? key
-  if (vars) {
-    for (const [k, v] of Object.entries(vars)) {
-      text = text.split(`{${k}}`).join(String(v))
+  let text: string | undefined
+  const regs = extra[current]
+  for (let i = regs.length - 1; i >= 0; i--) {
+    const reg = regs[i]
+    if (!reg) continue
+    const v = reg[key]
+    if (v !== undefined) {
+      text = v
+      break
     }
   }
-  return text
+  let final = text ?? table[key] ?? zh[key] ?? key
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) {
+      final = final.split(`{${k}}`).join(String(v))
+    }
+  }
+  return final
 }
 
 /** 内置智能体显示名（自定义智能体用存储值） */
@@ -80,4 +108,15 @@ export function agentDisplayName(a: { id: string; name: string }): string {
 export function agentDisplayDesc(a: { id: string; description?: string }): string | undefined {
   const key = `agent.${a.id}.desc`
   return key in zh ? t(key) : a.description
+}
+
+/** dshI18n 服务（主插件提供）：用户插件通过 inject: ['dshI18n'] 声明后调用 registerLocale */
+export interface DshI18nService {
+  registerLocale(lang: Language, dict: Record<string, string>): () => void
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    dshI18n: DshI18nService
+  }
 }

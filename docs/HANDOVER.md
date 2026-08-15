@@ -50,6 +50,7 @@
 - 插件管理器：发现/授权/加载/停止/重新加载/删除/授权状态展示
 - 创造模式工具集：`create_plugin` / `write_plugin_file`（覆盖需确认）/ `plugin_status` / `reload_plugin`（未授权弹窗）/ `open_view` / `plugin_guide`
 - 插件可注册：工具、命令、ItemView 面板、ribbon 图标、状态栏、设置页
+- **翻译扩展点 `ctx.dshI18n.registerLocale(lang, dict)`**（main.ts provide，返回 disposer）：用户插件可键级覆盖主插件 zh/en 界面文案（多插件注册时后注册优先，任一插件卸载只移除自己的注册）；创造模式 agent 可直接产出"翻译插件"
 
 ### 3.4 智能体与模型
 - 智能体预设：内置对话模式/修编模式/创造模式（可启用/禁用，禁用不出现在面板菜单）+ 自定义智能体（弹窗编辑，checkbox 勾选能力白名单）
@@ -90,7 +91,7 @@ dev-vault/                  项目内 Obsidian 测试库（gitignore）
 3. **发布（P3，SOP §7）**：远程仓库创建（名 `harness-like`）→ BRAT → 社区商店申报；发布前建议补：README 英文版、LICENSE、CHANGELOG
 4. 插件加载失败时的视图注册残留清理（Obsidian viewRegistry 无公开清理 API，agent 曾用换视图名绕开）
 5. 协议支持（OpenAI 兼容已覆盖主流；Anthropic/Gemini 按需添加，架构已支持多 provider 注册）
-6. i18n 边界：`plugin_guide` 等 agent 提示面保持中文（LLM 工作语言）；工具名/命令 id 为协议面不翻译；命令名在插件注册时定稿，切换语言后需重载插件才更新（面板/设置内即时生效，命令名不即时）
+6. i18n 边界：`plugin_guide` 等 agent 提示面保持中文（LLM 工作语言）；工具名/命令 id 为协议面不翻译；命令名在插件注册时定稿，切换语言后需重载插件才更新（面板/设置内即时生效，命令名不即时）；新增语言种类（非 zh/en）不在 v1 支持范围——`dshI18n` 只做键级覆盖
 
 ## 7. 开发速查
 

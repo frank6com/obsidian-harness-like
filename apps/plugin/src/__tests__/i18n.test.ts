@@ -7,6 +7,7 @@ import {
   agentDisplayDesc,
   agentDisplayName,
   getLanguage,
+  registerLocale,
   resolveLanguage,
   setLanguage,
   t,
@@ -82,6 +83,39 @@ describe('内置智能体显示名映射', () => {
       'Can read and write notes (default)',
     )
     expect(agentDisplayName({ id: 'custom-1', name: '我的智能体' })).toBe('我的智能体')
+    setLanguage('zh')
+  })
+})
+
+describe('registerLocale（翻译扩展点）', () => {
+  it('扩展文案覆盖内置；disposer 移除后还原；未覆盖的 key 保持原文', () => {
+    setLanguage('zh')
+    expect(t('chat.send')).toBe('发送')
+    const dispose = registerLocale('zh', { 'chat.send': '发送！', 'chat.stop': '停' })
+    expect(t('chat.send')).toBe('发送！')
+    expect(t('chat.stop')).toBe('停')
+    expect(t('chat.phase.thinking')).toBe('思考中…') // 未覆盖的 key 不受影响
+    dispose()
+    expect(t('chat.send')).toBe('发送')
+    expect(t('chat.stop')).toBe('停止')
+  })
+
+  it('多个插件注册同一 key：后注册者生效，先注册者卸载后回退到后注册者', () => {
+    setLanguage('en')
+    const a = registerLocale('en', { 'chat.send': 'Send A' })
+    const b = registerLocale('en', { 'chat.send': 'Send B' })
+    expect(t('chat.send')).toBe('Send B')
+    a()
+    expect(t('chat.send')).toBe('Send B')
+    b()
+    expect(t('chat.send')).toBe('Send')
+  })
+
+  it('扩展文案同样作用于英文语言与占位符替换', () => {
+    setLanguage('en')
+    const dispose = registerLocale('en', { 'chat.tool.fail': 'Oops {tool}: {msg}' })
+    expect(t('chat.tool.fail', { tool: 'x', msg: 'boom' })).toBe('Oops x: boom')
+    dispose()
     setLanguage('zh')
   })
 })
