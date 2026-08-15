@@ -67,6 +67,8 @@ export class ChatView extends ItemView {
   private turnCopied = false
   /** 最近一次渲染的 assistant 原始内容（防重比较用，textContent 不可靠） */
   private lastAssistantRaw: string | null = null
+  /** 最近处理的事件指纹（监听器叠加兜底：同一事件只处理一次） */
+  private lastEventKey = ''
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -224,6 +226,16 @@ export class ChatView extends ItemView {
 
   private onSessionEvent(e: SessionEvent): void {
     if (e.sessionId !== this.currentSessionId) return
+    // 事件级去重：若同一事件（同 ts/内容）被再次投递（如监听器叠加），跳过
+    // 指纹 = 会话 + 类型 + ts + 内容/调用 id 前缀，避免不同事件误判
+    const frag = 'content' in e && typeof e.content === 'string'
+      ? e.content.slice(0, 40)
+      : 'id' in e
+        ? String(e.id)
+        : ''
+    const key = `${e.sessionId}:${e.type}:${e.ts}:${frag}`
+    if (key === this.lastEventKey) return
+    this.lastEventKey = key
     if (e.type === 'turn/start') {
       // 新一轮次容器（send() 已先建好含用户消息的容器，这里幂等）
       this.openTurnContainer()
@@ -782,6 +794,7 @@ export class ChatView extends ItemView {
     this.turnText = []
     this.turnCopied = false
     this.lastAssistantRaw = null
+    this.lastEventKey = ''
     const id = this.currentSessionId
     if (!id) {
       this.renderWelcome()
