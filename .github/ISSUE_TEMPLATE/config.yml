@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 用户文档
+    url: https://frank6com.github.io/obsidian-harness-like/
+    about: 使用与插件开发指南（中文 / English）
+  - name: Discussions
+    url: https://github.com/frank6com/obsidian-harness-like/discussions
+    about: 提问、想法交流与社区讨论
