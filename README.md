@@ -15,7 +15,9 @@
 
 ### What is Harness Like?
 
-Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embeds a Cordis runtime inside the Obsidian plugin process, exposes Obsidian's APIs as Cordis services, and lets an AI agent use tools to read and write your notes — with a human-in-the-loop approval flow. In **Create Mode**, the agent can even build, iterate and reload your own Cordis plugins — Obsidian-adapted plugins that run inside Obsidian and extend it through `ctx.*` services — entirely through conversation.
+Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embeds a Cordis runtime inside the Obsidian plugin process, exposes Obsidian's APIs as Cordis services, and lets an AI agent read and write your notes through tools — with human approval at every step to keep your data safe. In **Create Mode**, you can build, iterate and reload your own **Cordis plugins** entirely through conversation — whatever you can imagine, you can create.
+
+(Note: these are not Obsidian-native plugins — they are Cordis plugins adapted to Obsidian's extension points provided by Harness Like.)
 
 > Detailed user guide: [**Harness Like Docs**](https://frank6com.github.io/obsidian-harness-like/)
 
@@ -27,9 +29,9 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 
 ### Installation
 
-From the **official plugin directory**: [Harness Like](https://community.obsidian.md/plugins/harness-like) — in Obsidian: Settings → Community plugins → Browse → search "Harness Like".
+1. From the **official plugin directory**: [Harness Like](https://community.obsidian.md/plugins/harness-like) (desktop only) — in Obsidian: Settings → Community plugins → Browse → search "Harness Like".
 
-Manual install (alternative): copy `main.js`, `manifest.json`, `styles.css` from the repository root to `.obsidian/plugins/harness-like/` in your vault.
+2. Manual install (alternative): copy `main.js`, `manifest.json`, `styles.css` from the repository root to `.obsidian/plugins/harness-like/` in your vault.
 
 ### Quick Start
 
@@ -64,6 +66,11 @@ Manual install (alternative): copy `main.js`, `manifest.json`, `styles.css` from
 
 MIT
 
+### For contributors
+
+- Skip this section as a user. Full development docs: [Development](https://frank6com.github.io/obsidian-harness-like/development/index.html).
+- Questions? Ask in GitHub **Discussions** or file feature requests in **Issues**.
+
 ---
 
 <a id="zh"></a>
@@ -71,7 +78,9 @@ MIT
 
 ### 这是什么？
 
-Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插件进程内嵌入 Cordis 运行时，把 Obsidian 的 API 暴露为 Cordis 服务，让 agent 通过工具读写你的笔记，全程带人工审批；在**创造模式**下，agent 甚至能完全通过对话创建、迭代并重载你自己的 **Cordis 插件**（运行在 Obsidian 内、通过 `ctx.*` 服务适配 Obsidian 的插件，而非 Obsidian 原生插件）。
+Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插件进程内嵌入 Cordis 运行时，把 Obsidian 的 API 暴露为 Cordis 服务，让 agent 可以通过工具读写你的笔记，同时为了保障数据安全全程带人工审批；而在**创造模式**下，甚至能按照你的想法完全通过对话创建、迭代并重载你自己的 **Cordis 插件**，让您的想法言出法随。
+
+`（注意此并非 Obsidian 原生插件，而是通过本插件针对 Obsidian 提供的扩展点适配的 Cordis 插件）`
 
 > 详细使用指南：[**Harness Like 文档站**](https://frank6com.github.io/obsidian-harness-like/)
 
@@ -83,9 +92,9 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 
 ### 安装
 
-从**官方插件目录**安装：[Harness Like](https://community.obsidian.md/plugins/harness-like)（仅限桌面端）——Obsidian 内：设置 → 第三方插件 → 浏览 → 搜索 "Harness Like"。
+1. 从**官方插件目录**安装：[Harness Like](https://community.obsidian.md/plugins/harness-like)（仅限桌面端）——Obsidian 内：设置 → 第三方插件 → 浏览 → 搜索 "Harness Like"。
 
-手动安装（备选）：从仓库根目录复制 `main.js`、`manifest.json`、`styles.css` 到 vault 的 `.obsidian/plugins/harness-like/`。
+2. 手动安装（备选）：从仓库根目录复制 `main.js`、`manifest.json`、`styles.css` 到 vault 的 `.obsidian/plugins/harness-like/`。
 
 ### 快速开始
 
@@ -122,16 +131,8 @@ MIT
 
 ---
 
-## 开发 / Development（面向贡献者）
+## 面向贡献者
 
-> 使用者可直接跳过本节。完整开发文档见文档站[开发文档](https://frank6com.github.io/obsidian-harness-like/development/index.html)栏目。
+- 使用者可直接跳过本节。完整开发文档见文档站[开发文档](https://frank6com.github.io/obsidian-harness-like/development/index.html)栏目。
 
-```sh
-pnpm install
-pnpm dev          # esbuild watch，产物自动同步 dev-vault/（项目内测试库）
-pnpm typecheck    # 四个包 + 插件类型检查
-pnpm test         # vitest 全量
-pnpm build        # 产物构建 + 同步（仓库根目录 = 官方插件包）
-```
-
-**约定**：用户插件一律通过 `ctx.*` 服务访问宿主能力（禁止直接操作 Obsidian DOM），所有注册必须挂 disposer（`ctx.effect`），保证卸载可逆。内部开发文档（SOP / 架构 / 交接约束）保留在仓库本地 `docs-internal/` 目录。
+- 有问题请在 GitHub Discussions 提问，或在 Issues 里提交功能请求。
