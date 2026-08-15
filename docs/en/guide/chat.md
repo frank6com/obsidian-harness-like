@@ -22,6 +22,12 @@
 - Export directory: Settings → Sessions (default: a `sessions/` folder at the vault root).
 - Retention (auto-cleanup days): Settings → Sessions.
 
+## Export & backup
+
+- **Export as Markdown**: hover the session in the list and click "⤓" — exports that session as a Markdown note;
+- **Export directory**: Settings → Sessions → "Export directory" (default: a `sessions/` folder at the vault root; empty = root);
+- **Full backup**: session logs live in `.obsidian/harness-like/sessions/` — copy that folder to migrate with your vault.
+
 ## Language
 
 Default is "Follow system": matches Obsidian's app language (zh → 中文, otherwise English). Pin 中文 or English in Settings → Interface.

@@ -1,16 +1,20 @@
 # Quick Start
 
-## Install
+## Install (the host plugin)
 
-In Obsidian: Settings → Community plugins → Browse → search "Harness Like" (**desktop only**).
+From the **official Obsidian plugin directory**: [Harness Like](https://community.obsidian.md/plugins/harness-like) (desktop only).
 
-Manual install: copy `main.js`, `manifest.json`, `styles.css` from the repository root to `.obsidian/plugins/harness-like/` in your vault.
+In Obsidian: Settings → Community plugins → Browse → search **Harness Like** → Install → Enable.
+
+Manual install (alternative): copy `main.js`, `manifest.json`, `styles.css` from the GitHub repository root to `.obsidian/plugins/harness-like/` in your vault.
 
 ## Configure a model
 
-1. Click the bot icon in the ribbon (or run "Open Harness Like Panel").
-2. Open plugin settings (Settings → Community plugins → Harness Like).
-3. On the Models tab: enter your **API Key** (DeepSeek endpoint is pre-configured), fetch the model list ("Fetch from endpoint") or add models manually, and set a default model.
+1. Click the bot icon in the left ribbon, or run the host command "Open Harness Like Panel";
+2. Open host settings (Settings → Community plugins → Harness Like) → Models tab:
+   - The DeepSeek channel is pre-configured — enter your **API Key**;
+   - "Fetch from endpoint" to pull the model list, or add models manually;
+   - Set your usual model as the default.
 
 ## First chat
 
@@ -22,9 +26,19 @@ Try an example:
 
 The agent calls tools with visible cards; write operations ask for approval.
 
+## Host commands (in the command palette)
+
+| Command | Purpose |
+| --- | --- |
+| Open Harness Like Panel | Opens the chat panel (same as the ribbon bot icon) |
+| Open Harness Like Plugin Manager | Opens the sub-plugin management view |
+| Reload authorized user plugins | Reloads all authorized sub-plugins |
+
+> Sub-plugin commands appear as `Harness Like: command (sub-plugin-id)` and are used the same way — see [User Plugins](/en/guide/plugins).
+
 ## Next steps
 
-- [Chat panel](/en/guide/chat)
-- [Agents & models](/en/guide/agents-models)
-- [Approval & security](/en/guide/approval)
-- [User plugins](/en/guide/plugins)
+- [Chat Panel](/en/guide/chat) (including session export)
+- [Agents & Models](/en/guide/agents-models) (what the three modes are for)
+- [Describing what you want](/en/guide/speak-to-agent) (Obsidian areas & how to phrase requests)
+- [Creating Plugins in Conversation](/en/guide/plugin-agent)

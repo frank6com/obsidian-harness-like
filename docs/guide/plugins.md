@@ -15,6 +15,17 @@
 - 运行中可：**打开面板 / 重新加载 / 停止 / 删除**；
 - 授权记录可在 设置 → 插件授权 查看/撤销。
 
+## 使用子插件注册的命令
+
+子插件注册的命令会在命令面板中显示为 `Harness Like: 命令（子插件id）`（如 `Harness Like: 打开面板（folder-stats）`）——打开命令面板（Ctrl/Cmd+P）搜索 "Harness Like" 即可找到；也可以直接问 agent 帮你执行。
+
+## 备份与迁移
+
+子插件 = `.obsidian/harness-like-plugins/<id>/` 下的文件（package.json + main.js）。**备份/迁移 = 复制该目录**：
+
+1. 把整个 `.obsidian/harness-like-plugins/`（或单个子插件目录）复制到新 vault 的相同位置；
+2. 在新 vault 中打开插件管理器 →「授权并加载」（重新授权一次即可）。
+
 ## 安全
 
 - 插件只执行本地文件（`.obsidian/harness-like-plugins/`），不会下载或远程执行代码；

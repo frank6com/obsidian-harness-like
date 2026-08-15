@@ -16,16 +16,14 @@ const enNav = [
 const zhTutorial = [
   {
     text: '入门',
-    items: [
-      { text: '快速开始', link: '/guide/quickstart' },
-      { text: '已实现的能力清单', link: '/guide/capabilities' },
-    ],
+    items: [{ text: '快速开始', link: '/guide/quickstart' }],
   },
   {
     text: '日常使用',
     items: [
       { text: '对话面板', link: '/guide/chat' },
       { text: '智能体与模型', link: '/guide/agents-models' },
+      { text: '在对话中描述需求', link: '/guide/speak-to-agent' },
       { text: '审批与安全', link: '/guide/approval' },
     ],
   },
@@ -45,16 +43,14 @@ const zhTutorial = [
 const enTutorial = [
   {
     text: 'Getting Started',
-    items: [
-      { text: 'Quick Start', link: '/en/guide/quickstart' },
-      { text: 'Implemented Capabilities', link: '/en/guide/capabilities' },
-    ],
+    items: [{ text: 'Quick Start', link: '/en/guide/quickstart' }],
   },
   {
     text: 'Daily Use',
     items: [
       { text: 'Chat Panel', link: '/en/guide/chat' },
       { text: 'Agents & Models', link: '/en/guide/agents-models' },
+      { text: 'Describing What You Want', link: '/en/guide/speak-to-agent' },
       { text: 'Approval & Security', link: '/en/guide/approval' },
     ],
   },
@@ -73,7 +69,7 @@ const enTutorial = [
 
 /** 开发文档导航树（面向本插件贡献者，分组分类） */
 const zhDevDocs = [
-  { text: '入门', items: [{ text: '开发总览', link: '/development/index' }] },
+  { text: '入门', items: [{ text: '开发总览', link: '/development/index' }, { text: '能力清单（扩展点映射）', link: '/development/capabilities' }] },
   {
     text: '流程与发布',
     items: [
@@ -99,7 +95,7 @@ const zhDevDocs = [
 ]
 
 const enDevDocs = [
-  { text: 'Getting Started', items: [{ text: 'Overview', link: '/en/development/index' }] },
+  { text: 'Getting Started', items: [{ text: 'Overview', link: '/en/development/index' }, { text: 'Capabilities (extension mapping)', link: '/en/development/capabilities' }] },
   {
     text: 'Workflow & Release',
     items: [

@@ -10,6 +10,12 @@ Three built-in modes:
 | Edit | Read/write notes (default) |
 | Create | Full capabilities, can create/modify plugins |
 
+**Which mode when**:
+
+- **Chat Mode**: read-only questions — counting, searching, summarizing, Q&A;
+- **Edit Mode**: reading and writing notes — journals, lists, editing content;
+- **Create Mode**: creating/modifying sub-plugins — panels, commands, tools, icons (see [Creating Plugins in Conversation](/en/guide/plugin-agent)).
+
 - Switch via the agent button (upward menu) in the toolbar; disabled modes are hidden.
 - **Custom agents**: Settings → Agents → "＋ Add Custom Agent", check capability whitelists.
 - **Default agent**: Settings → Agents → Default agent dropdown (enabled ones only).

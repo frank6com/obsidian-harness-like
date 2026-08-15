@@ -15,6 +15,17 @@ Plugin Manager (top-right "Plugin Manager" button in the chat header):
 - While running: **Open Panel / Reload / Stop / Delete**;
 - Grants can be reviewed/revoked in Settings → Plugin Grants.
 
+## Using sub-plugin commands
+
+Commands registered by sub-plugins appear in the palette as `Harness Like: command (sub-plugin-id)` (e.g. `Harness Like: Open panel (folder-stats)`) — press Ctrl/Cmd+P and search "Harness Like", or just ask the agent to run it.
+
+## Backup & migration
+
+A sub-plugin is just the files under `.obsidian/harness-like-plugins/<id>/` (package.json + main.js). **Backup/migrate = copy the folder**:
+
+1. Copy `.obsidian/harness-like-plugins/` (or a single sub-plugin folder) to the same location in the new vault;
+2. Open the Plugin Manager there → "Authorize & Load" (one-time re-authorization).
+
 ## Security
 
 - Plugins only execute local files under `.obsidian/harness-like-plugins/`; nothing is downloaded or executed remotely;
