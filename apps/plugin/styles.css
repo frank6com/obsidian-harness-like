@@ -244,25 +244,40 @@
   white-space: pre-wrap;
 }
 
-/* 消息复制按钮（悬浮显示） */
-.dsh-copy-btn {
-  position: absolute;
-  top: 4px;
-  right: 8px;
-  opacity: 0;
-  transition: opacity 0.15s;
-  font-size: 11px;
-  color: var(--text-muted);
-  cursor: pointer;
-  background: var(--background-secondary);
-  border-radius: 4px;
-  padding: 0 6px;
-  line-height: 1.6;
-  z-index: 1;
+/* ===== 轮次容器：一次问答一组，底部挂"复制本段对话" ===== */
+
+.dsh-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.dsh-msg:hover .dsh-copy-btn {
-  opacity: 1;
+.dsh-turn + .dsh-turn {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--background-modifier-border);
+}
+
+.dsh-turn-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.dsh-turn-copy {
+  height: auto; /* 覆盖 Obsidian 全局 button 固定高度 */
+  font-size: 11px;
+  padding: 2px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dsh-turn-copy:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
 }
 
 /* ===== 已渲染 Markdown 的气泡排版（marked + 自研样式层，完全可控） ===== */

@@ -55,6 +55,12 @@ export class ChatView extends ItemView {
   private lastFailed: { sessionId: string; text: string } | null = null
   private listCollapsed = false
   private disposers: Array<() => void> = []
+  /** 当前轮次容器（一次问答 = 一轮，底部挂"复制本段对话"按钮） */
+  private turnEl: HTMLElement | null = null
+  /** 当前轮次累积文本（轮末复制用） */
+  private turnText: string[] = []
+  /** 当前轮次是否已挂复制按钮 */
+  private turnCopied = false
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -164,28 +170,66 @@ export class ChatView extends ItemView {
 
   private onSessionEvent(e: SessionEvent): void {
     if (e.sessionId !== this.currentSessionId) return
-    if (e.type === 'assistant/message') {
+    if (e.type === 'turn/start') {
+      // 新一轮次容器（send() 已先建好含用户消息的容器，这里幂等）
+      this.openTurnContainer()
+    } else if (e.type === 'turn/end') {
+      this.closeTurn()
+      void this.refreshSessions()
+    } else if (e.type === 'assistant/message') {
       if (this.streamingEl) {
         this.streamingEl.classList.remove('dsh-msg-streaming')
         this.renderMarkdown(this.streamingEl, e.content)
-        this.addCopyButton(this.streamingEl, e.content)
         this.streamingEl = null
       } else {
         this.appendMessage('assistant', e.content)
       }
+      this.turnText.push(`助手：\n${e.content}`)
     } else if (e.type === 'system/message') {
       this.appendMessage('system', e.content)
     } else if (e.type === 'tool/call') {
       this.renderToolCall(e.id, e.tool, e.input)
     } else if (e.type === 'tool/result') {
       this.renderToolResult(e.id, e.tool, e.ok, e.error, e.output)
-    } else if (e.type === 'turn/end') {
-      void this.refreshSessions()
     }
   }
 
+  /** 打开当前轮次容器（幂等；无内容时按需创建） */
+  private openTurnContainer(): void {
+    if (this.turnEl) return
+    this.turnEl = this.messagesEl.createDiv({ cls: 'dsh-turn' })
+    this.turnText = []
+    this.turnCopied = false
+  }
+
+  /** 新一轮次：容器 + 用户消息 + 累积文本 */
+  private startTurn(userText: string): void {
+    this.closeTurn()
+    this.openTurnContainer()
+    this.turnText.push(`用户：\n${userText}`)
+    this.appendMessage('user', userText)
+  }
+
+  /** 收尾当前轮次：底部挂"复制本段对话"按钮（幂等） */
+  private closeTurn(): void {
+    if (!this.turnEl || this.turnCopied) {
+      this.turnEl = null
+      return
+    }
+    this.turnCopied = true
+    const actions = this.turnEl.createDiv({ cls: 'dsh-turn-actions' })
+    const btn = actions.createEl('button', { cls: 'dsh-turn-copy', text: '复制本段对话' })
+    btn.onclick = () => {
+      void navigator.clipboard.writeText(this.turnText.join('\n\n')).then(() => {
+        btn.setText('已复制')
+        setTimeout(() => btn.setText('复制本段对话'), 1200)
+      })
+    }
+    this.turnEl = null
+  }
+
   private renderToolCall(id: string, tool: string, input: unknown): void {
-    const card = this.messagesEl.createDiv({ cls: 'dsh-tool-card is-running' })
+    const card = (this.turnEl ?? this.messagesEl).createDiv({ cls: 'dsh-tool-card is-running' })
     card.createDiv({ cls: 'dsh-tool-card-title', text: `调用工具 ${tool}` })
     const detail = card.createEl('pre', { cls: 'dsh-tool-card-detail', text: summarize(input) })
     card.onclick = () => detail.classList.toggle('is-expanded')
@@ -219,7 +263,7 @@ export class ChatView extends ItemView {
   }
 
   private appendToolCard(title: string, detail: unknown): void {
-    const card = this.messagesEl.createDiv({ cls: 'dsh-tool-card' })
+    const card = (this.turnEl ?? this.messagesEl).createDiv({ cls: 'dsh-tool-card' })
     card.createDiv({ cls: 'dsh-tool-card-title', text: title })
     if (detail !== undefined) {
       card.createEl('pre', { cls: 'dsh-tool-card-detail', text: summarize(detail) })
@@ -227,39 +271,28 @@ export class ChatView extends ItemView {
     this.scrollToBottom()
   }
 
+  /** 消息气泡（挂到当前轮次容器内；无容器时直接挂消息区） */
   private appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
-    const el = this.messagesEl.createDiv({ cls: `dsh-msg dsh-msg-${role}` })
+    const el = (this.turnEl ?? this.messagesEl).createDiv({ cls: `dsh-msg dsh-msg-${role}` })
     if (role === 'assistant' && this.ctx.settings.get('renderMarkdown', true)) {
       this.renderMarkdown(el, content)
     } else {
       el.textContent = content
     }
-    this.addCopyButton(el, content)
     this.scrollToBottom()
     return el
   }
 
-  /** 渲染 Markdown（marked + DOMPurify，样式由 styles.css 完全控制） */
+  /** 渲染 Markdown（marked + DOMPurify；代码块保留独立复制按钮，样式由 styles.css 控制） */
   private renderMarkdown(el: HTMLElement, markdown: string): void {
     el.innerHTML = renderMarkdown(markdown)
     attachCodeCopyButtons(el)
   }
 
-  private addCopyButton(el: HTMLElement, text: string): void {
-    const btn = el.createSpan({ cls: 'dsh-copy-btn', text: '复制' })
-    btn.onclick = (ev) => {
-      ev.stopPropagation()
-      void navigator.clipboard.writeText(text).then(() => {
-        btn.setText('已复制')
-        setTimeout(() => btn.setText('复制'), 1200)
-      })
-    }
-  }
-
   private appendStream(delta: string): void {
     if (!this.streamingEl) {
       // 流式气泡用纯文本（避免 textContent 覆盖已渲染子元素）；结束后再渲染 Markdown
-      this.streamingEl = this.messagesEl.createDiv({
+      this.streamingEl = (this.turnEl ?? this.messagesEl).createDiv({
         cls: 'dsh-msg dsh-msg-assistant dsh-msg-streaming',
       })
     }
@@ -301,7 +334,7 @@ export class ChatView extends ItemView {
       } satisfies SessionEvent)
       void this.refreshSessions()
     }
-    this.appendMessage('user', text)
+    this.startTurn(text)
     this.lastFailed = null
     await this.run(sessionId, text)
   }
@@ -377,10 +410,12 @@ export class ChatView extends ItemView {
       this.ctx.emit('dsh/session/event', ev)
       if (!failed) {
         this.lastFailed = { sessionId, text }
-        const row = this.messagesEl.createDiv({ cls: 'dsh-retry-row' })
+        const row = (this.turnEl ?? this.messagesEl).createDiv({ cls: 'dsh-retry-row' })
         const btn = row.createEl('button', { cls: 'dsh-btn', text: '重试' })
         btn.onclick = () => void this.run(sessionId, text, true)
       }
+      // 异常/中止也收尾当前轮次（挂复制按钮）
+      this.closeTurn()
     } finally {
       this.running = false
       this.abortController = null
@@ -660,6 +695,9 @@ export class ChatView extends ItemView {
     this.streamingEl = null
     this.streamingText = ''
     this.toolCards.clear()
+    this.turnEl = null
+    this.turnText = []
+    this.turnCopied = false
     const id = this.currentSessionId
     if (!id) {
       this.renderWelcome()
@@ -677,14 +715,30 @@ export class ChatView extends ItemView {
     }
     this.refreshModelBtn()
     for (const e of events) {
-      if (e.type === 'user/message') this.appendMessage('user', e.content)
-      else if (e.type === 'assistant/message') this.appendMessage('assistant', e.content)
-      else if (e.type === 'system/message') this.appendMessage('system', e.content)
-      else if (e.type === 'tool/call') this.renderToolCall(e.id, e.tool, e.input)
-      else if (e.type === 'tool/result') {
+      if (e.type === 'turn/start') {
+        // 新轮次容器（用户消息/助手消息会按需补齐）
+        this.openTurnContainer()
+      } else if (e.type === 'turn/end') {
+        this.closeTurn()
+      } else if (e.type === 'user/message') {
+        this.openTurnContainer()
+        this.turnText.push(`用户：\n${e.content}`)
+        this.appendMessage('user', e.content)
+      } else if (e.type === 'assistant/message') {
+        this.openTurnContainer()
+        this.turnText.push(`助手：\n${e.content}`)
+        this.appendMessage('assistant', e.content)
+      } else if (e.type === 'system/message') {
+        this.openTurnContainer()
+        this.appendMessage('system', e.content)
+      } else if (e.type === 'tool/call') {
+        this.renderToolCall(e.id, e.tool, e.input)
+      } else if (e.type === 'tool/result') {
         this.renderToolResult(e.id, e.tool, e.ok, e.error, e.output)
       }
     }
+    // 末尾未收尾的轮次（中断/旧日志无 turn 标记）：补上复制按钮
+    this.closeTurn()
   }
 
   /** 空状态引导：示例问题 + 未配置 key 提示 */
