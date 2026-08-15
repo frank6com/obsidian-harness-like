@@ -26,6 +26,7 @@ import {
   type ProviderConfig,
 } from './settings'
 import { HarnessLikeSettingsTab, type TabId } from './settings-tab'
+import { setLanguage, t } from './i18n'
 import { WriteApprovalModal, GrantModal, ConfirmModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
 import { pluginDevToolsPlugin } from './tools/plugin-dev'
@@ -50,6 +51,8 @@ export default class HarnessLikePlugin extends Plugin {
 
   override async onload(): Promise<void> {
     await this.loadSettings()
+    // 界面语言：按设置生效（命令名/面板标题等注册时即定稿）
+    setLanguage(this.settings.uiLanguage)
 
     const vaultRoot = (
       this.app.vault.adapter as { getBasePath?: () => string }
@@ -91,8 +94,8 @@ export default class HarnessLikePlugin extends Plugin {
       if (policy === 'ask') {
         const ok = await new ConfirmModal(
           this.app,
-          `agent 请求执行工具 ${request.name}`,
-          '允许',
+          t('approval.toolAsk', { name: request.name }),
+          t('approval.allow'),
         ).ask()
         return ok ? 'allow' : 'deny'
       }
@@ -196,8 +199,8 @@ export default class HarnessLikePlugin extends Plugin {
     const confirmOverwrite = async (pluginId: string, file: string): Promise<boolean> => {
       return new ConfirmModal(
         this.app,
-        `agent 请求覆盖插件 ${pluginId} 的文件 ${file}\n覆盖后原内容将丢失。`,
-        '允许覆盖',
+        t('approval.overwriteConfirm', { id: pluginId, file }),
+        t('approval.allowOverwrite'),
       ).ask()
     }
     this.fibers.push(ctx.plugin(pluginDevToolsPlugin({ ensureGranted, confirmOverwrite })))
@@ -209,17 +212,17 @@ export default class HarnessLikePlugin extends Plugin {
     )
     this.addCommand({
       id: 'open-chat',
-      name: '打开 Harness Like 面板',
+      name: t('cmd.openChat'),
       callback: () => void this.activateView(CHAT_VIEW_TYPE),
     })
     this.addCommand({
       id: 'open-plugin-manager',
-      name: '打开 Harness Like 插件管理器',
+      name: t('cmd.openPluginManager'),
       callback: () => void this.activateView(PLUGIN_MANAGER_VIEW_TYPE),
     })
     this.addCommand({
       id: 'reload-user-plugins',
-      name: '重载已授权的用户插件',
+      name: t('cmd.reloadUserPlugins'),
       callback: () => void this.loadUserPlugins(),
     })
     this.settingsTab = new HarnessLikeSettingsTab(this.app, this, ctx)
@@ -228,7 +231,7 @@ export default class HarnessLikePlugin extends Plugin {
     ctx.reflect.provide('dshSettingsUi', {
       openTo: (tab: string) => this.settingsTab?.openTo(tab as TabId),
     })
-    this.addRibbonIcon('bot', '打开 Harness Like', () => void this.activateView(CHAT_VIEW_TYPE))
+    this.addRibbonIcon('bot', t('cmd.ribbonTitle'), () => void this.activateView(CHAT_VIEW_TYPE))
 
     // 启动时加载已授权用户插件
     await this.loadUserPlugins()

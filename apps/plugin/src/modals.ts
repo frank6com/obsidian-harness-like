@@ -5,6 +5,7 @@
 import { App, Modal, Setting } from 'obsidian'
 import type { AgentMode, AgentPreset } from './settings'
 import type { GrantMode } from '@harness-like/harness-base'
+import { t } from './i18n'
 
 export type GrantChoice = { mode: GrantMode } | { cancel: true }
 
@@ -21,43 +22,43 @@ export class GrantModal extends Modal {
 
   override onOpen(): void {
     const { contentEl, titleEl } = this
-    titleEl.setText(`授权运行插件 ${this.info.id} v${this.info.version}`)
+    titleEl.setText(t('modal.grant.title', { id: this.info.id, version: this.info.version }))
 
     // 索取权限的内容提示：明确说明插件将获得什么
-    new Setting(contentEl).setName('该插件将获得以下本地权限')
+    new Setting(contentEl).setName(t('modal.grant.permissions'))
     const scope = contentEl.createDiv({ cls: 'dsh-modal-scope' })
     scope.createEl('ul', {}, (ul) => {
       for (const item of [
-        '读写 vault 内笔记（写入需经过审批）',
-        '注册命令、工具与自定义面板',
-        '读取当前打开的笔记与编辑器选区',
-        '调用 Obsidian 通知',
+        t('modal.grant.scope.1'),
+        t('modal.grant.scope.2'),
+        t('modal.grant.scope.3'),
+        t('modal.grant.scope.4'),
       ]) {
         ul.createEl('li', { text: item })
       }
     })
     new Setting(contentEl)
-      .setName('安全边界')
+      .setName(t('modal.grant.boundary'))
       .setDesc(
-        '只执行本机 .obsidian/dsh-plugins/ 下的本地文件，不会下载或执行远程代码；' +
+        t('modal.grant.boundaryDesc') + '；' +
           (this.info.description ? `\n${this.info.description}` : ''),
       )
       .setClass('dsh-modal-warning')
-    new Setting(contentEl).setName('选择信任范围（对齐 dsh 的单勾/双勾语义）')
+    new Setting(contentEl).setName(t('modal.grant.trustScope'))
     new Setting(contentEl).addButton((b) =>
       b
-        .setButtonText('信任此版本（单勾）')
+        .setButtonText(t('modal.grant.trustVersion'))
         .setCta()
         .onClick(() => this.finish({ mode: 'version' })),
     )
     new Setting(contentEl).addButton((b) =>
       b
-        .setButtonText('信任所有版本（双勾）')
+        .setButtonText(t('modal.grant.trustAll'))
         .onClick(() => this.finish({ mode: 'all' })),
     )
     new Setting(contentEl).addButton((b) =>
       b
-        .setButtonText('取消')
+        .setButtonText(t('common.cancel'))
         .setWarning()
         .onClick(() => this.finish({ cancel: true })),
     )
@@ -93,17 +94,17 @@ export class ConfirmModal extends Modal {
   constructor(
     app: App,
     private message: string,
-    private okText = '确认',
+    private okText = t('common.confirm'),
   ) {
     super(app)
   }
 
   override onOpen(): void {
     const { contentEl, titleEl } = this
-    titleEl.setText('确认操作')
+    titleEl.setText(t('modal.confirm.title'))
     contentEl.createEl('p', { text: this.message })
     new Setting(contentEl).addButton((b) =>
-      b.setButtonText('取消').onClick(() => this.finish(false)),
+      b.setButtonText(t('common.cancel')).onClick(() => this.finish(false)),
     )
     new Setting(contentEl).addButton((b) =>
       b.setButtonText(this.okText).setWarning().onClick(() => this.finish(true)),
@@ -143,32 +144,32 @@ export class WriteApprovalModal extends Modal {
 
   override onOpen(): void {
     const { contentEl, titleEl } = this
-    titleEl.setText('写操作需要审批')
-    new Setting(contentEl).setName('目标文件').setDesc(`\`${this.target}\``)
+    titleEl.setText(t('modal.write.title'))
+    new Setting(contentEl).setName(t('modal.write.target')).setDesc(`\`${this.target}\``)
     if (this.meta?.preview) {
-      new Setting(contentEl).setName('内容预览（前 200 字符）')
+      new Setting(contentEl).setName(t('modal.write.preview'))
       contentEl.createEl('pre', {
         cls: 'dsh-modal-preview',
         text: this.meta.preview,
       })
     }
     new Setting(contentEl)
-      .setName('影响范围')
-      .setDesc('仅写入 vault 内的笔记/文件，不会修改 Obsidian 自身配置；"本会话允许写"不持久化。')
+      .setName(t('modal.write.scope'))
+      .setDesc(t('modal.write.scopeDesc'))
     new Setting(contentEl).addButton((b) =>
       b
-        .setButtonText('允许一次')
+        .setButtonText(t('modal.write.allowOnce'))
         .setCta()
         .onClick(() => this.finish({ choice: 'allow-once' })),
     )
     new Setting(contentEl).addButton((b) =>
       b
-        .setButtonText('本会话允许写')
+        .setButtonText(t('modal.write.allowSession'))
         .onClick(() => this.finish({ choice: 'allow-session' })),
     )
     new Setting(contentEl).addButton((b) =>
       b
-        .setButtonText('拒绝')
+        .setButtonText(t('modal.write.deny'))
         .setWarning()
         .onClick(() => this.finish({ choice: 'deny' })),
     )
@@ -210,11 +211,11 @@ export class ModelPickModal extends Modal {
 
   override onOpen(): void {
     const { contentEl, titleEl } = this
-    titleEl.setText(`选择要添加的模型（${this.models.length} 个候选）`)
+    titleEl.setText(t('modal.modelPick.title', { count: this.models.length }))
 
     const search = contentEl.createEl('input', {
       cls: 'dsh-modal-search',
-      attr: { placeholder: '搜索模型…（输入新模型名可直接添加为候选）' },
+      attr: { placeholder: t('modal.modelPick.search') },
     })
     search.addEventListener('input', () => {
       this.keyword = search.value.trim().toLowerCase()
@@ -225,12 +226,12 @@ export class ModelPickModal extends Modal {
     this.renderList()
 
     new Setting(contentEl)
-      .addButton((b) => b.setButtonText('全选').onClick(() => {
+      .addButton((b) => b.setButtonText(t('modal.modelPick.selectAll')).onClick(() => {
         this.models.forEach((m) => this.picked.add(m))
         this.renderList()
       }))
-      .addButton((b) => b.setButtonText('确认添加').setCta().onClick(() => this.finish()))
-      .addButton((b) => b.setButtonText('取消').onClick(() => this.close()))
+      .addButton((b) => b.setButtonText(t('modal.modelPick.confirm')).setCta().onClick(() => this.finish()))
+      .addButton((b) => b.setButtonText(t('common.cancel')).onClick(() => this.close()))
   }
 
   private listEl!: HTMLElement
@@ -251,7 +252,7 @@ export class ModelPickModal extends Modal {
         if (cb.checked) this.picked.add(kw)
         else this.picked.delete(kw)
       }
-      row.createEl('span', { text: `＋ 添加自定义：${kw}` })
+      row.createEl('span', { text: t('modal.modelPick.custom', { name: kw }) })
     }
 
     for (const m of visible) {
@@ -262,7 +263,7 @@ export class ModelPickModal extends Modal {
         cb.checked = true
         cb.disabled = true
         row.createEl('span', { text: m })
-        row.createEl('span', { cls: 'dsh-check-added', text: '✓ 已添加' })
+        row.createEl('span', { cls: 'dsh-check-added', text: t('modal.modelPick.addedMark') })
         continue
       }
       const cb = row.createEl('input', { type: 'checkbox' })
@@ -327,40 +328,40 @@ export class AgentEditModal extends Modal {
 
   override onOpen(): void {
     const { contentEl, titleEl } = this
-    titleEl.setText(this.agent.id.startsWith('agent-') ? '添加自定义智能体' : '编辑智能体')
+    titleEl.setText(this.agent.id.startsWith('agent-') ? t('modal.agentEdit.add') : t('modal.agentEdit.edit'))
 
     new Setting(contentEl)
-      .setName('名称')
+      .setName(t('modal.agentEdit.name'))
       .addText((t) =>
         t.setValue(this.name).onChange((v) => {
           this.name = v
         }),
       )
     new Setting(contentEl)
-      .setName('描述')
+      .setName(t('modal.agentEdit.desc'))
       .addText((t) =>
         t.setValue(this.description).onChange((v) => {
           this.description = v
         }),
       )
     new Setting(contentEl)
-      .setName('基础模式')
-      .setDesc('未勾选能力时按此模式过滤工具')
+      .setName(t('modal.agentEdit.mode'))
+      .setDesc(t('modal.agentEdit.modeDesc'))
       .addDropdown((d) =>
         d
-          .addOption('chat', '对话模式')
-          .addOption('edit', '修编模式')
-          .addOption('create', '创造模式')
+          .addOption('chat', t('agent.mode.chat'))
+          .addOption('edit', t('agent.mode.edit'))
+          .addOption('create', t('agent.mode.create'))
           .setValue(this.mode)
           .onChange((v) => {
             this.mode = v as AgentMode
           }),
       )
 
-    new Setting(contentEl).setName('可调用的能力').setDesc('勾选 = 白名单（仅这些工具可用）；不勾选任何项 = 按基础模式默认')
+    new Setting(contentEl).setName(t('modal.agentEdit.caps')).setDesc(t('modal.agentEdit.capsDesc'))
     const search = contentEl.createEl('input', {
       cls: 'dsh-modal-search',
-      attr: { placeholder: '搜索能力…' },
+      attr: { placeholder: t('modal.agentEdit.search') },
     })
     search.addEventListener('input', () => {
       this.keyword = search.value.trim().toLowerCase()
@@ -371,10 +372,10 @@ export class AgentEditModal extends Modal {
 
     new Setting(contentEl)
       .addButton((b) =>
-        b.setButtonText('保存').setCta().onClick(() => {
+        b.setButtonText(t('common.save')).setCta().onClick(() => {
           this.onSave({
             ...this.agent,
-            name: this.name.trim() || '未命名',
+            name: this.name.trim() || t('agent.unnamed'),
             description: this.description.trim() || undefined,
             mode: this.mode,
             capabilities: this.caps.size ? [...this.caps] : undefined,
@@ -382,7 +383,7 @@ export class AgentEditModal extends Modal {
           this.finish()
         }),
       )
-      .addButton((b) => b.setButtonText('取消').onClick(() => this.close()))
+      .addButton((b) => b.setButtonText(t('common.cancel')).onClick(() => this.close()))
   }
 
   private capsEl!: HTMLElement

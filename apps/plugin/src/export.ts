@@ -4,6 +4,7 @@
  */
 
 import type { SessionEvent } from '@harness-like/harness-base'
+import { t } from './i18n'
 
 export interface SessionExportOptions {
   title: string
@@ -16,10 +17,10 @@ function escapePipe(text: string): string {
 
 export function sessionToMarkdown(opts: SessionExportOptions, events: SessionEvent[]): string {
   const lines: string[] = []
-  lines.push(`# ${opts.title || '会话导出'}`)
+  lines.push(`# ${opts.title || t('export.defaultTitle')}`)
   lines.push('')
   lines.push(
-    `> 导出时间: ${new Date().toLocaleString()} ｜ 绑定笔记: ${opts.notePath ?? '无'}`,
+    `> ${t('export.exportedAt')}: ${new Date().toLocaleString()} ｜ ${t('export.boundNote')}: ${opts.notePath ?? t('export.none')}`,
   )
   lines.push('')
 

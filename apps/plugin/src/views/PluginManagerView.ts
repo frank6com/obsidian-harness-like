@@ -7,6 +7,7 @@ import { ItemView, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import { ConfirmModal, GrantModal } from '../modals'
 import { grantDisplay } from '../settings'
+import { getLanguage, setLanguage, t, type Language } from '../i18n'
 
 export const PLUGIN_MANAGER_VIEW_TYPE = 'dsh-plugin-manager'
 
@@ -29,7 +30,7 @@ export class PluginManagerView extends ItemView {
   }
 
   override getDisplayText(): string {
-    return 'Harness Like 插件管理器'
+    return t('pm.viewTitle')
   }
 
   override getIcon(): string {
@@ -37,36 +38,51 @@ export class PluginManagerView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
+    this.disposers.push(
+      this.ctx.on('dsh/settings-updated', () => {
+        // 界面语言切换：整体重渲染
+        const lang = this.ctx.settings.get('uiLanguage', 'zh') as Language
+        if (lang !== getLanguage()) {
+          setLanguage(lang)
+          void this.refresh()
+        }
+      }),
+    )
     await this.refresh()
   }
 
   override onClose(): Promise<void> {
+    for (const d of this.disposers) {
+      try {
+        d()
+      } catch {
+        // 忽略卸载期异常
+      }
+    }
+    this.disposers = []
     return Promise.resolve()
   }
 
+  private disposers: Array<() => void> = []
+
   private async refresh(): Promise<void> {
     this.contentEl.empty()
-    this.contentEl.createEl('h4', { text: '用户插件（.obsidian/dsh-plugins/）' })
+    this.contentEl.createEl('h4', { text: t('pm.heading') })
     const bar = this.contentEl.createDiv({ cls: 'dsh-pm-bar' })
-    const reload = bar.createEl('button', { cls: 'dsh-btn', text: '刷新' })
+    const reload = bar.createEl('button', { cls: 'dsh-btn', text: t('pm.refresh') })
     reload.onclick = () => void this.refresh()
-    const openDir = bar.createEl('button', { cls: 'dsh-btn', text: '打开插件目录' })
+    const openDir = bar.createEl('button', { cls: 'dsh-btn', text: t('pm.openDir') })
     openDir.onclick = () => this.options.openFolder(this.ctx.sandbox.scope.pluginsDir)
 
     const ids = await this.ctx.pluginRuntime.discover()
     if (!ids.length) {
       const empty = this.contentEl.createDiv({ cls: 'dsh-pm-empty' })
-      empty.createEl('p', { text: '还没有用户插件。三步开始：' })
+      empty.createEl('p', { text: t('pm.empty.title') })
       const steps = empty.createEl('ol')
-      steps.createEl('li', {
-        text: '把插件目录复制到 .obsidian/dsh-plugins/<id>/（目录需含 package.json 与编译产物 main.js）',
-      })
-      steps.createEl('li', { text: '点上方"刷新"或"打开插件目录"确认文件就位' })
-      steps.createEl('li', { text: '点"授权并加载"，选择信任范围（单勾=仅此版本 / 双勾=信任后续）' })
-      empty.createEl('p', {
-        cls: 'dsh-pm-hint',
-        text: '内置示例：apps/plugin/examples/my-first-plugin/（仓库内，含预编译产物，可直接复制）',
-      })
+      steps.createEl('li', { text: t('pm.empty.step1') })
+      steps.createEl('li', { text: t('pm.empty.step2') })
+      steps.createEl('li', { text: t('pm.empty.step3') })
+      empty.createEl('p', { cls: 'dsh-pm-hint', text: t('pm.empty.hint') })
       return
     }
 
@@ -87,41 +103,49 @@ export class PluginManagerView extends ItemView {
       if (caps.length) {
         const capRow = info.createDiv({ cls: 'dsh-pm-caps' })
         const LABELS: Record<string, string> = {
-          panel: '面板',
-          ribbon: '图标',
-          commands: '命令',
-          tools: '工具',
-          statusbar: '状态栏',
-          settings: '设置页',
+          panel: t('pm.cap.panel'),
+          ribbon: t('pm.cap.ribbon'),
+          commands: t('pm.cap.commands'),
+          tools: t('pm.cap.tools'),
+          statusbar: t('pm.cap.statusbar'),
+          settings: t('pm.cap.settings'),
         }
         for (const c of caps) {
           capRow.createSpan({ cls: 'dsh-pm-cap', text: LABELS[c] ?? c })
         }
       }
+      const statusLabel: Record<string, string> = {
+        running: t('pm.status.running'),
+        stopped: t('pm.status.stopped'),
+        error: t('pm.status.error'),
+      }
       info.createDiv({
         cls: `dsh-pm-status dsh-pm-status-${rec.status}`,
         text: rec.error
-          ? `错误: ${rec.error}`
-          : [rec.status, `· ${grantDisplay(grant, true, rec.manifest?.version).badge}`].join(' '),
+          ? t('pm.status.errText', { msg: rec.error })
+          : [
+              statusLabel[rec.status] ?? rec.status,
+              `· ${grantDisplay(grant, true, rec.manifest?.version).badge}`,
+            ].join(' '),
       })
       const actions = row.createDiv({ cls: 'dsh-pm-actions' })
       if (rec.status === 'running') {
         if (rec.viewType) {
-          const open = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: '打开面板' })
+          const open = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: t('pm.openPanel') })
           open.onclick = () => this.ctx.views.open(rec.viewType!)
         }
-        const reload = actions.createEl('button', { cls: 'dsh-btn', text: '重新加载' })
+        const reload = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.reload') })
         reload.onclick = () => void this.reload(id)
-        const stop = actions.createEl('button', { cls: 'dsh-btn', text: '停止' })
+        const stop = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.stop') })
         stop.onclick = () => {
           void this.ctx.pluginRuntime.stop(id)
           void this.refresh()
         }
       } else {
-        const run = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: '授权并加载' })
+        const run = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: t('pm.grantAndLoad') })
         run.onclick = () => void this.ensureAndLoad(id)
       }
-      const remove = actions.createEl('button', { cls: 'dsh-btn', text: '删除' })
+      const remove = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.delete') })
       remove.onclick = () => void this.removePlugin(id)
     }
   }
@@ -132,8 +156,8 @@ export class PluginManagerView extends ItemView {
     const result = await this.ctx.pluginRuntime.load(id)
     this.ctx.notice.notice(
       result.status === 'running'
-        ? `插件已重新加载: ${id}`
-        : `加载失败: ${result.error ?? '未知错误'}`,
+        ? t('pm.reload.done', { id })
+        : t('pm.reload.failed', { msg: result.error ?? 'unknown' }),
     )
     await this.refresh()
   }
@@ -142,13 +166,13 @@ export class PluginManagerView extends ItemView {
   private async removePlugin(id: string): Promise<void> {
     const ok = await new ConfirmModal(
       this.app,
-      `删除插件 ${id}？\n将删除 .obsidian/dsh-plugins/${id}/ 下的全部文件（含源码），无法恢复。`,
-      '删除',
+      t('pm.delete.confirm', { id }),
+      t('common.delete'),
     ).ask()
     if (!ok) return
     await this.ctx.pluginRuntime.removeDir(id)
     this.ctx.approval.revoke(id)
-    this.ctx.notice.notice(`插件已删除: ${id}`)
+    this.ctx.notice.notice(t('pm.delete.done', { id }))
     await this.refresh()
   }
 
@@ -156,7 +180,7 @@ export class PluginManagerView extends ItemView {
     const rec = this.ctx.pluginRuntime.inspect(id)
     const manifest = rec.manifest
     if (!manifest) {
-      this.ctx.notice.notice(`无法读取插件清单: ${rec.error ?? id}`)
+      this.ctx.notice.notice(t('pm.manifest.failed', { msg: rec.error ?? id }))
       return
     }
     if (!this.ctx.approval.isGranted(id, manifest.version)) {
@@ -171,8 +195,8 @@ export class PluginManagerView extends ItemView {
     const result = await this.ctx.pluginRuntime.load(id)
     this.ctx.notice.notice(
       result.status === 'running'
-        ? `插件已加载: ${id}`
-        : `插件加载失败: ${result.error ?? '未知错误'}`,
+        ? t('pm.load.done', { id })
+        : t('pm.load.failed', { msg: result.error ?? 'unknown' }),
     )
     await this.refresh()
   }

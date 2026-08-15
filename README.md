@@ -2,19 +2,22 @@
 
 **DeepSeek Harness for Obsidian**：在 Obsidian 内运行一个 Cordis 运行时，把 Obsidian 的 API 暴露为 Cordis 服务——用户编写的 Cordis 插件可以直接扩展 Obsidian（注册工具、命令、服务、面板），agent 直接操作你的笔记库。
 
+> **状态：beta 候选（v0.1.0）**。功能面已收敛：对话 / agent / 插件系统 / 设置面完整，界面支持**中英文切换**（设置 → 界面 → 界面语言）。剩余规划项（消息重编辑、会话 fork、虚拟滚动、Stage 4 sessions 迁移等）见 [docs/HANDOVER.md](docs/HANDOVER.md) §6。
+
 设计文档见 [docs/design.md](docs/design.md)，开发/发布规范见 [docs/SOP.md](docs/SOP.md)，**会话交接（约束与上下文）见 [docs/HANDOVER.md](docs/HANDOVER.md)**。
 
-## P0 已实现
+## 当前已实现（beta）
 
 - ✅ Cordis 运行时引导（`@deepseek-ai/cordis` 4.0.1），onload/onunload 完整生命周期
 - ✅ Obsidian 适配服务：`ctx.vault` / `ctx.editor` / `ctx.workspace` / `ctx.commands` / `ctx.views` / `ctx.settings` / `ctx.notice`
-- ✅ Harness 服务：`ctx.sandbox`（vault 白名单）/ `ctx.approval`（单勾双勾 grant + 会话级写开关）/ `ctx.sessions`（追加式 JSONL）/ `ctx.tools` / `ctx.llm`（OpenAI 兼容，默认 DeepSeek）
+- ✅ Harness 服务：`ctx.sandbox`（vault 白名单）/ `ctx.approval`（单勾双勾 grant + 会话级写开关）/ `ctx.sessionLog`（追加式 JSONL）/ `ctx.toolsCompat` / `ctx.llmCaller`（多提供方，OpenAI 兼容）
 - ✅ Agent 循环：工具调用 → 审批 → 回填 → 多轮（`turn/*`、`tool/*`、`user/message`、`assistant/message` 会话事件）
-- ✅ 内置工具：`read_note` / `write_note`（沙箱+审批）/ `search_notes`
-- ✅ UI：Chat 面板（会话列表/绑定笔记/流式输出/工具卡片/会话级允许写）、插件管理器（授权→加载→停止→卸载）、设置页
-- ✅ 用户插件系统：`.obsidian/dsh-plugins/<id>/` 预编译产物 + require shim（与宿主共享同一 Cordis 实例）
+- ✅ 智能体体系：对话/修编/创造三种内置模式 + 自定义智能体（能力白名单勾选）+ 会话级模型选择（模型级默认）
+- ✅ UI：Chat 面板（会话列表/轮次分组/流式输出/工具卡片/阶段状态条/仅当前笔记/导出目录可配置）、插件管理器（授权→加载→停止→删除）、tabs 设置页（模型/智能体/审批/会话/数据/界面/日志/插件授权）
+- ✅ **界面语言：中文 / English 一键切换（设置 → 界面）**
+- ✅ 用户插件系统：`.obsidian/dsh-plugins/<id>/` 预编译产物 + require shim（与宿主共享同一 Cordis 实例）；命令自动以主插件名归组（`Harness Like: 命令（子插件id）`）
 - ✅ 示例插件 `my-first-plugin`（工具 + 命令，含预编译产物）
-- ✅ 35 项单元测试 + 真实产物冒烟测试，全部通过
+- ✅ 121 项单元测试 + 真实产物冒烟测试，全部通过
 
 ## 安装（手动，BRAT 待仓库上线 GitHub）
 
@@ -25,7 +28,7 @@
 
 ## 使用
 
-1. **设置**：命令面板 → "打开 dsh 设置"（或 设置 → 第三方插件 → harness-like）→ 填写 API Key（默认 DeepSeek 端点）
+1. **设置**：命令面板 → "打开 Harness Like 设置"（或 设置 → 第三方插件 → harness-like）→ 填写 API Key（默认 DeepSeek 端点）；界面语言在 设置 → 界面 切换（中文 / English）
 2. **Chat**：点击侧边栏机器人图标 → 输入消息 → agent 可调用工具读写笔记；写操作会弹审批（可"本会话允许写"）
 3. **示例插件**：把 `apps/plugin/examples/my-first-plugin/` 复制到 `.obsidian/dsh-plugins/my-first-plugin/` → 插件管理器 → "授权并加载"（单勾=仅此版本 / 双勾=信任后续）
 

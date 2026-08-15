@@ -18,6 +18,7 @@ import { attachCodeCopyButtons, renderMarkdown } from '../markdown'
 import { agentAllows } from '../mode'
 import { listVisibleAgents, type AgentPreset } from '../settings'
 import { safeFileName, sessionToMarkdown } from '../export'
+import { agentDisplayDesc, agentDisplayName, getLanguage, setLanguage, t, type Language } from '../i18n'
 import { ConfirmModal } from '../modals'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
@@ -55,6 +56,8 @@ export class ChatView extends ItemView {
   private lastFailed: { sessionId: string; text: string } | null = null
   private listCollapsed = false
   private disposers: Array<() => void> = []
+  /** 语言切换时若正在生成，等本轮结束后重建 */
+  private pendingRebuild = false
   /** 当前轮次容器（一次问答 = 一轮，底部挂"复制本段对话"按钮） */
   private turnEl: HTMLElement | null = null
   /** 当前轮次累积文本（轮末复制用） */
@@ -82,8 +85,31 @@ export class ChatView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
+    this.buildUi()
+    await this.refreshSessions()
+    this.setPhase({ kind: 'idle' })
+    if (this.currentSessionId) {
+      void this.renderSession()
+    } else {
+      this.renderWelcome()
+    }
+  }
+
+  /** 构建界面（语言切换时重建，保留 currentSessionId 与输入草稿） */
+  private buildUi(): void {
+    // 重建前先卸载旧监听器，避免叠加
+    for (const d of this.disposers) {
+      try {
+        d()
+      } catch {
+        // 忽略卸载期异常
+      }
+    }
+    this.disposers = []
+    const draft = this.inputEl?.value ?? ''
     this.contentEl.empty()
     this.root = this.contentEl.createDiv({ cls: 'dsh-chat' })
+    this.root.classList.toggle('is-collapsed', this.listCollapsed)
 
     // 头部：折叠按钮 + 标题（左），新会话 + 插件管理器（右对齐）
     const header = this.root.createDiv({ cls: 'dsh-chat-header' })
@@ -91,9 +117,9 @@ export class ChatView extends ItemView {
     collapseBtn.onclick = () => this.toggleSessionList()
     header.createSpan({ cls: 'dsh-chat-title', text: 'Harness Like' })
     const actions = header.createDiv({ cls: 'dsh-chat-actions' })
-    const newBtn = actions.createEl('button', { cls: 'dsh-btn', text: '＋ 新会话' })
+    const newBtn = actions.createEl('button', { cls: 'dsh-btn', text: t('chat.header.newSession') })
     newBtn.onclick = () => this.newSession()
-    const pluginBtn = actions.createEl('button', { cls: 'dsh-btn', text: '插件管理器' })
+    const pluginBtn = actions.createEl('button', { cls: 'dsh-btn', text: t('chat.header.pluginManager') })
     pluginBtn.onclick = () => this.openPluginManager()
 
     // 主体：会话列表 + 消息
@@ -114,7 +140,7 @@ export class ChatView extends ItemView {
     this.refreshModelBtn()
     this.modelBtn.onclick = (e) => this.openModelMenu(e)
     const confine = toolbar.createDiv({ cls: 'dsh-toggle' })
-    confine.createSpan({ text: '仅当前笔记' })
+    confine.createSpan({ text: t('chat.toolbar.confine') })
     this.confineCheck = confine.createEl('input', { type: 'checkbox' })
     this.confineCheck.checked = this.ctx.settings.get('confineToCurrentNote', false) as boolean
     this.confineCheck.addEventListener('change', () => {
@@ -125,8 +151,9 @@ export class ChatView extends ItemView {
     const footer = this.root.createDiv({ cls: 'dsh-chat-footer' })
     this.inputEl = footer.createEl('textarea', {
       cls: 'dsh-chat-input',
-      attr: { placeholder: '输入消息…（Enter 发送，Shift+Enter 换行）' },
+      attr: { placeholder: t('chat.input.placeholder') },
     })
+    this.inputEl.value = draft
     this.inputEl.addEventListener('input', () => this.autoGrowInput())
     this.inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -134,7 +161,7 @@ export class ChatView extends ItemView {
         void this.onSendClick()
       }
     })
-    this.sendBtn = footer.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: '发送' })
+    this.sendBtn = footer.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: t('chat.send') })
     this.sendBtn.onclick = () => void this.onSendClick()
 
     this.disposers.push(this.ctx.on('dsh/session/event', (e) => this.onSessionEvent(e)))
@@ -146,11 +173,34 @@ export class ChatView extends ItemView {
         this.refreshAgentBtn()
         // 欢迎界面（如配置提示）随设置变化刷新
         if (this.messagesEl.querySelector('.dsh-welcome')) this.renderWelcome()
+        // 界面语言切换：立即重建（生成中则等本轮结束）
+        const lang = this.ctx.settings.get('uiLanguage', 'zh') as Language
+        if (lang !== getLanguage()) {
+          setLanguage(lang)
+          if (this.running) this.pendingRebuild = true
+          else void this.rebuild()
+        }
       }),
     )
+  }
+
+  /** 语言切换重建：保留当前会话与输入草稿，重放会话内容 */
+  private async rebuild(): Promise<void> {
+    const sessionId = this.currentSessionId
+    this.buildUi()
+    this.turnEl = null
+    this.turnText = []
+    this.turnCopied = false
+    this.toolCards.clear()
+    this.streamingEl = null
+    this.streamingText = ''
     await this.refreshSessions()
-    this.setPhase({ kind: 'idle' })
-    if (!this.currentSessionId) this.renderWelcome()
+    if (sessionId) {
+      this.currentSessionId = sessionId
+      void this.renderSession()
+    } else {
+      this.renderWelcome()
+    }
   }
 
   override onClose(): Promise<void> {
@@ -184,7 +234,7 @@ export class ChatView extends ItemView {
       } else {
         this.appendMessage('assistant', e.content)
       }
-      this.turnText.push(`助手：\n${e.content}`)
+      this.turnText.push(`${t('chat.msg.assistant')}：\n${e.content}`)
     } else if (e.type === 'system/message') {
       this.appendMessage('system', e.content)
     } else if (e.type === 'tool/call') {
@@ -206,7 +256,7 @@ export class ChatView extends ItemView {
   private startTurn(userText: string): void {
     this.closeTurn()
     this.openTurnContainer()
-    this.turnText.push(`用户：\n${userText}`)
+    this.turnText.push(`${t('chat.msg.user')}：\n${userText}`)
     this.appendMessage('user', userText)
   }
 
@@ -218,11 +268,11 @@ export class ChatView extends ItemView {
     }
     this.turnCopied = true
     const actions = this.turnEl.createDiv({ cls: 'dsh-turn-actions' })
-    const btn = actions.createEl('button', { cls: 'dsh-turn-copy', text: '复制本段对话' })
+    const btn = actions.createEl('button', { cls: 'dsh-turn-copy', text: t('chat.copyTurn') })
     btn.onclick = () => {
       void navigator.clipboard.writeText(this.turnText.join('\n\n')).then(() => {
-        btn.setText('已复制')
-        setTimeout(() => btn.setText('复制本段对话'), 1200)
+        btn.setText(t('common.copied'))
+        setTimeout(() => btn.setText(t('chat.copyTurn')), 1200)
       })
     }
     this.turnEl = null
@@ -230,7 +280,7 @@ export class ChatView extends ItemView {
 
   private renderToolCall(id: string, tool: string, input: unknown): void {
     const card = (this.turnEl ?? this.messagesEl).createDiv({ cls: 'dsh-tool-card is-running' })
-    card.createDiv({ cls: 'dsh-tool-card-title', text: `调用工具 ${tool}` })
+    card.createDiv({ cls: 'dsh-tool-card-title', text: t('chat.tool.call', { tool }) })
     const detail = card.createEl('pre', { cls: 'dsh-tool-card-detail', text: summarize(input) })
     card.onclick = () => detail.classList.toggle('is-expanded')
     this.toolCards.set(id, card)
@@ -250,14 +300,19 @@ export class ChatView extends ItemView {
       card.classList.add(ok ? 'is-success' : 'is-error')
       const title = card.querySelector('.dsh-tool-card-title')
       if (title) {
-        title.textContent = ok ? `✓ ${tool} 完成` : `✗ ${tool} 失败: ${error ?? '未知错误'}`
+        title.textContent = ok
+          ? t('chat.tool.ok', { tool })
+          : t('chat.tool.fail', { tool, msg: error ?? 'unknown' })
       }
       const detail = card.querySelector('pre')
       if (detail && output !== undefined) detail.textContent = summarize(output)
       this.toolCards.delete(id)
     } else {
       // 回放或跨会话兜底
-      this.appendToolCard(ok ? `✓ ${tool} 完成` : `✗ ${tool} 失败: ${error ?? ''}`, output)
+      this.appendToolCard(
+        ok ? t('chat.tool.ok', { tool }) : t('chat.tool.fail', { tool, msg: error ?? '' }),
+        output,
+      )
     }
     this.scrollToBottom()
   }
@@ -403,7 +458,7 @@ export class ChatView extends ItemView {
       })
     } catch (err) {
       const failed = err instanceof Error && err.name === 'AbortError'
-      const content = failed ? '已停止' : `错误: ${err instanceof Error ? err.message : String(err)}`
+      const content = failed ? t('common.stopped') : t('chat.run.failed', { msg: err instanceof Error ? err.message : String(err) })
       // 持久化系统消息（重载后仍在；并进入模型上下文，避免"上一问悬空被顺带回答"）
       const ev: SessionEvent = { type: 'system/message', ts: Date.now(), sessionId, content }
       void this.ctx.sessionLog.append(sessionId, ev)
@@ -411,7 +466,7 @@ export class ChatView extends ItemView {
       if (!failed) {
         this.lastFailed = { sessionId, text }
         const row = (this.turnEl ?? this.messagesEl).createDiv({ cls: 'dsh-retry-row' })
-        const btn = row.createEl('button', { cls: 'dsh-btn', text: '重试' })
+        const btn = row.createEl('button', { cls: 'dsh-btn', text: t('common.retry') })
         btn.onclick = () => void this.run(sessionId, text, true)
       }
       // 异常/中止也收尾当前轮次（挂复制按钮）
@@ -423,13 +478,17 @@ export class ChatView extends ItemView {
       this.streamingEl = null
       this.streamingText = ''
       this.setPhase({ kind: 'idle' })
+      if (this.pendingRebuild) {
+        this.pendingRebuild = false
+        void this.rebuild()
+      }
     }
   }
 
   private async executeTool(name: string, input: Record<string, unknown>): Promise<ToolExecution> {
     const agent = this.activeAgent()
     if (!agentAllows(agent, name)) {
-      return { ok: false, error: `当前智能体「${agent?.name ?? '未知'}」不允许使用工具 ${name}` }
+      return { ok: false, error: t('chat.agent.toolDenied', { name: agentDisplayName(agent ?? { id: '', name: '' }), tool: name }) }
     }
     try {
       const result = await this.ctx.toolsCompat.execute({
@@ -448,13 +507,13 @@ export class ChatView extends ItemView {
   private setPhase(phase: UiPhase): void {
     const text =
       phase.kind === 'thinking'
-        ? '思考中…'
+        ? t('chat.phase.thinking')
         : phase.kind === 'tool'
-          ? `调用工具 ${phase.name}…`
+          ? t('chat.phase.tool', { name: phase.name })
           : phase.kind === 'waiting'
-            ? '等待你的审批…'
+            ? t('chat.phase.waiting')
             : phase.kind === 'stopped'
-              ? '已停止'
+              ? t('chat.phase.stopped')
               : phase.kind === 'done' || phase.kind === 'idle'
                 ? ''
                 : ''
@@ -462,7 +521,7 @@ export class ChatView extends ItemView {
   }
 
   private setSendingState(): void {
-    this.sendBtn.setText(this.running ? '停止' : '发送')
+    this.sendBtn.setText(this.running ? t('chat.stop') : t('chat.send'))
     this.sendBtn.classList.toggle('dsh-btn-stop', this.running)
     this.inputEl.disabled = this.running
   }
@@ -499,7 +558,7 @@ export class ChatView extends ItemView {
     const value = this.sessionModelValue()
     const items = this.buildModelItems()
     const label = items.find((i) => i.value === value)?.label ?? value
-    this.modelBtn.setText(`${label || '模型'} ▾`)
+    this.modelBtn.setText(`${label || t('chat.model.default')} ▾`)
   }
 
   /** 上拉选择模型（与智能体菜单样式一致；管理入口在菜单内） */
@@ -520,7 +579,7 @@ export class ChatView extends ItemView {
     }
     menu.addSeparator()
     menu.addItem((mi) =>
-      mi.setTitle('管理模型…').onClick(() => {
+      mi.setTitle(t('chat.model.manage')).onClick(() => {
         ;(this.ctx.get('dshSettingsUi') as { openTo(t: string): void } | undefined)?.openTo('model')
       }),
     )
@@ -574,8 +633,8 @@ export class ChatView extends ItemView {
 
   private refreshAgentBtn(): void {
     const agent = this.activeAgent()
-    this.agentBtn.setText(`${agent?.name ?? '智能体'} ▾`)
-    this.agentBtn.setAttr('title', agent?.description ?? '')
+    this.agentBtn.setText(`${agent ? agentDisplayName(agent) : t('chat.agent.default')} ▾`)
+    this.agentBtn.setAttr('title', agent ? agentDisplayDesc(agent) ?? '' : '')
   }
 
   /** 上拉选择智能体（Obsidian Menu） */
@@ -584,20 +643,22 @@ export class ChatView extends ItemView {
     const activeId = this.ctx.settings.get('activeAgentId', 'edit') as string
     const menu = new Menu()
     for (const a of agents) {
+      const name = agentDisplayName(a)
+      const desc = agentDisplayDesc(a)
       menu.addItem((item) =>
         item
-          .setTitle(a.description ? `${a.name} — ${a.description}` : a.name)
+          .setTitle(desc ? `${name} — ${desc}` : name)
           .setChecked(a.id === activeId)
           .onClick(() => {
             this.ctx.settings.set('activeAgentId', a.id)
             this.refreshAgentBtn()
-            this.ctx.notice.notice(`已切换到智能体「${a.name}」${a.description ? '：' + a.description : ''}`)
+            this.ctx.notice.notice(t('chat.agent.switched', { name, desc: desc ? `：${desc}` : '' }))
           }),
       )
     }
     menu.addSeparator()
     menu.addItem((item) =>
-      item.setTitle('管理智能体…').onClick(() => {
+      item.setTitle(t('chat.agent.manage')).onClick(() => {
         ;(this.ctx.get('dshSettingsUi') as { openTo(t: string): void } | undefined)?.openTo('agent')
       }),
     )
@@ -622,7 +683,7 @@ export class ChatView extends ItemView {
     this.listEl.empty()
     const list = await this.ctx.sessionLog.list()
     if (!list.length) {
-      this.listEl.createDiv({ cls: 'dsh-session-empty', text: '还没有会话' })
+      this.listEl.createDiv({ cls: 'dsh-session-empty', text: t('chat.list.empty') })
       return
     }
     for (const s of list) {
@@ -633,7 +694,7 @@ export class ChatView extends ItemView {
       btn.createDiv({ cls: 'dsh-session-title', text: s.title ?? s.id })
       btn.createDiv({
         cls: 'dsh-session-sub',
-        text: `${s.notePath ?? '全局'} · ${s.count} 条`,
+        text: `${s.notePath ?? t('chat.list.global')} · ${t('chat.list.count', { count: s.count })}`,
       })
       btn.onclick = () => {
         this.currentSessionId = s.id
@@ -642,12 +703,12 @@ export class ChatView extends ItemView {
       }
       // 悬浮操作：导出 / 删除
       const actions = row.createDiv({ cls: 'dsh-session-actions' })
-      const exp = actions.createEl('button', { cls: 'dsh-session-action', text: '⤓', attr: { title: '导出为 Markdown' } })
+      const exp = actions.createEl('button', { cls: 'dsh-session-action', text: '⤓', attr: { title: t('chat.list.exportTitle') } })
       exp.onclick = (ev) => {
         ev.stopPropagation()
         void this.exportSession(s.id, s.title)
       }
-      const del = actions.createEl('button', { cls: 'dsh-session-action dsh-session-action-danger', text: '✕', attr: { title: '删除会话' } })
+      const del = actions.createEl('button', { cls: 'dsh-session-action dsh-session-action-danger', text: '✕', attr: { title: t('chat.list.deleteTitle') } })
       del.onclick = (ev) => {
         ev.stopPropagation()
         void this.deleteSession(s.id)
@@ -668,17 +729,17 @@ export class ChatView extends ItemView {
       }
       const target = exportDir ? `${exportDir}/${fileName}` : fileName
       await this.ctx.vault.write(target, md)
-      this.ctx.notice.notice(`已导出: ${target}`)
+      this.ctx.notice.notice(t('chat.export.done', { path: target }))
     } catch (err) {
-      this.ctx.notice.notice(`导出失败: ${err instanceof Error ? err.message : String(err)}`)
+      this.ctx.notice.notice(t('chat.export.failed', { msg: err instanceof Error ? err.message : String(err) }))
     }
   }
 
   private async deleteSession(id: string): Promise<void> {
     const ok = await new ConfirmModal(
       this.app,
-      `删除会话 ${id}？\n会话日志文件将被删除，无法恢复。`,
-      '删除',
+      t('chat.list.deleteConfirm', { id }),
+      t('common.delete'),
     ).ask()
     if (!ok) return
     await this.ctx.sessionLog.remove(id)
@@ -722,11 +783,11 @@ export class ChatView extends ItemView {
         this.closeTurn()
       } else if (e.type === 'user/message') {
         this.openTurnContainer()
-        this.turnText.push(`用户：\n${e.content}`)
+        this.turnText.push(`${t('chat.msg.user')}：\n${e.content}`)
         this.appendMessage('user', e.content)
       } else if (e.type === 'assistant/message') {
         this.openTurnContainer()
-        this.turnText.push(`助手：\n${e.content}`)
+        this.turnText.push(`${t('chat.msg.assistant')}：\n${e.content}`)
         this.appendMessage('assistant', e.content)
       } else if (e.type === 'system/message') {
         this.openTurnContainer()
@@ -747,13 +808,13 @@ export class ChatView extends ItemView {
     const wrap = this.messagesEl.createDiv({ cls: 'dsh-welcome' })
     wrap.createEl('h3', { text: 'Harness Like' })
     wrap.createEl('p', {
-      text: '在 Obsidian 内运行 Cordis 插件体系与 agent。试试下面的示例，或直接输入你的问题。',
+      text: t('chat.welcome.desc'),
     })
     const examples = [
-      '统计 vault 里有多少笔记',
-      '搜索包含"读书"的笔记',
-      '总结当前笔记的要点',
-      '写一篇周记到 Inbox',
+      t('chat.welcome.example.1'),
+      t('chat.welcome.example.2'),
+      t('chat.welcome.example.3'),
+      t('chat.welcome.example.4'),
     ]
     for (const text of examples) {
       const chip = wrap.createEl('button', { cls: 'dsh-welcome-chip', text })
@@ -768,8 +829,8 @@ export class ChatView extends ItemView {
     const hasKey = providers.some((p) => p.apiKey && p.apiKey.trim().length > 0)
     if (!hasKey) {
       const hint = wrap.createDiv({ cls: 'dsh-welcome-hint' })
-      hint.createSpan({ text: '还没有配置 API Key，先' })
-      const btn = hint.createEl('button', { cls: 'dsh-btn', text: '打开设置' })
+      hint.createSpan({ text: t('chat.welcome.noKey') })
+      const btn = hint.createEl('button', { cls: 'dsh-btn', text: t('common.openSettings') })
       btn.onclick = () => {
         // 跳转到本插件设置页的"模型" tab（API Key 配置处）
         ;(this.ctx.get('dshSettingsUi') as { openTo(t: string): void } | undefined)?.openTo('model')

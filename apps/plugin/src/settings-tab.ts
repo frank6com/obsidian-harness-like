@@ -8,6 +8,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type HarnessLikePlugin from './main'
 import { AgentEditModal, ConfirmModal, ModelPickModal } from './modals'
 import { BUILTIN_AGENTS, type AgentMode, type AgentPreset } from './settings'
+import { agentDisplayDesc, agentDisplayName, setLanguage, t, type Language } from './i18n'
 
 export type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
 
@@ -45,14 +46,14 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
     containerEl.empty()
 
     const tabs: Array<{ id: TabId; label: string }> = [
-      { id: 'model', label: '模型' },
-      { id: 'agent', label: '智能体' },
-      { id: 'approval', label: '审批' },
-      { id: 'session', label: '会话' },
-      { id: 'data', label: '数据' },
-      { id: 'ui', label: '界面' },
-      { id: 'log', label: '日志' },
-      { id: 'grants', label: '插件授权' },
+      { id: 'model', label: t('settings.tab.model') },
+      { id: 'agent', label: t('settings.tab.agent') },
+      { id: 'approval', label: t('settings.tab.approval') },
+      { id: 'session', label: t('settings.tab.session') },
+      { id: 'data', label: t('settings.tab.data') },
+      { id: 'ui', label: t('settings.tab.ui') },
+      { id: 'log', label: t('settings.tab.log') },
+      { id: 'grants', label: t('settings.tab.grants') },
     ]
 
     const nav = containerEl.createDiv({ cls: 'dsh-settings-nav' })
@@ -99,19 +100,19 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       item.createDiv({ text: p.name || p.id })
       item.createDiv({
         cls: 'dsh-provider-sub',
-        text: p.models.length ? `${p.models.length} 个模型` : '无模型',
+        text: p.models.length ? t('settings.model.modelsCount', { count: p.models.length }) : t('settings.model.noModels'),
       })
       item.onclick = () => {
         this.activeProviderId = p.id
         this.display()
       }
     }
-    const add = list.createEl('button', { cls: 'dsh-btn dsh-provider-add', text: '＋ 添加通道' })
+    const add = list.createEl('button', { cls: 'dsh-btn dsh-provider-add', text: t('settings.model.addChannel') })
     add.onclick = () => {
       const id = `provider-${Date.now()}`
       settings.providers.push({
         id,
-        name: '新通道',
+        name: t('settings.model.newChannel'),
         baseURL: 'https://',
         apiKey: '',
         models: [],
@@ -127,9 +128,9 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
     const p = settings.providers.find((x) => x.id === this.activeProviderId) ?? settings.providers[0]
     if (!p) return
 
-    new Setting(form).setName('通道').setDesc(p.id)
+    new Setting(form).setName(t('settings.model.channel')).setDesc(p.id)
     new Setting(form)
-      .setName('名称')
+      .setName(t('settings.model.name'))
       .addText((t) =>
         t.setValue(p.name).onChange(async (v) => {
           p.name = v.trim() || p.id
@@ -137,8 +138,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
     new Setting(form)
-      .setName('Base URL')
-      .setDesc('OpenAI 兼容端点')
+      .setName(t('settings.model.baseUrl'))
+      .setDesc(t('settings.model.baseUrlDesc'))
       .addText((t) =>
         t.setValue(p.baseURL).onChange(async (v) => {
           p.baseURL = v.trim()
@@ -146,8 +147,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
     new Setting(form)
-      .setName('API Key')
-      .setDesc('明文保存在本插件 data.json 中，注意保管')
+      .setName(t('settings.model.apiKey'))
+      .setDesc(t('settings.model.apiKeyDesc'))
       .addText((t) =>
         t.setPlaceholder('sk-...').setValue(p.apiKey).onChange(async (v) => {
           p.apiKey = v.trim()
@@ -157,29 +158,31 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
 
     // 模型列表：从端点获取 / 手动添加 / 设为默认 / 删除
     new Setting(form)
-      .setName('模型列表')
-      .setDesc('从端点获取或手动添加；默认模型 = 新会话的兜底')
+      .setName(t('settings.model.list'))
+      .setDesc(t('settings.model.listDesc'))
       .addButton((b) =>
         b
-          .setButtonText('从端点获取')
+          .setButtonText(t('settings.model.fetch'))
           .onClick(async () => {
             try {
               const fetched = await this.fetchModels(p.baseURL, p.apiKey)
               if (!fetched.length) {
-                this.ctx.notice.notice('端点未返回模型列表，请手动添加')
+                this.ctx.notice.notice(t('settings.model.fetchEmpty'))
                 return
               }
               const picked = await new ModelPickModal(this.app, fetched, p.models).ask()
               if ('cancel' in picked || !picked.models.length) {
-                this.ctx.notice.notice('未选择模型')
+                this.ctx.notice.notice(t('settings.model.nonePicked'))
                 return
               }
               p.models = [...new Set([...p.models, ...picked.models])]
               await this.plugin.saveSettings()
               this.display()
-              this.ctx.notice.notice(`已添加 ${picked.models.length} 个模型`)
+              this.ctx.notice.notice(t('settings.model.added', { count: picked.models.length }))
             } catch (err) {
-              this.ctx.notice.notice(`获取模型失败: ${err instanceof Error ? err.message : String(err)}`)
+              this.ctx.notice.notice(
+                t('settings.model.fetchFailed', { msg: err instanceof Error ? err.message : String(err) }),
+              )
             }
           }),
       )
@@ -189,18 +192,18 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       const isDefault = settings.defaultModelId === `${p.id}/${m}`
       row.createDiv({ cls: 'dsh-model-name', text: m })
       if (isDefault) {
-        row.createEl('span', { cls: 'dsh-model-default', text: '✓ 默认' })
+        row.createEl('span', { cls: 'dsh-model-default', text: t('settings.model.defaultMark') })
       }
       const setDefault = row.createEl('button', {
         cls: 'dsh-btn',
-        text: isDefault ? '默认' : '设为默认',
+        text: isDefault ? t('settings.model.default') : t('settings.model.setDefault'),
       })
       setDefault.onclick = async () => {
         settings.defaultModelId = `${p.id}/${m}`
         await this.plugin.saveSettings()
         this.display()
       }
-      const del = row.createEl('button', { cls: 'dsh-btn', text: '✕', attr: { title: '移除模型' } })
+      const del = row.createEl('button', { cls: 'dsh-btn', text: '✕', attr: { title: t('settings.model.removeTitle') } })
       del.onclick = async () => {
         p.models = p.models.filter((x) => x !== m)
         if (settings.defaultModelId === `${p.id}/${m}`) {
@@ -211,8 +214,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       }
     }
     const addRow = form.createDiv({ cls: 'dsh-model-add' })
-    const addInput = addRow.createEl('input', { cls: 'dsh-model-input', attr: { placeholder: '手动输入模型名' } })
-    const addBtn = addRow.createEl('button', { cls: 'dsh-btn', text: '添加' })
+    const addInput = addRow.createEl('input', { cls: 'dsh-model-input', attr: { placeholder: t('settings.model.inputPlaceholder') } })
+    const addBtn = addRow.createEl('button', { cls: 'dsh-btn', text: t('settings.model.add') })
     const commit = async () => {
       const name = addInput.value.trim()
       if (!name) return
@@ -227,8 +230,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
     })
 
     new Setting(form)
-      .setName('Temperature')
-      .setDesc('采样温度：越低越保守，越高越发散（0 = 端点默认）')
+      .setName(t('settings.model.temperature'))
+      .setDesc(t('settings.model.temperatureDesc'))
       .addSlider((s) =>
         s
           .setLimits(0, 2, 0.1)
@@ -240,8 +243,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
           }),
       )
     new Setting(form)
-      .setName('最大输出 token 数')
-      .setDesc('0 = 不限制')
+      .setName(t('settings.model.maxTokens'))
+      .setDesc(t('settings.model.maxTokensDesc'))
       .addText((t) =>
         t.setValue(String(p.maxTokens)).onChange(async (v) => {
           p.maxTokens = Math.max(0, Math.floor(Number(v) || 0))
@@ -250,8 +253,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
     new Setting(form)
-      .setName('自定义请求头')
-      .setDesc('每行 "Header: value"（如网关鉴权）')
+      .setName(t('settings.model.headers'))
+      .setDesc(t('settings.model.headersDesc'))
       .addTextArea((t) =>
         t.setValue(p.extraHeaders.join('\n')).onChange(async (v) => {
           p.extraHeaders = v.split('\n').map((s) => s.trim()).filter(Boolean)
@@ -260,8 +263,12 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       )
     if (settings.providers.length > 1) {
       new Setting(form).addButton((b) =>
-        b.setButtonText('删除此通道').setWarning().onClick(async () => {
-          const ok = await new ConfirmModal(this.app, `删除通道 ${p.name}？`, '删除').ask()
+        b.setButtonText(t('settings.model.deleteChannel')).setWarning().onClick(async () => {
+          const ok = await new ConfirmModal(
+            this.app,
+            t('settings.model.deleteChannelConfirm', { name: p.name }),
+            t('common.delete'),
+          ).ask()
           if (!ok) return
           settings.providers = settings.providers.filter((x) => x.id !== p.id)
           if (this.activeProviderId === p.id) {
@@ -294,12 +301,12 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
 
     // 默认智能体：独立设置项（下拉选择，只能选启用的）
     new Setting(c)
-      .setName('默认智能体')
-      .setDesc('对话面板新会话的默认智能体')
+      .setName(t('settings.agent.defaultAgent'))
+      .setDesc(t('settings.agent.defaultAgentDesc'))
       .addDropdown((d) => {
         for (const a of settings.agents) {
           if (a.enabled === false) continue
-          d.addOption(a.id, a.name)
+          d.addOption(a.id, agentDisplayName(a))
         }
         d.setValue(settings.activeAgentId)
         d.onChange(async (v) => {
@@ -310,15 +317,17 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         return d
       })
 
-    c.createEl('h4', { text: '内置智能体' })
+    c.createEl('h4', { text: t('settings.agent.builtin') })
     c.createEl('p', {
       cls: 'setting-item-description',
-      text: '启用开关控制该模式是否出现在对话面板的智能体选择中',
+      text: t('settings.agent.builtinDesc'),
     })
     for (const a of BUILTIN_AGENTS) {
       const s = new Setting(c)
-        .setName(a.name)
-        .setDesc(`${a.description ?? ''}${a.id === settings.activeAgentId ? ' · ✓ 当前' : ''}`)
+        .setName(agentDisplayName(a))
+        .setDesc(
+          `${agentDisplayDesc(a) ?? ''}${a.id === settings.activeAgentId ? t('settings.agent.currentMark') : ''}`,
+        )
       s.addToggle((t) =>
         t.setValue(a.enabled !== false).onChange(async (v) => {
           a.enabled = v
@@ -333,16 +342,16 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       }
     }
 
-    c.createEl('h4', { text: '自定义智能体' })
+    c.createEl('h4', { text: t('settings.agent.custom') })
     const customs = settings.agents.filter((a) => !BUILTIN_AGENTS.some((b) => b.id === a.id))
     if (!customs.length) {
-      c.createEl('p', { cls: 'setting-item-description', text: '暂无自定义智能体。点下方按钮添加，可在弹窗中勾选可调用的能力。' })
+      c.createEl('p', { cls: 'setting-item-description', text: t('settings.agent.customEmpty') })
     }
     for (const a of customs) {
       const row = new Setting(c)
         .setName(a.name)
         .setDesc(
-          `${a.description ?? ''} · ${a.capabilities?.length ? `${a.capabilities.length} 项能力` : '按模式默认'}${a.id === settings.activeAgentId ? ' · ✓ 当前' : ''}`,
+          `${a.description ?? ''} · ${a.capabilities?.length ? t('settings.agent.capsCount', { count: a.capabilities.length }) : t('settings.agent.byMode')}${a.id === settings.activeAgentId ? t('settings.agent.currentMark') : ''}`,
         )
       row.addToggle((t) =>
         t.setValue(a.enabled !== false).onChange(async (v) => {
@@ -352,7 +361,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
       row.addButton((b) =>
-        b.setButtonText('编辑').onClick(async () => {
+        b.setButtonText(t('settings.agent.edit')).onClick(async () => {
           await new AgentEditModal(this.app, a, allTools, (draft) => {
             Object.assign(a, draft)
           }).ask()
@@ -361,8 +370,12 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
       row.addButton((b) =>
-        b.setButtonText('删除').setWarning().onClick(async () => {
-          const ok = await new ConfirmModal(this.app, `删除智能体 ${a.name}？`, '删除').ask()
+        b.setButtonText(t('common.delete')).setWarning().onClick(async () => {
+          const ok = await new ConfirmModal(
+            this.app,
+            t('settings.agent.deleteConfirm', { name: a.name }),
+            t('common.delete'),
+          ).ask()
           if (!ok) return
           settings.agents = settings.agents.filter((x) => x.id !== a.id)
           if (settings.activeAgentId === a.id) settings.activeAgentId = 'edit'
@@ -372,9 +385,9 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       )
     }
     new Setting(c).addButton((b) =>
-      b.setButtonText('＋ 添加自定义智能体').onClick(async () => {
+      b.setButtonText(t('settings.agent.addCustom')).onClick(async () => {
         const id = `agent-${Date.now()}`
-        const draft: AgentPreset = { id, name: '新智能体', mode: 'edit', enabled: true }
+        const draft: AgentPreset = { id, name: t('agent.new'), mode: 'edit', enabled: true }
         await new AgentEditModal(this.app, draft, allTools, (saved) => {
           settings.agents.push(saved)
         }).ask()
@@ -389,12 +402,12 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
   private renderApprovalTab(c: HTMLElement): void {
     const { settings } = this.plugin
     new Setting(c)
-      .setName('写操作审批默认模式')
-      .setDesc('ask = 每次询问；deny = 默认拒绝（可在 Chat 面板会话级放宽）')
+      .setName(t('settings.approval.mode'))
+      .setDesc(t('settings.approval.modeDesc'))
       .addDropdown((d) =>
         d
-          .addOption('ask', '每次询问 (ask)')
-          .addOption('deny', '默认拒绝 (deny)')
+          .addOption('ask', t('settings.approval.ask'))
+          .addOption('deny', t('settings.approval.deny'))
           .setValue(settings.approvalDefault)
           .onChange(async (v) => {
             settings.approvalDefault = v as 'ask' | 'deny'
@@ -402,8 +415,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
           }),
       )
     new Setting(c)
-      .setName('目录级审批白名单')
-      .setDesc('每行一个 vault 相对目录（如 Inbox / Projects）。agent 写入这些目录下的笔记免审批。')
+      .setName(t('settings.approval.allowDirs'))
+      .setDesc(t('settings.approval.allowDirsDesc'))
       .addTextArea((t) =>
         t.setValue(settings.writeAllowDirs.join('\n')).onChange(async (v) => {
           settings.writeAllowDirs = v.split('\n').map((s) => s.trim()).filter(Boolean)
@@ -411,8 +424,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
     new Setting(c)
-      .setName('工具级策略覆盖')
-      .setDesc('每行 "工具名=ask|allow|deny"，如 write_note=deny。覆盖默认审批行为。')
+      .setName(t('settings.approval.toolPolicy'))
+      .setDesc(t('settings.approval.toolPolicyDesc'))
       .addTextArea((t) =>
         t.setValue(settings.toolPolicy.join('\n')).onChange(async (v) => {
           settings.toolPolicy = v.split('\n').map((s) => s.trim()).filter(Boolean)
@@ -426,8 +439,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
   private renderSessionTab(c: HTMLElement): void {
     const { settings } = this.plugin
     new Setting(c)
-      .setName('会话保留天数')
-      .setDesc('启动时自动清理超过 N 天未更新的会话日志（0 = 不清理）')
+      .setName(t('settings.session.retention'))
+      .setDesc(t('settings.session.retentionDesc'))
       .addText((t) =>
         t.setValue(String(settings.sessionRetentionDays)).onChange(async (v) => {
           settings.sessionRetentionDays = Math.max(0, Math.floor(Number(v) || 0))
@@ -436,8 +449,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
     new Setting(c)
-      .setName('导出目录')
-      .setDesc('会话导出 Markdown 的 vault 相对目录（默认 sessions = 根目录下的 sessions 文件夹；留空 = 导出到根目录）')
+      .setName(t('settings.session.exportDir'))
+      .setDesc(t('settings.session.exportDirDesc'))
       .addText((t) =>
         t.setValue(settings.exportDir).onChange(async (v) => {
           settings.exportDir = v.trim().replace(/^\/+|\/+$/g, '')
@@ -452,17 +465,19 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
   private renderDataTab(c: HTMLElement): void {
     c.createEl('p', {
       cls: 'setting-item-description',
-      text: ['会话日志: .obsidian/dsh/sessions/*.jsonl', '用户插件: .obsidian/dsh-plugins/<id>/'].join(
-        '\n',
-      ),
+      text: [t('settings.data.paths.sessionLog'), t('settings.data.paths.plugins')].join('\n'),
     })
     new Setting(c).addButton((b) =>
-      b.setButtonText('清空全部会话').setWarning().onClick(async () => {
-        const ok = await new ConfirmModal(this.app, '删除全部会话日志？此操作不可恢复。', '清空').ask()
+      b.setButtonText(t('settings.data.clearAll')).setWarning().onClick(async () => {
+        const ok = await new ConfirmModal(
+          this.app,
+          t('settings.data.clearAllConfirm'),
+          t('settings.data.clear'),
+        ).ask()
         if (!ok) return
         const list = await this.ctx.sessionLog.list()
         for (const s of list) await this.ctx.sessionLog.remove(s.id)
-        this.ctx.notice.notice(`已清空 ${list.length} 个会话`)
+        this.ctx.notice.notice(t('settings.data.cleared', { count: list.length }))
       }),
     )
   }
@@ -472,8 +487,23 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
   private renderUiTab(c: HTMLElement): void {
     const { settings } = this.plugin
     new Setting(c)
-      .setName('流式输出')
-      .setDesc('关闭后等完整消息再显示（省流量/减少闪烁）')
+      .setName(t('settings.ui.language'))
+      .setDesc(t('settings.ui.languageDesc'))
+      .addDropdown((d) => {
+        d.addOption('zh', t('settings.ui.lang.zh'))
+        d.addOption('en', t('settings.ui.lang.en'))
+        d.setValue(settings.uiLanguage)
+        d.onChange(async (v) => {
+          settings.uiLanguage = v as Language
+          setLanguage(settings.uiLanguage)
+          await this.plugin.saveSettings()
+          this.display()
+        })
+        return d
+      })
+    new Setting(c)
+      .setName(t('settings.ui.streaming'))
+      .setDesc(t('settings.ui.streamingDesc'))
       .addToggle((t) =>
         t.setValue(settings.streamingEnabled).onChange(async (v) => {
           settings.streamingEnabled = v
@@ -481,8 +511,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
     new Setting(c)
-      .setName('Markdown 渲染')
-      .setDesc('关闭后消息以纯文本显示')
+      .setName(t('settings.ui.markdown'))
+      .setDesc(t('settings.ui.markdownDesc'))
       .addToggle((t) =>
         t.setValue(settings.renderMarkdown).onChange(async (v) => {
           settings.renderMarkdown = v
@@ -495,8 +525,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
 
   private renderLogTab(c: HTMLElement): void {
     new Setting(c)
-      .setName('日志级别')
-      .setDesc('控制 [dsh] 前缀的 console 输出（llm/stream 耗时等）')
+      .setName(t('settings.log.level'))
+      .setDesc(t('settings.log.levelDesc'))
       .addDropdown((d) =>
         d
           .addOption('debug', 'debug')
@@ -521,7 +551,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
     if (!grants.length) {
       c.createEl('p', {
         cls: 'setting-item-description',
-        text: '暂无授权。在插件管理器中"授权并加载"后，这里可查看与撤销。',
+        text: t('settings.grants.empty'),
       })
     }
     for (const { pluginId, grant } of grants) {
@@ -531,14 +561,14 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         .setName(pluginId)
         .setDesc(
           [
-            `${grant.mode === 'all' ? '信任所有版本（双勾）' : '仅信任当前版本（单勾）'} · v${grant.version} · ${new Date(grant.grantedAt).toLocaleString()}`,
-            exists ? '' : ' · ⚠ 插件目录已删除，此授权已失效（残留）',
+            `${grant.mode === 'all' ? t('settings.grants.all') : t('settings.grants.version')} · v${grant.version} · ${new Date(grant.grantedAt).toLocaleString()}`,
+            exists ? '' : t('settings.grants.stale'),
           ]
             .filter(Boolean)
             .join(''),
         )
         .addButton((b) =>
-          b.setButtonText('撤销').setWarning().onClick(() => {
+          b.setButtonText(t('settings.grants.revoke')).setWarning().onClick(() => {
             this.ctx.approval.revoke(pluginId)
             this.display()
           }),
@@ -547,7 +577,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
     if (stale.length) {
       new Setting(c).addButton((b) =>
         b
-          .setButtonText(`清理 ${stale.length} 条残留授权（插件目录已删除）`)
+          .setButtonText(t('settings.grants.cleanStale', { count: stale.length }))
           .setWarning()
           .onClick(() => {
             for (const id of stale) this.ctx.approval.revoke(id)

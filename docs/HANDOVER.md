@@ -1,7 +1,7 @@
 # Harness Like — 会话交接文档（HANDOVER）
 
 > 用途：本文件完整记录项目背景、架构决策、当前状态与**全部约束**。新会话/新 agent 接手任务时，先读本文件 + [docs/design.md](design.md) + [docs/SOP.md](SOP.md) + [docs/seams.md](seams.md)，即可无缝继续。
-> 最后更新：2026-08-15（项目重命名为 harness-like 后）
+> 最后更新：2026-08-15（i18n 完成，beta 候选）
 
 ---
 
@@ -22,7 +22,7 @@
 - obsidian@1.13 类型面缺失 `app.commands/viewRegistry/setting/workspace.addRibbonIcon/addStatusBarItem/app.addSettingTab`——运行时存在，统一在 `apps/plugin/src/obsidian-bridge.ts` 用结构断言访问。
 - 插件执行机制：只执行本地预编译产物（纯 JS 免编译；TS 需本地 esbuild 构建），`@deepseek-ai/cordis` 与 `obsidian` 由宿主 require shim 注入。
 - 沙箱白名单：读 = 整个 vault；写 = 笔记区 + `.obsidian/dsh/` + `.obsidian/dsh-plugins/` + 临时目录；**禁止写 `.obsidian/` 其他区域**。
-- 测试基线：**104 项 vitest 全绿**（`pnpm test`）；改动必须保持全绿。
+- 测试基线：**121 项 vitest 全绿**（`pnpm test`）；改动必须保持全绿。
 
 ### 2.3 安全模型
 - 动态插件只执行用户本地文件；运行需授权（单勾=当前版本 / 双勾=信任后续）。
@@ -39,10 +39,11 @@
 - agent loop（自研，`packages/harness-base/src/agent-loop.ts`）：阶段事件、中止（AbortSignal）、孤儿消息防御
 
 ### 3.2 Chat 面板
-- 会话（标题/绑定笔记/模型选择/删除/导出 Markdown，均随 `session/meta` 持久化）
+- 会话（标题/模型选择/删除/导出 Markdown 到可配置目录，默认根目录 sessions/，随 `session/meta` 持久化）
 - 输入区工具栏：智能体上拉菜单（向上展开）+ 模型上拉菜单（向上展开，管理入口在菜单内）
 - 阶段状态条 / 工具卡片实时状态 / 流式光标 / 三态发送按钮 / 错误持久化 + 重试
-- Markdown 渲染（marked + DOMPurify + 自研样式层）/ 消息复制 / 代码块复制
+- Markdown 渲染（marked + DOMPurify + 自研样式层）/ 轮次分组（一次问答一组）+ 轮末"复制本段对话" / 代码块独立复制
+- **界面语言 zh/en**（`apps/plugin/src/i18n.ts` 字典 + `t()`；设置 → 界面 切换，视图监听 `dsh/settings-updated` 重建；命令名/面板标题注册时定稿，切换后需重载插件）
 
 ### 3.3 插件系统（创造模式）
 - 用户插件：`.obsidian/dsh-plugins/<id>/`（package.json 含 dsh 字段 + 预编译 main.js）
@@ -82,18 +83,21 @@ dev-vault/                  项目内 Obsidian 测试库（gitignore）
 
 ## 6. 未完成事项（下一步候选）
 
-1. **UX 清单剩余**（docs/ux-checklist.md）：消息操作（重新生成/编辑重发/删除）、工具卡片折叠、会话重命名、虚拟滚动、绑定笔记选择器
+> 当前状态：**beta 候选（v0.1.0）**，功能面已收敛。以下均为发布后迭代项，不影响 beta 发布。
+
+1. **UX 清单剩余**（docs/ux-checklist.md）：消息操作（重新生成/编辑重发/删除）、工具卡片折叠、会话重命名、虚拟滚动、上下文注入可视化
 2. **技术债**：Stage 3b（agent-loop 调度器替换 toolsCompat 门面）、Stage 4（sessions 迁移——**建议继续暂缓**，设计见 seams.md §3.3）、全文倒排索引
-3. **发布**：远程仓库创建（名 `harness-like`）+ BRAT + 社区商店申报（P3，SOP §7）
+3. **发布（P3，SOP §7）**：远程仓库创建（名 `harness-like`）→ BRAT → 社区商店申报；发布前建议补：README 英文版、LICENSE、CHANGELOG
 4. 插件加载失败时的视图注册残留清理（Obsidian viewRegistry 无公开清理 API，agent 曾用换视图名绕开）
 5. 协议支持（OpenAI 兼容已覆盖主流；Anthropic/Gemini 按需添加，架构已支持多 provider 注册）
+6. i18n 边界：`plugin_guide` 等 agent 提示面保持中文（LLM 工作语言）；工具名/命令 id 为协议面不翻译；切换语言后需重载插件才更新命令名
 
 ## 7. 开发速查
 
 ```sh
 pnpm dev            # esbuild watch + 自动同步 dev-vault 插件目录
 pnpm typecheck      # 四包类型检查
-pnpm test           # 104 项 vitest
+pnpm test           # 121 项 vitest
 pnpm build          # 产物构建 + 同步
 pnpm init:vault     # 初始化 dev-vault（示例笔记/插件）
 pnpm link:vault     # 文件级软链接入外部真实 vault
