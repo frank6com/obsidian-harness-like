@@ -14,10 +14,12 @@ export class ItemView {
   }
 }
 
-/** 简化渲染：去掉 markdown 符号，模拟官方渲染器行为 */
+/** 简化渲染：去掉 markdown 符号，模拟官方渲染器行为。
+ * 注意：真实 Obsidian 的 render 是【追加】语义（el - the element to append to），
+ * 这里必须模拟追加，否则测不出"流式残留 + 渲染结果叠加"的真实问题。 */
 export const MarkdownRenderer = {
   render: async (_app: unknown, markdown: string, el: HTMLElement) => {
-    el.textContent = markdown.replace(/[*`#>]/g, '')
+    el.insertAdjacentHTML('beforeend', `<p>${markdown.replace(/[*`#>]/g, '')}</p>`)
   },
 }
 

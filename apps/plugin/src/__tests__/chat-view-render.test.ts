@@ -143,6 +143,18 @@ describe('ChatView 渲染（单事件 → 单气泡）', () => {
     expect(bubbles[1]!.textContent).toBe('第二轮内容')
   })
 
+  it('流式残留必须被清空：追加语义下不叠加旧文本（0.28.30 回归）', async () => {
+    const { view } = await makeView()
+    delta(view, '旧的流式残留文本')
+    fire(view, { sessionId: 's1', type: 'assistant/message', ts: 1, content: '最终内容' })
+    // 等待异步渲染完成
+    await new Promise((r) => window.setTimeout(r, 0))
+    const bubbles = view.messagesEl.querySelectorAll('.dsh-msg-assistant')
+    expect(bubbles.length).toBe(1)
+    expect(bubbles[0].textContent).toBe('最终内容')
+    expect(bubbles[0].textContent).not.toContain('旧的流式残留文本')
+  })
+
   it('无流式（streamingEl 为 null）：事件直接生成一个气泡', async () => {
     const { view } = await makeView()
     fire(view, { sessionId: 's1', type: 'assistant/message', ts: 1, content: '直接回答' })
