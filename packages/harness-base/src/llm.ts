@@ -35,6 +35,8 @@ export interface LlmCallerOptions {
   tools: ToolDef[]
   signal?: AbortSignal
   onDelta?: (delta: string) => void
+  /** 推理过程增量（DeepSeek reasoner 的 reasoning_content），实时回调 */
+  onThinking?: (delta: string) => void
   /** 会话级模型选择，格式 "providerId/model"；缺省用默认提供方 */
   model?: string
 }
@@ -108,7 +110,9 @@ export class DeepSeekAdapter extends LlmAdapter {
     return { id: provider, name: 'DeepSeek (OpenAI 兼容)' }
   }
 
-  override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+  override async *stream(
+    options: GenerateOptions & { onThinking?: (delta: string) => void },
+  ): AsyncIterable<StreamChunk> {
     const cfg = this.getConfigByProvider(options.provider)
     const apiKey = assertUsableApiKey(cfg.apiKey, 'harness-like', 'settings.apiKey')
     const url = cfg.baseURL.replace(/\/+$/, '') + '/chat/completions'
@@ -169,9 +173,15 @@ export class DeepSeekAdapter extends LlmAdapter {
         if (data === '[DONE]') continue
         try {
           const chunk = JSON.parse(data) as {
-            choices?: Array<{ delta?: { content?: string; tool_calls?: ToolCallDelta[] } }>
+            choices?: Array<{
+              delta?: { content?: string; reasoning_content?: string; tool_calls?: ToolCallDelta[] }
+            }>
           }
           const delta = chunk.choices?.[0]?.delta
+          // 推理过程（DeepSeek reasoner 等）：实时透传给 UI 折叠块
+          if (delta?.reasoning_content) {
+            options.onThinking?.(delta.reasoning_content)
+          }
           if (delta?.content) {
             if (!textStarted) {
               yield { type: 'block-start', index: 0, blockType: 'text' }
@@ -320,7 +330,8 @@ export function createLlmCaller(llm: LlmRuntime, cfg: LlmRuntimeConfig): LlmCall
         temperature: c.temperature,
         maxTokens: c.maxTokens,
         signal: options.signal,
-      })
+        onThinking: options.onThinking,
+      } as GenerateOptions & { onThinking?: (delta: string) => void })
 
       for await (const chunk of chunks) {
         if (chunk.type === 'text-delta') {

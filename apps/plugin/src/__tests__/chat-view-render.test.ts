@@ -63,10 +63,24 @@ function makeCtx(): MockCtx {
   }
 }
 
-async function makeView(): Promise<{ view: ChatView & Record<string, unknown> }> {
+interface ViewInternals {
+  messagesEl: HTMLElement
+  turnEl: HTMLElement | null
+  streamingEl: HTMLElement | null
+  streamingText: string
+  turnText: string[]
+  turnCopied: boolean
+  lastAssistantRaw: string | null
+  lastEventKey: string
+  toolCards: Map<string, HTMLElement>
+  currentSessionId: string | null
+  ctx: unknown
+}
+
+async function makeView(): Promise<{ view: ViewInternals }> {
   polyfillObsidianDom()
   const ctx = makeCtx()
-  const view = new ChatView({} as never, ctx as never) as ChatView & Record<string, unknown>
+  const view = new ChatView({} as never, ctx as never) as unknown as ViewInternals
   // 手动初始化渲染区（绕过 onOpen 的完整装配）
   view.messagesEl = document.createElement('div')
   view.messagesEl.className = 'dsh-chat-messages'
@@ -84,12 +98,12 @@ async function makeView(): Promise<{ view: ChatView & Record<string, unknown> }>
 }
 
 /** 模拟流式增量 */
-function delta(view: ChatView & Record<string, unknown>, text: string): void {
+function delta(view: ViewInternals, text: string): void {
   ;(view as unknown as { appendStream(d: string): void }).appendStream(text)
 }
 
 /** 模拟事件投递 */
-function fire(view: ChatView & Record<string, unknown>, e: Record<string, unknown>): void {
+function fire(view: ViewInternals, e: Record<string, unknown>): void {
   ;(view as unknown as { onSessionEvent(ev: unknown): void }).onSessionEvent(e)
 }
 
@@ -105,7 +119,7 @@ describe('ChatView 渲染（单事件 → 单气泡）', () => {
     fire(view, { sessionId: 's1', type: 'assistant/message', ts: 1, content: '我来帮你创建这个插件。' })
     const bubbles = view.messagesEl.querySelectorAll('.dsh-msg-assistant')
     expect(bubbles.length).toBe(1)
-    expect(bubbles[0].textContent).toBe('我来帮你创建这个插件。')
+    expect(bubbles[0]!.textContent).toBe('我来帮你创建这个插件。')
   })
 
   it('同一事件重复投递（监听器叠加模拟）：仍只有一个气泡', async () => {
@@ -125,8 +139,8 @@ describe('ChatView 渲染（单事件 → 单气泡）', () => {
     fire(view, { sessionId: 's1', type: 'assistant/message', ts: 2, content: '第二轮内容' })
     const bubbles = view.messagesEl.querySelectorAll('.dsh-msg-assistant')
     expect(bubbles.length).toBe(2)
-    expect(bubbles[0].textContent).toBe('第一轮内容')
-    expect(bubbles[1].textContent).toBe('第二轮内容')
+    expect(bubbles[0]!.textContent).toBe('第一轮内容')
+    expect(bubbles[1]!.textContent).toBe('第二轮内容')
   })
 
   it('无流式（streamingEl 为 null）：事件直接生成一个气泡', async () => {
@@ -134,6 +148,6 @@ describe('ChatView 渲染（单事件 → 单气泡）', () => {
     fire(view, { sessionId: 's1', type: 'assistant/message', ts: 1, content: '直接回答' })
     const bubbles = view.messagesEl.querySelectorAll('.dsh-msg-assistant')
     expect(bubbles.length).toBe(1)
-    expect(bubbles[0].textContent).toBe('直接回答')
+    expect(bubbles[0]!.textContent).toBe('直接回答')
   })
 })

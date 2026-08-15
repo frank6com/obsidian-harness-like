@@ -31,6 +31,12 @@ interface SessionMeta {
 /** 宿主侧额外阶段：idle / waiting（等待审批）/ stopped */
 type UiPhase = AgentPhase | { kind: 'idle' } | { kind: 'waiting' } | { kind: 'stopped' }
 
+/** 渲染调试日志开关（定位重复渲染；定位后置 false） */
+const RENDER_DEBUG = true
+function renderLog(...args: unknown[]): void {
+  if (RENDER_DEBUG) console.info('[dsh-render]', ...args)
+}
+
 function summarize(value: unknown): string {
   const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
   return text.length > 300 ? text.slice(0, 300) + ' …' : text
@@ -69,6 +75,9 @@ export class ChatView extends ItemView {
   private lastAssistantRaw: string | null = null
   /** 最近处理的事件指纹（监听器叠加兜底：同一事件只处理一次） */
   private lastEventKey = ''
+  /** 对话内思考折叠卡片（推理过程/阶段状态，可展开查看） */
+  private thinkingEl: HTMLElement | null = null
+  private thinkingText = ''
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -247,7 +256,9 @@ export class ChatView extends ItemView {
     } else if (e.type === 'assistant/message') {
       // 防重：多个 Chat 面板实例会同时收到同一事件（广播），
       // 同一实例内相同原始内容只渲染一次（用原始内容比较，textContent 受渲染影响不可靠）
+      renderLog('assistant msg', 'streamingEl=' + !!this.streamingEl, 'rawDedup=' + (this.lastAssistantRaw === e.content))
       if (!this.streamingEl && this.lastAssistantRaw === e.content) {
+        renderLog('  -> raw-dedup skip')
         return
       }
       if (this.streamingEl) {
@@ -262,6 +273,7 @@ export class ChatView extends ItemView {
       this.streamingText = ''
       this.lastAssistantRaw = e.content
       this.turnText.push(`${t('chat.msg.assistant')}：\n${e.content}`)
+      this.closeThinking()
     } else if (e.type === 'system/message') {
       this.appendMessage('system', e.content)
     } else if (e.type === 'tool/call') {
@@ -377,9 +389,12 @@ export class ChatView extends ItemView {
   private appendStream(delta: string): void {
     if (!this.streamingEl) {
       // 流式气泡用纯文本（避免 textContent 覆盖已渲染子元素）；结束后再渲染 Markdown
+      renderLog('appendStream CREATE', 'len=' + this.streamingText.length)
       this.streamingEl = (this.turnEl ?? this.messagesEl).createDiv({
         cls: 'dsh-msg dsh-msg-assistant dsh-msg-streaming',
       })
+    } else {
+      renderLog('appendStream APPEND', 'len=' + this.streamingText.length)
     }
     this.streamingText += delta
     this.streamingEl.textContent = this.streamingText
@@ -479,6 +494,7 @@ export class ChatView extends ItemView {
         executeTool: (name, input) => this.executeTool(name, input),
         onEvent: sink,
         onStream: streaming ? (delta) => this.appendStream(delta) : undefined,
+        onThinking: (delta) => this.appendThinking(delta),
         onPhase: (phase) => this.setPhase(phase),
         history,
         system,
@@ -538,7 +554,40 @@ export class ChatView extends ItemView {
     return path.posix.join(this.ctx.sandbox.scope.configDir, 'harness-like-plugins')
   }
 
+  /** 对话内思考折叠卡：推理过程增量（reasoning_content）实时追加 */
+  private appendThinking(delta: string): void {
+    if (!this.thinkingEl) this.openThinking()
+    this.thinkingText += delta
+    const body = this.thinkingEl?.querySelector('.dsh-thinking-body')
+    if (body) body.textContent = this.thinkingText
+    this.scrollToBottom()
+  }
+
+  private openThinking(): void {
+    if (this.thinkingEl) return
+    const parent = this.turnEl ?? this.messagesEl
+    const details = parent.createEl('details', { cls: 'dsh-thinking is-active' })
+    details.createEl('summary', { text: '🧠 思考中…' })
+    details.createDiv({ cls: 'dsh-thinking-body' })
+    this.thinkingEl = details
+    this.thinkingText = ''
+    this.scrollToBottom()
+  }
+
+  /** 收尾思考卡：自动折叠，保留可展开查看 */
+  private closeThinking(): void {
+    if (!this.thinkingEl) return
+    const summary = this.thinkingEl.querySelector('summary')
+    if (summary) summary.textContent = '🧠 已思考'
+    this.thinkingEl.removeAttribute('open')
+    this.thinkingEl.classList.remove('is-active')
+    this.thinkingEl = null
+  }
+
   private setPhase(phase: UiPhase): void {
+    // 思考/工具阶段：对话内折叠卡（思考中 → 工具调用），避免"卡死"感
+    if (phase.kind === 'thinking') this.openThinking()
+    else if (phase.kind === 'tool') this.closeThinking()
     const text =
       phase.kind === 'thinking'
         ? t('chat.phase.thinking')
@@ -795,6 +844,8 @@ export class ChatView extends ItemView {
     this.turnCopied = false
     this.lastAssistantRaw = null
     this.lastEventKey = ''
+    this.thinkingEl = null
+    this.thinkingText = ''
     const id = this.currentSessionId
     if (!id) {
       this.renderWelcome()
