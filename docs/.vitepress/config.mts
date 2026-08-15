@@ -2,38 +2,43 @@ import { defineConfig } from 'vitepress'
 
 const zhNav = [
   { text: '首页', link: '/' },
-  { text: '使用指南', link: '/guide/quickstart' },
-  { text: '开发你的插件', link: '/dev/hello-world' },
+  { text: '使用教程', link: '/guide/quickstart' },
 ]
 
 const enNav = [
   { text: 'Home', link: '/en/' },
-  { text: 'Guide', link: '/en/guide/quickstart' },
-  { text: 'Plugin Guide', link: '/en/dev/hello-world' },
+  { text: 'Tutorial', link: '/en/guide/quickstart' },
 ]
 
 const zhSidebar = {
   '/guide/': [
     {
-      text: '使用指南',
+      text: '入门',
       items: [
         { text: '快速开始', link: '/guide/quickstart' },
+        { text: '已实现的能力清单', link: '/guide/capabilities' },
+      ],
+    },
+    {
+      text: '日常使用',
+      items: [
         { text: '对话面板', link: '/guide/chat' },
         { text: '智能体与模型', link: '/guide/agents-models' },
         { text: '审批与安全', link: '/guide/approval' },
-        { text: '用户插件体系', link: '/guide/plugins' },
-        { text: '常见问题', link: '/guide/faq' },
       ],
     },
-  ],
-  '/dev/': [
     {
-      text: '插件开发（面向使用者）',
+      text: '扩展',
       items: [
-        { text: '最小插件', link: '/dev/hello-world' },
+        { text: '用户插件体系', link: '/guide/plugins' },
+        { text: '开发你的第一个插件', link: '/dev/hello-world' },
         { text: 'ctx.* 服务速查', link: '/dev/services' },
         { text: '翻译插件', link: '/dev/translation' },
       ],
+    },
+    {
+      text: '帮助',
+      items: [{ text: '常见问题', link: '/guide/faq' }],
     },
   ],
 }
@@ -41,25 +46,32 @@ const zhSidebar = {
 const enSidebar = {
   '/en/guide/': [
     {
-      text: 'Guide',
+      text: 'Getting Started',
       items: [
         { text: 'Quick Start', link: '/en/guide/quickstart' },
+        { text: 'Implemented Capabilities', link: '/en/guide/capabilities' },
+      ],
+    },
+    {
+      text: 'Daily Use',
+      items: [
         { text: 'Chat Panel', link: '/en/guide/chat' },
         { text: 'Agents & Models', link: '/en/guide/agents-models' },
         { text: 'Approval & Security', link: '/en/guide/approval' },
-        { text: 'User Plugins', link: '/en/guide/plugins' },
-        { text: 'FAQ', link: '/en/guide/faq' },
       ],
     },
-  ],
-  '/en/dev/': [
     {
-      text: 'Plugin Development (for users)',
+      text: 'Extending',
       items: [
-        { text: 'Minimal Plugin', link: '/en/dev/hello-world' },
+        { text: 'User Plugins', link: '/en/guide/plugins' },
+        { text: 'Your First Plugin', link: '/en/dev/hello-world' },
         { text: 'ctx.* Services', link: '/en/dev/services' },
         { text: 'Translation Plugins', link: '/en/dev/translation' },
       ],
+    },
+    {
+      text: 'Help',
+      items: [{ text: 'FAQ', link: '/en/guide/faq' }],
     },
   ],
 }

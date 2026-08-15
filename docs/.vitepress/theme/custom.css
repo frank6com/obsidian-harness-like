@@ -1,6 +1,27 @@
-/* 首页 hero 副标题缩小 */
+/* 首页 hero：主标题外的层级统一缩小 */
+.VPHero .tagline {
+  font-size: 22px;
+  line-height: 1.5;
+}
 .VPHero .description {
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.6;
   max-width: 720px;
+}
+
+/* FAQ 折叠样式 */
+details {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin: 8px 0;
+  background: var(--vp-c-bg-soft);
+}
+details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+details[open] > summary {
+  margin-bottom: 8px;
 }
