@@ -168,7 +168,7 @@ function asProvider(p: Partial<ProviderConfig> & { model?: string }): ProviderCo
 export function migrateSettings(raw: Record<string, unknown> | undefined): HarnessLikeSettings {
   const base = defaultSettings()
   if (!raw || typeof raw !== 'object') return base
-  const r = raw as Record<string, unknown>
+  const r = raw
 
   const providers = Array.isArray(r.providers)
     ? (r.providers as Partial<ProviderConfig>[]).filter((p) => p && typeof p.id === 'string')
@@ -234,8 +234,12 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
         ? r.activeAgentId
         : legacyMode
   base.approvalDefault = r.approvalDefault === 'deny' ? 'deny' : 'ask'
-  base.writeAllowDirs = Array.isArray(r.writeAllowDirs) ? r.writeAllowDirs : []
-  base.toolPolicy = Array.isArray(r.toolPolicy) ? r.toolPolicy : []
+  base.writeAllowDirs = Array.isArray(r.writeAllowDirs)
+    ? r.writeAllowDirs.filter((x): x is string => typeof x === 'string')
+    : []
+  base.toolPolicy = Array.isArray(r.toolPolicy)
+    ? r.toolPolicy.filter((x): x is string => typeof x === 'string')
+    : []
   base.sessionRetentionDays =
     typeof r.sessionRetentionDays === 'number' ? r.sessionRetentionDays : 0
   base.exportDir = typeof r.exportDir === 'string' ? r.exportDir.trim() : 'sessions'

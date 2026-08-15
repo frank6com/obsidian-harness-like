@@ -8,7 +8,6 @@
 
 import type { LLMMessage, OpenAIToolCall, SessionEvent, ToolCall, ToolDef, ToolExecution } from './types'
 import type { LlmCaller } from './llm'
-import { ToolRegistry } from './tools'
 
 export type AgentPhase =
   | { kind: 'thinking' }

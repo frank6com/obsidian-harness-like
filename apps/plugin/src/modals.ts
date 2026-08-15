@@ -59,7 +59,7 @@ export class GrantModal extends Modal {
     new Setting(contentEl).addButton((b) =>
       b
         .setButtonText(t('common.cancel'))
-        .setDestructive()
+        .setWarning()
         .onClick(() => this.finish({ cancel: true })),
     )
   }
@@ -107,7 +107,7 @@ export class ConfirmModal extends Modal {
       b.setButtonText(t('common.cancel')).onClick(() => this.finish(false)),
     )
     new Setting(contentEl).addButton((b) =>
-      b.setButtonText(this.okText).setDestructive().onClick(() => this.finish(true)),
+      b.setButtonText(this.okText).setWarning().onClick(() => this.finish(true)),
     )
   }
 
@@ -170,7 +170,7 @@ export class WriteApprovalModal extends Modal {
     new Setting(contentEl).addButton((b) =>
       b
         .setButtonText(t('modal.write.deny'))
-        .setDestructive()
+        .setWarning()
         .onClick(() => this.finish({ choice: 'deny' })),
     )
   }

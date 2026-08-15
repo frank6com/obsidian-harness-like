@@ -262,7 +262,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       )
     if (settings.providers.length > 1) {
       new Setting(form).addButton((b) =>
-        b.setButtonText(t('settings.model.deleteChannel')).setDestructive().onClick(async () => {
+        b.setButtonText(t('settings.model.deleteChannel')).setWarning().onClick(async () => {
           const ok = await new ConfirmModal(
             this.app,
             t('settings.model.deleteChannelConfirm', { name: p.name }),
@@ -369,7 +369,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
       row.addButton((b) =>
-        b.setButtonText(t('common.delete')).setDestructive().onClick(async () => {
+        b.setButtonText(t('common.delete')).setWarning().onClick(async () => {
           const ok = await new ConfirmModal(
             this.app,
             t('settings.agent.deleteConfirm', { name: a.name }),
@@ -467,7 +467,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       text: [t('settings.data.paths.sessionLog'), t('settings.data.paths.plugins')].join('\n'),
     })
     new Setting(c).addButton((b) =>
-      b.setButtonText(t('settings.data.clearAll')).setDestructive().onClick(async () => {
+      b.setButtonText(t('settings.data.clearAll')).setWarning().onClick(async () => {
         const ok = await new ConfirmModal(
           this.app,
           t('settings.data.clearAllConfirm'),
@@ -568,7 +568,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
             .join(''),
         )
         .addButton((b) =>
-          b.setButtonText(t('settings.grants.revoke')).setDestructive().onClick(() => {
+          b.setButtonText(t('settings.grants.revoke')).setWarning().onClick(() => {
             this.ctx.approval.revoke(pluginId)
             this.display()
           }),
@@ -578,7 +578,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       new Setting(c).addButton((b) =>
         b
           .setButtonText(t('settings.grants.cleanStale', { count: stale.length }))
-          .setDestructive()
+          .setWarning()
           .onClick(() => {
             for (const id of stale) this.ctx.approval.revoke(id)
             this.display()

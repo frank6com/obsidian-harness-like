@@ -11,7 +11,7 @@
 
 import { ToolRuntime } from '@deepseek-ai/dsh-tools'
 import type { ToolDefinition, ToolExecutionInput, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
-import type { ContentBlock, ToolSchema } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { Context, Plugin } from '@deepseek-ai/cordis'
 import type { ToolDef } from './types'
 
