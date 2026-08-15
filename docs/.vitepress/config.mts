@@ -141,6 +141,8 @@ const enSidebar = {
 }
 
 export default defineConfig({
+  // 项目站点部署在子路径（frank6com.github.io/obsidian-harness-like/），必须配置 base
+  base: '/obsidian-harness-like/',
   title: 'Harness Like',
   description: 'DeepSeek Harness 理念的 Obsidian 实现：在桌面版 Obsidian 内运行 Cordis 插件体系与 AI agent',
   cleanUrls: true,
