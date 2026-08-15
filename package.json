@@ -8,7 +8,10 @@
     "test": "vitest run",
     "init:vault": "bash scripts/init-dev-vault.sh",
     "link:vault": "bash scripts/link-dev.sh",
-    "typecheck": "tsc --noEmit -p packages/harness-base/tsconfig.json && tsc --noEmit -p packages/obsidian-adapter/tsconfig.json && tsc --noEmit -p packages/plugin-runtime/tsconfig.json && tsc --noEmit -p apps/plugin/tsconfig.json"
+    "typecheck": "tsc --noEmit -p packages/harness-base/tsconfig.json && tsc --noEmit -p packages/obsidian-adapter/tsconfig.json && tsc --noEmit -p packages/plugin-runtime/tsconfig.json && tsc --noEmit -p apps/plugin/tsconfig.json",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -18,6 +21,7 @@
   "devDependencies": {
     "jsdom": "^30.0.1",
     "typescript": "^7.0.2",
+    "vitepress": "^1.6.4",
     "vitest": "^4.1.10"
   }
 }
