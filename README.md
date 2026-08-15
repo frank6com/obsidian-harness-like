@@ -31,9 +31,9 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 > The plugin is currently in beta. Community-store & BRAT installation will be available after the first release.
 > **Desktop only** — this plugin requires the Obsidian **desktop** app (macOS / Windows / Linux); it cannot be installed on Obsidian Mobile.
 
-1. Get the build: clone the repository and run `pnpm install && pnpm build`, or download a release package when published.
+1. Get the build: clone the repository and run `pnpm install && pnpm build` (this also produces the plugin package at the repo root), or download a release package when published.
 2. Create the folder `.obsidian/plugins/harness-like/` inside your vault.
-3. Copy `apps/plugin/dist/main.js`, `apps/plugin/manifest.json` and `apps/plugin/styles.css` into that folder.
+3. Copy `main.js`, `manifest.json` and `styles.css` from the **repository root** (the root is the official plugin package) into that folder.
 4. In Obsidian: Settings → Community plugins → turn off Restricted mode if needed → **Reload** → enable **Harness Like**.
 
 ### Quick Start
@@ -90,9 +90,9 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 > 当前为 beta。首个发布版上线后支持社区商店与 BRAT 安装。
 > **仅限桌面端**：Harness Like 只运行在 Obsidian **桌面版**（macOS / Windows / Linux），不支持 Obsidian 移动端（manifest 已声明 `isDesktopOnly`，移动端商店与插件列表会自动隐藏）。
 
-1. 获取产物：克隆仓库后执行 `pnpm install && pnpm build`，或等发布后在 Releases 下载。
+1. 获取产物：克隆仓库后执行 `pnpm install && pnpm build`（构建会同时生成仓库根目录的插件包），或等发布后在 Releases 下载。
 2. 在 vault 内创建目录 `.obsidian/plugins/harness-like/`。
-3. 把 `apps/plugin/dist/main.js`、`apps/plugin/manifest.json`、`apps/plugin/styles.css` 复制进去。
+3. 从**仓库根目录**复制 `main.js`、`manifest.json`、`styles.css`（根目录即官方插件包）到该目录。
 4. Obsidian：设置 → 第三方插件（必要时关闭受限模式）→ **重新加载** → 启用 **Harness Like**。
 
 ### 快速开始

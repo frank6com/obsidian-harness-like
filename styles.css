@@ -1,0 +1,867 @@
+/* harness-like 基础样式 */
+
+.dsh-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dsh-chat.is-collapsed .dsh-chat-list {
+  display: none;
+}
+
+.dsh-btn-icon {
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.dsh-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-wrap: wrap;
+}
+
+.dsh-chat-title {
+  font-weight: 600;
+}
+
+/* 头部右侧操作组：新会话 + 插件管理器，整体靠右 */
+.dsh-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.dsh-bound {
+  color: var(--text-muted);
+  font-size: 12px;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dsh-chat-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.dsh-chat-list {
+  width: 180px;
+  border-right: 1px solid var(--background-modifier-border);
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.dsh-session-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+  padding: 8px;
+}
+
+/* 空状态引导 */
+.dsh-welcome {
+  margin: auto;
+  max-width: 420px;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px 12px;
+}
+
+.dsh-welcome h3 {
+  margin: 0 0 8px;
+  color: var(--text-normal);
+}
+
+.dsh-welcome p {
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+
+.dsh-welcome-chip {
+  display: inline-block;
+  margin: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dsh-welcome-chip:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dsh-welcome-hint {
+  margin-top: 20px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dsh-session-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  /* 关键：覆盖 Obsidian 全局 button 的 height: var(--input-height)（固定 ~30px），
+     否则两行内容（标题+子行）会溢出按钮底部，子行显示在行框外面 */
+  height: auto;
+  min-height: 0;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-normal);
+  border: none;
+  cursor: pointer;
+}
+
+.dsh-session-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dsh-session-row {
+  position: relative;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+/* 选中态：主题没有 --background-modifier-active（无效变量导致选中行无底色），
+   改用存在的 --background-modifier-active-hover（带主题色淡染），并回退 hover 色；
+   左侧主题色竖条 + 标题主题色加粗，任何主题下选中行都一目了然（不再"反了"） */
+.dsh-session-row.is-active {
+  background: var(--background-modifier-active-hover, var(--background-modifier-hover));
+  box-shadow: inset 2px 0 0 0 var(--interactive-accent);
+}
+
+.dsh-session-row.is-active .dsh-session-btn {
+  background: transparent;
+}
+
+.dsh-session-row.is-active .dsh-session-title {
+  color: var(--text-accent);
+  font-weight: 600;
+}
+
+.dsh-session-row.is-active .dsh-session-sub {
+  color: var(--text-muted);
+}
+
+/* 标题与子行单行省略：不允许内容撑宽列表（否则列表横向滚动会裁掉右侧内容，
+   如"全局 · N 条"的"条"显示不全） */
+.dsh-session-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-session-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-session-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: none;
+  gap: 2px;
+}
+
+.dsh-session-row:hover .dsh-session-actions {
+  display: flex;
+}
+
+.dsh-session-action {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  height: auto; /* 覆盖 Obsidian 全局 button 固定高度，保持小尺寸 */
+  line-height: 1.4;
+  padding: 0 4px;
+}
+
+.dsh-session-action:hover {
+  color: var(--text-normal);
+}
+
+.dsh-session-action-danger:hover {
+  color: var(--text-error);
+}
+
+.dsh-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dsh-msg {
+  position: relative;
+  padding: 8px 10px;
+  border-radius: 8px;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.55;
+  /* 文本必须可选中复制 */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.dsh-msg * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.dsh-msg-user,
+.dsh-msg-system {
+  white-space: pre-wrap;
+}
+
+/* ===== 轮次容器：一次问答一组，底部挂"复制本段对话" ===== */
+
+.dsh-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dsh-turn + .dsh-turn {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--background-modifier-border);
+}
+
+.dsh-turn-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.dsh-turn-copy {
+  height: auto; /* 覆盖 Obsidian 全局 button 固定高度 */
+  font-size: 11px;
+  padding: 2px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dsh-turn-copy:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+/* ===== 已渲染 Markdown 的气泡排版（marked + 自研样式层，完全可控） ===== */
+
+.dsh-msg-assistant {
+  align-self: flex-start;
+  background: var(--background-secondary);
+  max-width: 100%;
+}
+
+.dsh-msg-assistant > :first-child {
+  margin-top: 0;
+}
+
+.dsh-msg-assistant > :last-child {
+  margin-bottom: 0;
+}
+
+.dsh-msg-assistant p {
+  margin: 0 0 6px;
+}
+
+.dsh-msg-assistant h1,
+.dsh-msg-assistant h2,
+.dsh-msg-assistant h3,
+.dsh-msg-assistant h4,
+.dsh-msg-assistant h5,
+.dsh-msg-assistant h6 {
+  margin: 10px 0 6px;
+  line-height: 1.3;
+}
+
+.dsh-msg-assistant h1 {
+  font-size: 1.25em;
+}
+
+.dsh-msg-assistant h2 {
+  font-size: 1.15em;
+}
+
+.dsh-msg-assistant h3,
+.dsh-msg-assistant h4,
+.dsh-msg-assistant h5,
+.dsh-msg-assistant h6 {
+  font-size: 1.05em;
+}
+
+.dsh-msg-assistant ul,
+.dsh-msg-assistant ol {
+  margin: 0 0 6px;
+  padding-left: 22px;
+}
+
+.dsh-msg-assistant li {
+  margin: 2px 0;
+}
+
+.dsh-msg-assistant strong {
+  font-weight: 600;
+}
+
+/* 表格：必须有框线 */
+.dsh-msg-assistant table {
+  border-collapse: collapse;
+  margin: 6px 0;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.dsh-msg-assistant th,
+.dsh-msg-assistant td {
+  border: 1px solid var(--background-modifier-border);
+  padding: 4px 8px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.dsh-msg-assistant th {
+  background: var(--background-modifier-hover);
+  font-weight: 600;
+}
+
+.dsh-msg-assistant tr:nth-child(2n) td {
+  background: var(--background-primary);
+}
+
+/* 代码块 */
+.dsh-msg-assistant pre {
+  position: relative;
+  margin: 6px 0;
+  padding: 10px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  overflow-x: auto;
+  max-height: 320px;
+}
+
+.dsh-msg-assistant pre code {
+  display: block;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-normal);
+  white-space: pre;
+}
+
+.dsh-msg-assistant :not(pre) > code {
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+/* 代码块复制按钮 */
+.dsh-code-copy {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border-radius: 4px;
+  padding: 0 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  line-height: 1.7;
+  z-index: 1;
+}
+
+.dsh-msg-assistant pre:hover .dsh-code-copy {
+  opacity: 1;
+}
+
+/* 引用 / 链接 / 分隔线 / 图片 */
+.dsh-msg-assistant blockquote {
+  margin: 6px 0;
+  padding: 2px 10px;
+  border-left: 3px solid var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.dsh-msg-assistant a {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.dsh-msg-assistant hr {
+  border: none;
+  border-top: 1px solid var(--background-modifier-border);
+  margin: 8px 0;
+}
+
+.dsh-msg-assistant img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.dsh-msg-user {
+  align-self: flex-end;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dsh-msg-streaming::after {
+  content: '▍';
+  margin-left: 1px;
+  color: var(--text-accent);
+  animation: dsh-blink 1s steps(1) infinite;
+}
+
+@keyframes dsh-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.dsh-msg-system {
+  align-self: center;
+  color: var(--text-warning);
+  font-size: 12px;
+}
+
+/* 阶段状态条 */
+.dsh-phase {
+  min-height: 18px;
+  padding: 2px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid transparent;
+}
+
+.dsh-phase:not(:empty) {
+  border-top-color: var(--background-modifier-border);
+  color: var(--text-accent);
+}
+
+/* 重试行 */
+.dsh-retry-row {
+  align-self: center;
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.dsh-tool-card {
+  align-self: flex-start;
+  width: 100%;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dsh-tool-card.is-running {
+  border-color: var(--interactive-accent);
+}
+
+.dsh-tool-card.is-running .dsh-tool-card-title::before {
+  content: '⟳ ';
+  display: inline-block;
+  animation: dsh-spin 1s linear infinite;
+}
+
+@keyframes dsh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dsh-tool-card.is-success {
+  border-color: var(--color-green);
+}
+
+.dsh-tool-card.is-error {
+  border-color: var(--text-error);
+}
+
+.dsh-tool-card-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.dsh-tool-card-detail {
+  margin: 0;
+  max-height: 90px;
+  overflow: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dsh-tool-card-detail.is-expanded {
+  max-height: none;
+}
+
+.dsh-chat-footer {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.dsh-chat-input {
+  flex: 1;
+  resize: none;
+  min-height: 60px;
+}
+
+.dsh-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dsh-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dsh-btn-primary {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+.dsh-btn-stop {
+  background: var(--text-error) !important;
+  border-color: transparent;
+}
+
+/* 插件管理器 */
+.dsh-pm-bar {
+  margin-bottom: 8px;
+}
+
+.dsh-pm-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.dsh-pm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.dsh-pm-name {
+  font-weight: 600;
+}
+
+.dsh-pm-status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dsh-pm-status-running {
+  color: var(--color-green);
+}
+
+.dsh-pm-status-error {
+  color: var(--text-error);
+}
+
+.dsh-pm-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* 审批弹窗 */
+.dsh-modal-scope {  padding: 0 8px 8px;
+  color: var(--text-normal);
+  font-size: 13px;
+}
+
+.dsh-modal-scope ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.dsh-modal-warning .setting-item-description {
+  color: var(--text-warning);
+}
+
+.dsh-modal-preview {
+  margin: 0 12px 12px;
+  padding: 8px;
+  max-height: 120px;
+  overflow: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+}
+
+/* ===== 设置页 tabs ===== */
+.dsh-settings-nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.dsh-settings-tab {
+  padding: 4px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dsh-settings-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.dsh-settings-tab.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+/* 模型提供方：侧向列表 + 表单 */
+.dsh-provider-layout {
+  display: flex;
+  gap: 16px;
+}
+
+.dsh-provider-list {
+  width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--background-modifier-border);
+  padding-right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dsh-provider-item {
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.dsh-provider-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dsh-provider-item.is-active {
+  border-color: var(--interactive-accent);
+}
+
+.dsh-provider-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.dsh-provider-add {
+  margin-top: 4px;
+  text-align: center;
+}
+
+.dsh-provider-form {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ===== Chat 输入区工具栏（模式 + 模型） ===== */
+.dsh-chat-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 0;
+}
+
+.dsh-mode-group {
+  display: flex;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.dsh-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 3px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dsh-mode-btn:hover {
+  color: var(--text-normal);
+}
+
+.dsh-mode-btn.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dsh-model-select {
+  max-width: 220px;
+  font-size: 12px;
+}
+
+/* 设置页：模型列表管理 */
+.dsh-model-list {
+  padding: 0 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dsh-model-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.dsh-model-name {
+  flex: 1;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+.dsh-model-default {
+  color: var(--color-green);
+  font-size: 11px;
+}
+
+.dsh-model-add {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 8px;
+}
+
+.dsh-model-input {
+  flex: 1;
+}
+
+/* 智能体上拉按钮 */
+.dsh-agent-btn {
+  min-width: 88px;
+  text-align: left;
+  font-size: 12px;
+}
+
+/* 弹窗：搜索 + 滚动列表 + 勾选行 */
+.dsh-modal-search {
+  width: calc(100% - 24px);
+  margin: 0 12px 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.dsh-modal-list {
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0 12px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.dsh-modal-list-tall {
+  max-height: 220px;
+}
+
+.dsh-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.dsh-check-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dsh-check-custom {
+  background: var(--background-modifier-hover);
+}
+
+.dsh-check-added {
+  margin-left: auto;
+  color: var(--color-green);
+  font-size: 11px;
+}
+
+.dsh-model-btn {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

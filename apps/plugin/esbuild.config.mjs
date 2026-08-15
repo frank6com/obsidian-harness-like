@@ -12,24 +12,41 @@ const DEV_VAULT_DIR = path.resolve(
 )
 const PLUGIN_DIR = path.join(DEV_VAULT_DIR, '.obsidian', 'plugins', 'harness-like')
 
-/** 构建后把四个产物同步进 dev-vault 的插件目录（dev-vault 不存在则跳过） */
-function syncDevVault() {
+const ARTIFACTS = ['main.js', 'manifest.json', 'styles.css', 'versions.json']
+
+/** 构建产物源文件路径 */
+function artifactSrc(name) {
+  return path.join(ROOT, 'apps', 'plugin', name === 'main.js' ? 'dist/main.js' : name)
+}
+
+/**
+ * 构建后同步产物：
+ * 1) 仓库根目录 = 官方插件包（Obsidian 商店从默认分支根目录校验/拉取
+ *    manifest.json + main.js + styles.css，monorepo 布局必须映射到根目录）；
+ * 2) dev-vault 插件目录（本地测试，dev-vault 不存在则跳过）。
+ */
+function syncArtifacts() {
+  // 仓库根目录（必须提交入库，商店依赖）
+  for (const name of ARTIFACTS) {
+    fs.copyFileSync(artifactSrc(name), path.join(ROOT, name))
+  }
+  console.log('[sync] 插件包已同步 → 仓库根目录')
+  // dev-vault（本地测试）
   if (!fs.existsSync(DEV_VAULT_DIR)) return
   fs.mkdirSync(PLUGIN_DIR, { recursive: true })
-  for (const name of ['main.js', 'manifest.json', 'styles.css', 'versions.json']) {
-    const src = path.join(ROOT, 'apps', 'plugin', name === 'main.js' ? 'dist/main.js' : name)
-    fs.copyFileSync(src, path.join(PLUGIN_DIR, name))
+  for (const name of ARTIFACTS) {
+    fs.copyFileSync(artifactSrc(name), path.join(PLUGIN_DIR, name))
   }
   console.log(`[sync] 产物已同步 → ${PLUGIN_DIR}`)
 }
 
 const syncPlugin = {
-  name: 'sync-dev-vault',
+  name: 'sync-artifacts',
   setup(build) {
     build.onEnd((result) => {
       if (result.errors.length) return
       try {
-        syncDevVault()
+        syncArtifacts()
       } catch (err) {
         console.warn('[sync] 同步失败:', err)
       }
