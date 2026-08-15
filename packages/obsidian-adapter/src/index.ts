@@ -52,9 +52,14 @@ export class VaultService {
     return this.api.vault.rename(oldPath, newPath)
   }
 
-  /** 全部 markdown 笔记路径（v1 搜索工具的数据源） */
+  /** 全部 markdown 笔记路径（vault 相对路径列表） */
   listMarkdown(): string[] {
     return this.api.vault.getMarkdownPaths()
+  }
+
+  /** 全部 markdown 笔记路径（直观别名，插件作者常用名） */
+  getMarkdownPaths(): string[] {
+    return this.listMarkdown()
   }
 }
 
@@ -105,12 +110,15 @@ export class CommandsService {
   constructor(private api: ObsidianApiLike) {}
 
   addCommand(cmd: import('./api').CommandLike): () => void {
-    const registered = this.api.commands.addCommand(cmd)
+    // 注意：Obsidian 的 app.commands.addCommand 返回 undefined（bundle 确认），
+    // 不能依赖返回值；卸载用传入的 cmd.id（loader 已加插件前缀）
+    this.api.commands.addCommand(cmd)
+    const id = cmd.id
     // 卸载必须不抛错：Obsidian 的 removeCommand 对缺失命令会抛错，
     // 而 cordis 的 dispose 链遇错即断，会阻断后续 disposer（如工具注销）
     return () => {
       try {
-        this.api.commands.removeCommand(registered.id)
+        this.api.commands.removeCommand(id)
       } catch (err) {
         console.warn('[dsh] 命令卸载失败（忽略）:', err)
       }

@@ -2,7 +2,7 @@
 
 **An Obsidian implementation inspired by DeepSeek Harness** — run a Cordis plugin system and an AI agent inside Obsidian. The agent reads and writes your notes, calls tools and goes through approvals; you (or the agent) can write your own Cordis plugins to extend Obsidian's commands, tools, panels, ribbon icons, status bar and settings tabs.
 
-> **Status: beta (v0.28.19)** — core features are complete; the UI supports Chinese & English (and can follow Obsidian's language).
+> **Status: beta (v0.28.20)** — core features are complete; the UI supports Chinese & English (and can follow Obsidian's language).
 >
 > **Desktop only** — Harness Like runs in the Obsidian **desktop** app (macOS / Windows / Linux). Obsidian Mobile is **not** supported.
 
