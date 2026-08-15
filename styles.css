@@ -578,7 +578,7 @@
 }
 
 .dsh-btn-stop {
-  background: var(--text-error) !important;
+  background: var(--text-error);
   border-color: transparent;
 }
 

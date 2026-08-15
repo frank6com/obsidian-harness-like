@@ -59,7 +59,7 @@ export class GrantModal extends Modal {
     new Setting(contentEl).addButton((b) =>
       b
         .setButtonText(t('common.cancel'))
-        .setWarning()
+        .setDestructive()
         .onClick(() => this.finish({ cancel: true })),
     )
   }
@@ -107,7 +107,7 @@ export class ConfirmModal extends Modal {
       b.setButtonText(t('common.cancel')).onClick(() => this.finish(false)),
     )
     new Setting(contentEl).addButton((b) =>
-      b.setButtonText(this.okText).setWarning().onClick(() => this.finish(true)),
+      b.setButtonText(this.okText).setDestructive().onClick(() => this.finish(true)),
     )
   }
 
@@ -170,7 +170,7 @@ export class WriteApprovalModal extends Modal {
     new Setting(contentEl).addButton((b) =>
       b
         .setButtonText(t('modal.write.deny'))
-        .setWarning()
+        .setDestructive()
         .onClick(() => this.finish({ choice: 'deny' })),
     )
   }
@@ -252,7 +252,7 @@ export class ModelPickModal extends Modal {
         if (cb.checked) this.picked.add(kw)
         else this.picked.delete(kw)
       }
-      row.createEl('span', { text: t('modal.modelPick.custom', { name: kw }) })
+      row.createSpan({ text: t('modal.modelPick.custom', { name: kw }) })
     }
 
     for (const m of visible) {
@@ -262,8 +262,8 @@ export class ModelPickModal extends Modal {
         const cb = row.createEl('input', { type: 'checkbox' })
         cb.checked = true
         cb.disabled = true
-        row.createEl('span', { text: m })
-        row.createEl('span', { cls: 'dsh-check-added', text: t('modal.modelPick.addedMark') })
+        row.createSpan({ text: m })
+        row.createSpan({ cls: 'dsh-check-added', text: t('modal.modelPick.addedMark') })
         continue
       }
       const cb = row.createEl('input', { type: 'checkbox' })
@@ -272,7 +272,7 @@ export class ModelPickModal extends Modal {
         if (cb.checked) this.picked.add(m)
         else this.picked.delete(m)
       }
-      row.createEl('span', { text: m })
+      row.createSpan({ text: m })
     }
   }
 
@@ -401,7 +401,7 @@ export class AgentEditModal extends Modal {
         if (cb.checked) this.caps.add(t)
         else this.caps.delete(t)
       }
-      row.createEl('span', { text: t })
+      row.createSpan({ text: t })
     }
   }
 

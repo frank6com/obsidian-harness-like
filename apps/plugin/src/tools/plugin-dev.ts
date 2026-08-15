@@ -142,7 +142,7 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
     apply(ctx) {
       const pluginsDir = ctx.sandbox.scope.pluginsDir
       /** vault API 一律用 vault 相对路径（绝对路径会破坏 Obsidian 路径语义） */
-      const pluginsDirRel = path.posix.join('.obsidian', 'dsh-plugins')
+      const pluginsDirRel = path.posix.join(ctx.sandbox.scope.configDir, 'dsh-plugins')
 
       ctx.toolsCompat.register({
         name: 'plugin_guide',

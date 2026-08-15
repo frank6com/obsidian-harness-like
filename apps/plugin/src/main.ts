@@ -63,7 +63,7 @@ export default class HarnessLikePlugin extends Plugin {
       console.warn('[harness-like] 无法获取 vault 根路径，沙箱将拒绝所有写操作')
     }
     const root = vaultRoot ?? ''
-    const configDir = this.app.vault.configDir || '.obsidian'
+    const configDir = this.app.vault.configDir
     const dataDir = path.join(root, configDir, 'dsh')
     const pluginsDir = path.join(root, configDir, 'dsh-plugins')
     const tempDir = path.join(dataDir, 'tmp')
@@ -78,7 +78,7 @@ export default class HarnessLikePlugin extends Plugin {
         obsidianAdapterPlugin(apiLike, {
           load: () => this.settings,
           save: (d) => {
-            this.settings = d as unknown as HarnessLikeSettings
+            this.settings = d as HarnessLikeSettings
             void this.saveSettings()
           },
         }),

@@ -160,7 +160,7 @@ function asProvider(p: Partial<ProviderConfig> & { model?: string }): ProviderCo
     models: models.length ? [...new Set(models)] : [],
     temperature: typeof p.temperature === 'number' ? p.temperature : DEFAULT_PROVIDER.temperature,
     maxTokens: typeof p.maxTokens === 'number' ? p.maxTokens : DEFAULT_PROVIDER.maxTokens,
-    extraHeaders: Array.isArray(p.extraHeaders) ? (p.extraHeaders as string[]) : [],
+    extraHeaders: Array.isArray(p.extraHeaders) ? p.extraHeaders : [],
   }
 }
 
@@ -183,13 +183,13 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
         name: 'DeepSeek',
         baseURL:
           typeof r.baseURL === 'string' && r.baseURL
-            ? (r.baseURL as string)
+            ? r.baseURL
             : DEFAULT_PROVIDER.baseURL,
-        apiKey: typeof r.apiKey === 'string' ? (r.apiKey as string) : '',
-        model: typeof r.model === 'string' && r.model ? (r.model as string) : 'deepseek-chat',
-        models: Array.isArray(r.models) ? (r.models as string[]) : undefined,
-        temperature: typeof r.temperature === 'number' ? (r.temperature as number) : undefined,
-        maxTokens: typeof r.maxTokens === 'number' ? (r.maxTokens as number) : undefined,
+        apiKey: typeof r.apiKey === 'string' ? r.apiKey : '',
+        model: typeof r.model === 'string' && r.model ? r.model : 'deepseek-chat',
+        models: Array.isArray(r.models) ? r.models : undefined,
+        temperature: typeof r.temperature === 'number' ? r.temperature : undefined,
+        maxTokens: typeof r.maxTokens === 'number' ? r.maxTokens : undefined,
       }),
     ]
   }
@@ -229,17 +229,17 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
     : 'edit'
   base.activeAgentId =
     typeof r.activeAgentId === 'string' && base.agents.some((a) => a.id === r.activeAgentId)
-      ? (r.activeAgentId as string)
+      ? r.activeAgentId
       : typeof r.activeAgentId === 'string'
-        ? (r.activeAgentId as string)
+        ? r.activeAgentId
         : legacyMode
   base.approvalDefault = r.approvalDefault === 'deny' ? 'deny' : 'ask'
-  base.writeAllowDirs = Array.isArray(r.writeAllowDirs) ? (r.writeAllowDirs as string[]) : []
-  base.toolPolicy = Array.isArray(r.toolPolicy) ? (r.toolPolicy as string[]) : []
+  base.writeAllowDirs = Array.isArray(r.writeAllowDirs) ? r.writeAllowDirs : []
+  base.toolPolicy = Array.isArray(r.toolPolicy) ? r.toolPolicy : []
   base.sessionRetentionDays =
-    typeof r.sessionRetentionDays === 'number' ? (r.sessionRetentionDays as number) : 0
-  base.exportDir = typeof r.exportDir === 'string' ? (r.exportDir as string).trim() : 'sessions'
-  base.logLevel = (['debug', 'info', 'warn', 'error'] as const).includes(r.logLevel as never)
+    typeof r.sessionRetentionDays === 'number' ? r.sessionRetentionDays : 0
+  base.exportDir = typeof r.exportDir === 'string' ? r.exportDir.trim() : 'sessions'
+  base.logLevel = (['debug', 'info', 'warn', 'error'] as const).includes(r.logLevel as LogLevel)
     ? (r.logLevel as LogLevel)
     : 'info'
   base.confineToCurrentNote = r.confineToCurrentNote === true

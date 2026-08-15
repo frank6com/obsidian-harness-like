@@ -7,7 +7,7 @@ import { App, PluginSettingTab, Setting } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import type HarnessLikePlugin from './main'
 import { AgentEditModal, ConfirmModal, ModelPickModal } from './modals'
-import { BUILTIN_AGENTS, type AgentMode, type AgentPreset } from './settings'
+import { BUILTIN_AGENTS, type AgentPreset } from './settings'
 import { agentDisplayDesc, agentDisplayName, resolveLanguage, setLanguage, t, type LanguagePreference } from './i18n'
 
 export type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
@@ -192,7 +192,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       const isDefault = settings.defaultModelId === `${p.id}/${m}`
       row.createDiv({ cls: 'dsh-model-name', text: m })
       if (isDefault) {
-        row.createEl('span', { cls: 'dsh-model-default', text: t('settings.model.defaultMark') })
+        row.createSpan({ cls: 'dsh-model-default', text: t('settings.model.defaultMark') })
       }
       const setDefault = row.createEl('button', {
         cls: 'dsh-btn',
@@ -236,7 +236,6 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         s
           .setLimits(0, 2, 0.1)
           .setValue(p.temperature)
-          .setDynamicTooltip()
           .onChange(async (v) => {
             p.temperature = v
             await this.plugin.saveSettings()
@@ -263,7 +262,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       )
     if (settings.providers.length > 1) {
       new Setting(form).addButton((b) =>
-        b.setButtonText(t('settings.model.deleteChannel')).setWarning().onClick(async () => {
+        b.setButtonText(t('settings.model.deleteChannel')).setDestructive().onClick(async () => {
           const ok = await new ConfirmModal(
             this.app,
             t('settings.model.deleteChannelConfirm', { name: p.name }),
@@ -370,7 +369,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
       row.addButton((b) =>
-        b.setButtonText(t('common.delete')).setWarning().onClick(async () => {
+        b.setButtonText(t('common.delete')).setDestructive().onClick(async () => {
           const ok = await new ConfirmModal(
             this.app,
             t('settings.agent.deleteConfirm', { name: a.name }),
@@ -468,7 +467,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       text: [t('settings.data.paths.sessionLog'), t('settings.data.paths.plugins')].join('\n'),
     })
     new Setting(c).addButton((b) =>
-      b.setButtonText(t('settings.data.clearAll')).setWarning().onClick(async () => {
+      b.setButtonText(t('settings.data.clearAll')).setDestructive().onClick(async () => {
         const ok = await new ConfirmModal(
           this.app,
           t('settings.data.clearAllConfirm'),
@@ -569,7 +568,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
             .join(''),
         )
         .addButton((b) =>
-          b.setButtonText(t('settings.grants.revoke')).setWarning().onClick(() => {
+          b.setButtonText(t('settings.grants.revoke')).setDestructive().onClick(() => {
             this.ctx.approval.revoke(pluginId)
             this.display()
           }),
@@ -579,7 +578,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       new Setting(c).addButton((b) =>
         b
           .setButtonText(t('settings.grants.cleanStale', { count: stale.length }))
-          .setWarning()
+          .setDestructive()
           .onClick(() => {
             for (const id of stale) this.ctx.approval.revoke(id)
             this.display()

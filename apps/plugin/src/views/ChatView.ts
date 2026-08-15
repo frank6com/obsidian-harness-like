@@ -6,6 +6,7 @@
  * 流式光标、错误重试、列表可收起、发送中禁用与中止。
  */
 
+import * as path from 'path'
 import { ItemView, MarkdownRenderer, Menu, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import {
@@ -14,7 +15,7 @@ import {
   type SessionEvent,
   type ToolExecution,
 } from '@harness-like/harness-base'
-import { attachCodeCopyButtons, renderMarkdown } from '../markdown'
+import { attachCodeCopyButtons } from '../markdown'
 import { agentAllows } from '../mode'
 import { listVisibleAgents, type AgentPreset } from '../settings'
 import { safeFileName, sessionToMarkdown } from '../export'
@@ -426,7 +427,7 @@ export class ChatView extends ItemView {
       const system = [
         '你是运行在 Obsidian 中的 DeepSeek Harness agent。',
         '可以调用工具读写笔记；写操作会请求审批，请等待结果。',
-        '你还可以创建和维护 Harness Like 用户插件（.obsidian/dsh-plugins/）：用 create_plugin 建骨架、write_plugin_file 写纯 JS main.js（覆盖已有文件需用户确认；读取文件用 read_note）、reload_plugin 加载生效；开发指南见 plugin_guide。',
+        `你还可以创建和维护 Harness Like 用户插件（${this.pluginsDirRel()}）：用 create_plugin 建骨架、write_plugin_file 写纯 JS main.js（覆盖已有文件需用户确认；读取文件用 read_note）、reload_plugin 加载生效；开发指南见 plugin_guide。`,
         '插件代码必须通过 ctx.* 服务访问宿主能力（ribbon/statusbar/views/commands/vault/notice 等），禁止直接操作 Obsidian DOM；inject 必须声明 apply 里用到的每一个服务。',
         '创建带面板（ItemView）的插件并加载成功后，用 open_view 打开面板让用户看到界面。',
         note ? `仅当前笔记模式：当前笔记 ${note}\n\n笔记内容：\n${noteCtx.slice(0, 8000)}` : '',
@@ -504,6 +505,11 @@ export class ChatView extends ItemView {
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
+  }
+
+  /** 用户插件目录（vault 相对，跟随 configDir） */
+  private pluginsDirRel(): string {
+    return path.posix.join(this.ctx.sandbox.scope.configDir, 'dsh-plugins')
   }
 
   private setPhase(phase: UiPhase): void {

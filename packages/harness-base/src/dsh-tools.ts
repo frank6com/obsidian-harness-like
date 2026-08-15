@@ -78,7 +78,7 @@ export function toolsCompatPlugin(options: ToolsCompatOptions = {}): Plugin.Obje
           const definition: ToolDefinition = {
             name: def.name,
             description: def.description,
-            parameters: def.input as ToolSchema['parameters'],
+            parameters: def.input,
             output: {
               schema: TOOL_OUTPUT_SCHEMA as never,
               render: renderValue,
