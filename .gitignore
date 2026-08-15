@@ -13,3 +13,6 @@ research/
 
 # pnpm 包缓存（工作区内的 store 落点）
 .pnpm-store/
+
+# 文档站缓存目录
+docs/.vitepress/cache/

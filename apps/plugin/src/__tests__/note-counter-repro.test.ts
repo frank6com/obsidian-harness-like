@@ -65,14 +65,10 @@ describe('note-counter 重写复现', () => {
     // 把重写文件复制进临时插件目录
     const pluginDir = path.join(pluginsDir, 'note-counter')
     await fs.promises.mkdir(pluginDir, { recursive: true })
-    await fs.promises.copyFile(
-      path.join(process.cwd(), 'dev-vault/.obsidian/harness-like-plugins/note-counter/main.js'),
-      path.join(pluginDir, 'main.js'),
-    )
-    await fs.promises.copyFile(
-      path.join(process.cwd(), 'dev-vault/.obsidian/harness-like-plugins/note-counter/package.json'),
-      path.join(pluginDir, 'package.json'),
-    )
+    // 固定 fixture（不依赖 dev-vault 实时文件）
+    const fixture = path.join(process.cwd(), 'apps/plugin/src/__tests__/fixtures/note-counter')
+    await fs.promises.copyFile(path.join(fixture, 'main.js'), path.join(pluginDir, 'main.js'))
+    await fs.promises.copyFile(path.join(fixture, 'package.json'), path.join(pluginDir, 'package.json'))
 
     const records = { views: [] as string[], ribbons: [] as string[], commands: [] as string[] }
     const ctx = new Context()

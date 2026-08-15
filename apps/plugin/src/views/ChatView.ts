@@ -229,6 +229,12 @@ export class ChatView extends ItemView {
       this.closeTurn()
       void this.refreshSessions()
     } else if (e.type === 'assistant/message') {
+      // 防重：多个 Chat 面板实例会同时收到同一事件；
+      // 若最后一条已渲染的 assistant 内容与本次相同（且非流式进行中）则跳过
+      const lastAssistant = [...this.messagesEl.querySelectorAll('.dsh-msg-assistant')].pop()
+      if (!this.streamingEl && lastAssistant && lastAssistant.textContent === e.content) {
+        return
+      }
       if (this.streamingEl) {
         this.streamingEl.classList.remove('dsh-msg-streaming')
         this.renderMarkdown(this.streamingEl, e.content)
@@ -281,6 +287,7 @@ export class ChatView extends ItemView {
   }
 
   private renderToolCall(id: string, tool: string, input: unknown): void {
+    if (this.toolCards.has(id)) return // 防重：重复事件不重复建卡
     const card = (this.turnEl ?? this.messagesEl).createDiv({ cls: 'dsh-tool-card is-running' })
     card.createDiv({ cls: 'dsh-tool-card-title', text: t('chat.tool.call', { tool }) })
     const detail = card.createEl('pre', { cls: 'dsh-tool-card-detail', text: summarize(input) })

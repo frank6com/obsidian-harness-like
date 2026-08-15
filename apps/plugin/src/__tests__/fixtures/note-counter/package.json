@@ -1,0 +1,6 @@
+{
+  "name": "note-counter",
+  "version": "0.2.0",
+  "description": "面板显示 vault 笔记数量与按文件夹统计，随文件增删实时刷新；侧边栏图标点击弹出笔记数通知",
+  "dsh": { "id": "note-counter", "version": "0.2.0", "entry": "main.js" }
+}
