@@ -385,9 +385,14 @@ export class ChatView extends ItemView {
     // 官方渲染器（@since 0.10.6）：主题原生一致，避免 innerHTML（审核要求）；
     // component = 本视图，视图卸载时渲染的子组件自动清理
     renderLog('renderMarkdown 开始', 'len=' + markdown.length)
+    // 先清空流式残留文本，避免异步渲染期间显示旧内容
+    el.textContent = ''
     void MarkdownRenderer.render(this.app, markdown, el, '', this)
       .then(() => renderLog('renderMarkdown 完成', 'el.text=' + (el.textContent ?? '').length))
-      .catch((err) => renderLog('renderMarkdown 失败', String(err)))
+      .catch((err) => {
+        renderLog('renderMarkdown 失败', String(err))
+        el.textContent = markdown // 兜底：渲染失败时显示原始文本
+      })
     attachCodeCopyButtons(el)
   }
 
