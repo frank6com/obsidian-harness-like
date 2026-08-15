@@ -191,9 +191,11 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): DshSe
   const agents = Array.isArray(r.agents)
     ? (r.agents as AgentPreset[]).filter((a) => a && typeof a.id === 'string')
     : []
-  base.agents = agents.length
-    ? agents.map((a) => ({ ...a, enabled: a.enabled !== false }))
-    : BUILTIN_AGENTS.map((a) => ({ ...a, enabled: true }))
+  // 内置智能体的名称/描述/模式强制对齐 BUILTIN_AGENTS（旧数据可能存了旧名）
+  base.agents = (agents.length ? agents : BUILTIN_AGENTS.map((a) => ({ ...a }))).map((a) => {
+    const builtin = BUILTIN_AGENTS.find((b) => b.id === a.id)
+    return builtin ? { ...a, ...builtin, enabled: a.enabled !== false } : { ...a, enabled: a.enabled !== false }
+  })
   const legacyMode = (['chat', 'edit', 'create'] as const).includes(r.agentMode as never)
     ? (r.agentMode as AgentMode)
     : 'edit'

@@ -796,3 +796,20 @@
 .dsh-check-row:hover {
   background: var(--background-modifier-hover);
 }
+
+.dsh-check-custom {
+  background: var(--background-modifier-hover);
+}
+
+.dsh-check-added {
+  margin-left: auto;
+  color: var(--color-green);
+  font-size: 11px;
+}
+
+.dsh-model-btn {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

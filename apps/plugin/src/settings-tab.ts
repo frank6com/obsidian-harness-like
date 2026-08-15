@@ -159,7 +159,7 @@ export class DshSettingsTab extends PluginSettingTab {
                 this.ctx.notice.notice('端点未返回模型列表，请手动添加')
                 return
               }
-              const picked = await new ModelPickModal(this.app, fetched, new Set()).ask()
+              const picked = await new ModelPickModal(this.app, fetched, p.models).ask()
               if ('cancel' in picked || !picked.models.length) {
                 this.ctx.notice.notice('未选择模型')
                 return
@@ -279,8 +279,26 @@ export class DshSettingsTab extends PluginSettingTab {
 
   private renderAgentTab(c: HTMLElement): void {
     const { settings } = this.plugin
-    const activeId = settings.activeAgentId
     const allTools = this.ctx.toolsCompat.list().map((t) => t.name)
+    const visible = settings.agents.filter((a) => a.enabled !== false)
+
+    // 默认智能体：独立设置项（下拉选择，只能选启用的）
+    new Setting(c)
+      .setName('默认智能体')
+      .setDesc('对话面板新会话的默认智能体')
+      .addDropdown((d) => {
+        for (const a of settings.agents) {
+          if (a.enabled === false) continue
+          d.addOption(a.id, a.name)
+        }
+        d.setValue(settings.activeAgentId)
+        d.onChange(async (v) => {
+          settings.activeAgentId = v
+          await this.plugin.saveSettings()
+          this.display()
+        })
+        return d
+      })
 
     c.createEl('h4', { text: '内置智能体' })
     c.createEl('p', {
@@ -288,28 +306,21 @@ export class DshSettingsTab extends PluginSettingTab {
       text: '启用开关控制该模式是否出现在对话面板的智能体选择中',
     })
     for (const a of BUILTIN_AGENTS) {
-      new Setting(c)
+      const s = new Setting(c)
         .setName(a.name)
-        .setDesc(`${a.description ?? ''}${a.id === activeId ? ' · ✓ 当前' : ''}`)
-        .addToggle((t) =>
-          t.setValue(a.enabled !== false).onChange(async (v) => {
-            a.enabled = v
-            if (!v && settings.activeAgentId === a.id) settings.activeAgentId = 'edit'
-            await this.plugin.saveSettings()
-            this.display()
-          }),
-        )
-        .addButton((b) =>
-          b
-            .setButtonText(a.id === activeId ? '✓ 当前' : '激活')
-            .setCta()
-            .onClick(async () => {
-              settings.activeAgentId = a.id
-              a.enabled = true
-              await this.plugin.saveSettings()
-              this.display()
-            }),
-        )
+        .setDesc(`${a.description ?? ''}${a.id === settings.activeAgentId ? ' · ✓ 当前' : ''}`)
+      s.addToggle((t) =>
+        t.setValue(a.enabled !== false).onChange(async (v) => {
+          a.enabled = v
+          if (!v && settings.activeAgentId === a.id) settings.activeAgentId = 'edit'
+          await this.plugin.saveSettings()
+          this.display()
+        }),
+      )
+      if (visible.length === 1 && a.enabled !== false) {
+        // 唯一启用的智能体不可禁用（保证默认智能体始终存在）
+        s.settingEl.querySelector('input')?.setAttribute('disabled', 'disabled')
+      }
     }
 
     c.createEl('h4', { text: '自定义智能体' })
@@ -321,7 +332,7 @@ export class DshSettingsTab extends PluginSettingTab {
       const row = new Setting(c)
         .setName(a.name)
         .setDesc(
-          `${a.description ?? ''} · ${a.capabilities?.length ? `${a.capabilities.length} 项能力` : '按模式默认'}${a.id === activeId ? ' · ✓ 当前' : ''}`,
+          `${a.description ?? ''} · ${a.capabilities?.length ? `${a.capabilities.length} 项能力` : '按模式默认'}${a.id === settings.activeAgentId ? ' · ✓ 当前' : ''}`,
         )
       row.addToggle((t) =>
         t.setValue(a.enabled !== false).onChange(async (v) => {
@@ -331,16 +342,10 @@ export class DshSettingsTab extends PluginSettingTab {
         }),
       )
       row.addButton((b) =>
-        b.setButtonText(a.id === activeId ? '✓ 当前' : '激活').setCta().onClick(async () => {
-          settings.activeAgentId = a.id
-          a.enabled = true
-          await this.plugin.saveSettings()
-          this.display()
-        }),
-      )
-      row.addButton((b) =>
         b.setButtonText('编辑').onClick(async () => {
-          await new AgentEditModal(this.app, a, allTools).ask()
+          await new AgentEditModal(this.app, a, allTools, (draft) => {
+            Object.assign(a, draft)
+          }).ask()
           await this.plugin.saveSettings()
           this.display()
         }),
@@ -359,9 +364,10 @@ export class DshSettingsTab extends PluginSettingTab {
     new Setting(c).addButton((b) =>
       b.setButtonText('＋ 添加自定义智能体').onClick(async () => {
         const id = `agent-${Date.now()}`
-        const agent: AgentPreset = { id, name: '新智能体', mode: 'edit', description: '', enabled: true }
-        settings.agents.push(agent)
-        await new AgentEditModal(this.app, agent, allTools).ask()
+        const draft: AgentPreset = { id, name: '新智能体', mode: 'edit', enabled: true }
+        await new AgentEditModal(this.app, draft, allTools, (saved) => {
+          settings.agents.push(saved)
+        }).ask()
         await this.plugin.saveSettings()
         this.display()
       }),

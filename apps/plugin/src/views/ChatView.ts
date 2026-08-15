@@ -39,7 +39,7 @@ export class ChatView extends ItemView {
   private boundNote: string | null = null
   private sessions = new Map<string, SessionMeta>()
   private sessionModels = new Map<string, string>()
-  private modelSelect!: HTMLSelectElement
+  private modelBtn!: HTMLButtonElement
   private agentBtn!: HTMLButtonElement
   private root!: HTMLElement
   private listEl!: HTMLElement
@@ -117,19 +117,9 @@ export class ChatView extends ItemView {
     this.refreshAgentBtn()
     this.agentBtn.onclick = (e) => this.openAgentMenu(e)
 
-    this.modelSelect = toolbar.createEl('select', { cls: 'dsh-model-select' })
-    this.buildModelOptions()
-    this.modelSelect.addEventListener('change', () => {
-      if (this.currentSessionId) this.sessionModels.set(this.currentSessionId, this.modelSelect.value)
-    })
-    const manageModels = toolbar.createEl('button', {
-      cls: 'dsh-btn dsh-btn-icon',
-      text: '⚙',
-      attr: { title: '管理模型' },
-    })
-    manageModels.onclick = () => {
-      ;(this.ctx.get('dshSettingsUi') as { openTo(t: string): void } | undefined)?.openTo('model')
-    }
+    this.modelBtn = toolbar.createEl('button', { cls: 'dsh-btn dsh-agent-btn dsh-model-btn' })
+    this.refreshModelBtn()
+    this.modelBtn.onclick = (e) => this.openModelMenu(e)
 
     // 底部：输入 + 发送/停止
     const footer = this.root.createDiv({ cls: 'dsh-chat-footer' })
@@ -151,9 +141,7 @@ export class ChatView extends ItemView {
     this.disposers.push(this.ctx.on('dsh/waiting-approval', () => this.setPhase({ kind: 'waiting' })))
     this.disposers.push(
       this.ctx.on('dsh/settings-updated', () => {
-        const prev = this.modelSelect.value
-        this.buildModelOptions()
-        if (prev) this.modelSelect.value = prev
+        this.refreshModelBtn()
         this.refreshAgentBtn()
       }),
     )
@@ -311,7 +299,7 @@ export class ChatView extends ItemView {
         sessionId,
         title: text.length > 24 ? text.slice(0, 24) + '…' : text,
         notePath: this.boundNote,
-        modelId: this.modelSelect.value,
+        modelId: this.sessionModelValue(),
       } satisfies SessionEvent)
       void this.refreshSessions()
     }
@@ -378,7 +366,7 @@ export class ChatView extends ItemView {
         onPhase: (phase) => this.setPhase(phase),
         history,
         system,
-        model: this.sessionModels.get(sessionId) ?? (this.modelSelect.value || undefined),
+        model: this.sessionModelValue(),
         signal,
       })
     } catch (err) {
@@ -448,24 +436,73 @@ export class ChatView extends ItemView {
   // ---------- 会话列表 / 绑定 / 输入 ----------
 
   /** 模型选择器选项：所有提供方 × 模型列表 */
-  private buildModelOptions(): void {
+  private buildModelItems(): Array<{ value: string; label: string }> {
     const providers = this.ctx.settings.get('providers', [] as Array<{
       id: string
       name?: string
       model?: string
       models?: string[]
     }>)
-    this.modelSelect.empty()
+    const items: Array<{ value: string; label: string }> = []
     for (const p of providers) {
       const models = p.models?.length ? p.models : p.model ? [p.model] : []
       for (const m of models) {
-        this.modelSelect.createEl('option', {
-          value: `${p.id}/${m}`,
-          text: `${p.name || p.id}: ${m}`,
-        })
+        items.push({ value: `${p.id}/${m}`, label: `${p.name || p.id}: ${m}` })
       }
     }
-    this.modelSelect.value = this.defaultModelId()
+    return items
+  }
+
+  /** 当前会话使用的模型（"providerId/model"） */
+  private sessionModelValue(): string {
+    if (this.currentSessionId && this.sessionModels.has(this.currentSessionId)) {
+      return this.sessionModels.get(this.currentSessionId)!
+    }
+    return this.defaultModelId()
+  }
+
+  private refreshModelBtn(): void {
+    const value = this.sessionModelValue()
+    const items = this.buildModelItems()
+    const label = items.find((i) => i.value === value)?.label ?? value
+    this.modelBtn.setText(`${label || '模型'} ▾`)
+  }
+
+  /** 上拉选择模型（与智能体菜单样式一致；管理入口在菜单内） */
+  private openModelMenu(ev: MouseEvent): void {
+    const items = this.buildModelItems()
+    const current = this.sessionModelValue()
+    const menu = new Menu()
+    for (const item of items) {
+      menu.addItem((mi) =>
+        mi
+          .setTitle(item.label)
+          .setChecked(item.value === current)
+          .onClick(() => {
+            if (this.currentSessionId) this.sessionModels.set(this.currentSessionId, item.value)
+            this.refreshModelBtn()
+          }),
+      )
+    }
+    menu.addSeparator()
+    menu.addItem((mi) =>
+      mi.setTitle('管理模型…').onClick(() => {
+        ;(this.ctx.get('dshSettingsUi') as { openTo(t: string): void } | undefined)?.openTo('model')
+      }),
+    )
+    this.showMenuUpward(menu, ev)
+  }
+
+  /** 上拉展开（菜单在按钮上方） */
+  private showMenuUpward(menu: Menu, ev: MouseEvent): void {
+    const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect()
+    menu.showAtPosition({ x: rect.left, y: rect.top })
+    window.setTimeout(() => {
+      // menu.dom 在 1.13 类型面外，运行时存在
+      const dom = (menu as unknown as { dom: HTMLElement }).dom
+      const h = dom.offsetHeight
+      dom.style.top = `${Math.max(8, rect.top - h)}px`
+    }, 0)
   }
 
   /** 默认模型选择（defaultProviderId + 其默认模型） */
@@ -524,7 +561,7 @@ export class ChatView extends ItemView {
   private newSession(): void {
     this.currentSessionId = null
     this.boundNote = null
-    this.modelSelect.value = this.defaultModelId()
+    this.refreshModelBtn()
     this.renderBinding()
     void this.renderSession()
     void this.refreshSessions()
@@ -627,10 +664,8 @@ export class ChatView extends ItemView {
     }
     if (meta?.modelId) {
       this.sessionModels.set(id, meta.modelId)
-      this.modelSelect.value = meta.modelId
-    } else {
-      this.modelSelect.value = this.defaultModelId()
     }
+    this.refreshModelBtn()
     for (const e of events) {
       if (e.type === 'user/message') this.appendMessage('user', e.content)
       else if (e.type === 'assistant/message') this.appendMessage('assistant', e.content)

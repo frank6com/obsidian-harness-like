@@ -196,15 +196,14 @@ export class WriteApprovalModal extends Modal {
 
 /** 模型勾选弹窗：从端点获取的候选模型中勾选确认后加入列表 */
 export class ModelPickModal extends Modal {
-  private picked: Set<string>
+  private picked = new Set<string>()
 
   constructor(
     app: App,
     private models: string[],
-    initial: Set<string>,
+    private existing: string[],
   ) {
     super(app)
-    this.picked = new Set(initial)
   }
 
   private keyword = ''
@@ -215,7 +214,7 @@ export class ModelPickModal extends Modal {
 
     const search = contentEl.createEl('input', {
       cls: 'dsh-modal-search',
-      attr: { placeholder: '搜索模型…' },
+      attr: { placeholder: '搜索模型…（输入新模型名可直接添加为候选）' },
     })
     search.addEventListener('input', () => {
       this.keyword = search.value.trim().toLowerCase()
@@ -241,8 +240,31 @@ export class ModelPickModal extends Modal {
     const visible = this.keyword
       ? this.models.filter((m) => m.toLowerCase().includes(this.keyword))
       : this.models
+
+    // 搜索输入可手动添加为新候选（不在候选列表、不在已添加列表）
+    const kw = this.keyword
+    if (kw && !this.models.some((m) => m.toLowerCase() === kw) && !this.existing.includes(kw)) {
+      const row = this.listEl.createDiv({ cls: 'dsh-check-row dsh-check-custom' })
+      const cb = row.createEl('input', { type: 'checkbox' })
+      cb.checked = this.picked.has(kw)
+      cb.onchange = () => {
+        if (cb.checked) this.picked.add(kw)
+        else this.picked.delete(kw)
+      }
+      row.createEl('span', { text: `＋ 添加自定义：${kw}` })
+    }
+
     for (const m of visible) {
       const row = this.listEl.createDiv({ cls: 'dsh-check-row' })
+      if (this.existing.includes(m)) {
+        // 已添加：显示关联标记，不可重复勾选
+        const cb = row.createEl('input', { type: 'checkbox' })
+        cb.checked = true
+        cb.disabled = true
+        row.createEl('span', { text: m })
+        row.createEl('span', { cls: 'dsh-check-added', text: '✓ 已添加' })
+        continue
+      }
       const cb = row.createEl('input', { type: 'checkbox' })
       cb.checked = this.picked.has(m)
       cb.onchange = () => {
@@ -294,6 +316,7 @@ export class AgentEditModal extends Modal {
     app: App,
     private agent: AgentPreset,
     private tools: string[],
+    private onSave: (draft: AgentPreset) => void,
   ) {
     super(app)
     this.name = agent.name
@@ -349,10 +372,13 @@ export class AgentEditModal extends Modal {
     new Setting(contentEl)
       .addButton((b) =>
         b.setButtonText('保存').setCta().onClick(() => {
-          this.agent.name = this.name.trim() || '未命名'
-          this.agent.description = this.description.trim() || undefined
-          this.agent.mode = this.mode
-          this.agent.capabilities = this.caps.size ? [...this.caps] : undefined
+          this.onSave({
+            ...this.agent,
+            name: this.name.trim() || '未命名',
+            description: this.description.trim() || undefined,
+            mode: this.mode,
+            capabilities: this.caps.size ? [...this.caps] : undefined,
+          })
           this.finish()
         }),
       )
