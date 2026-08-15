@@ -28,8 +28,10 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 
 ### Installation
 
-> The plugin is currently in beta. Community-store & BRAT installation will be available after the first release.
+> Now available on the [Obsidian community plugin directory](https://community.obsidian.md/plugins/harness-like): in Obsidian go to Settings → Community plugins → Browse → search "Harness Like".
 > **Desktop only** — this plugin requires the Obsidian **desktop** app (macOS / Windows / Linux); it cannot be installed on Obsidian Mobile.
+>
+> Manual install (alternative):
 
 1. Get the build: clone the repository and run `pnpm install && pnpm build` (this also produces the plugin package at the repo root), or download a release package when published.
 2. Create the folder `.obsidian/plugins/harness-like/` inside your vault.
@@ -87,8 +89,10 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 
 ### 安装
 
-> 当前为 beta。首个发布版上线后支持社区商店与 BRAT 安装。
+> 已上架 [Obsidian 社区插件目录](https://community.obsidian.md/plugins/harness-like)：在 Obsidian 内 设置 → 第三方插件 → 浏览 → 搜索 "Harness Like" 即可安装。
 > **仅限桌面端**：Harness Like 只运行在 Obsidian **桌面版**（macOS / Windows / Linux），不支持 Obsidian 移动端（manifest 已声明 `isDesktopOnly`，移动端商店与插件列表会自动隐藏）。
+>
+> 手动安装（备选）：
 
 1. 获取产物：克隆仓库后执行 `pnpm install && pnpm build`（构建会同时生成仓库根目录的插件包），或等发布后在 Releases 下载。
 2. 在 vault 内创建目录 `.obsidian/plugins/harness-like/`。
@@ -136,7 +140,7 @@ MIT（首个发布版将附带 LICENSE 文件）。
 pnpm install
 pnpm dev          # esbuild watch，产物自动同步到 dev-vault/（项目内测试库）
 pnpm typecheck    # 四个包 + 插件类型检查
-pnpm test         # 123 项 vitest
+pnpm test         # 127 项 vitest
 pnpm build        # 产物构建 + 同步
 ```
 
@@ -149,4 +153,4 @@ packages/plugin-runtime/    用户插件加载器（require shim + 状态机 + �
 apps/plugin/                主入口 / Chat 面板 / 插件管理器 / tabs 设置页 / 弹窗 / 工具集 / i18n
 ```
 
-**分层纪律**：只有 `packages/obsidian-adapter` 可以 import `obsidian` 依赖；用户插件一律通过 `ctx.*` 服务访问宿主能力，禁止直接操作 Obsidian DOM；所有注册必须挂 disposer（`ctx.effect`），保证卸载可逆。上游 dsh 包锁定 `0.1.0-rc.6`，esbuild 必须保留 `node-module-shim`（历史事故约束，详见 HANDOVER §2.2）。
+**约定**：用户插件一律通过 `ctx.*` 服务访问宿主能力（禁止直接操作 Obsidian DOM），所有注册必须挂 disposer（`ctx.effect`），保证卸载可逆。完整开发文档保留在仓库本地 `docs/` 目录。
