@@ -1,6 +1,6 @@
 # Harness Like（harness-like）
 
-**Run a Cordis plugin system and an AI agent inside Obsidian.** The agent reads and writes your notes, calls tools and goes through approvals; you (or the agent) can write your own Cordis plugins to extend Obsidian's commands, tools, panels, ribbon icons, status bar and settings tabs.
+**An Obsidian implementation inspired by DeepSeek Harness** — run a Cordis plugin system and an AI agent inside Obsidian. The agent reads and writes your notes, calls tools and goes through approvals; you (or the agent) can write your own Cordis plugins to extend Obsidian's commands, tools, panels, ribbon icons, status bar and settings tabs.
 
 > **Status: beta (v0.1.0)** — core features are complete; the UI supports Chinese & English (and can follow Obsidian's language).
 
@@ -13,7 +13,7 @@
 
 ### What is Harness Like?
 
-Harness Like embeds a Cordis runtime inside the Obsidian plugin process, exposes Obsidian's APIs as Cordis services, and lets an AI agent use tools to read and write your notes — with a human-in-the-loop approval flow. In **Create Mode**, the agent can even build, iterate and reload your own Cordis plugins — Obsidian-adapted plugins that run inside Obsidian and extend it through `ctx.*` services — entirely through conversation.
+Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embeds a Cordis runtime inside the Obsidian plugin process, exposes Obsidian's APIs as Cordis services, and lets an AI agent use tools to read and write your notes — with a human-in-the-loop approval flow. In **Create Mode**, the agent can even build, iterate and reload your own Cordis plugins — Obsidian-adapted plugins that run inside Obsidian and extend it through `ctx.*` services — entirely through conversation.
 
 ### Highlights
 
@@ -71,7 +71,7 @@ MIT (pending: LICENSE file will be added with the first release).
 
 ### 这是什么？
 
-Harness Like 在 Obsidian 插件进程内嵌入 Cordis 运行时，把 Obsidian 的 API 暴露为 Cordis 服务，让 agent 通过工具读写你的笔记，全程带人工审批；在**创造模式**下，agent 甚至能完全通过对话创建、迭代并重载你自己的 **Cordis 插件**（运行在 Obsidian 内、通过 `ctx.*` 服务适配 Obsidian 的插件，而非 Obsidian 原生插件）。
+Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插件进程内嵌入 Cordis 运行时，把 Obsidian 的 API 暴露为 Cordis 服务，让 agent 通过工具读写你的笔记，全程带人工审批；在**创造模式**下，agent 甚至能完全通过对话创建、迭代并重载你自己的 **Cordis 插件**（运行在 Obsidian 内、通过 `ctx.*` 服务适配 Obsidian 的插件，而非 Obsidian 原生插件）。
 
 ### 功能亮点
 
