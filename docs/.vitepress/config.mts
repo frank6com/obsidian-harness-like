@@ -127,12 +127,14 @@ const enDevDocs = [
 ]
 
 const zhSidebar = {
+  '/overview': zhTutorial,
   '/guide/': zhTutorial,
   '/dev/': zhDevDocs,
   '/development/': zhDevDocs,
 }
 
 const enSidebar = {
+  '/en/overview': enTutorial,
   '/en/guide/': enTutorial,
   '/en/dev/': enDevDocs,
   '/en/development/': enDevDocs,
