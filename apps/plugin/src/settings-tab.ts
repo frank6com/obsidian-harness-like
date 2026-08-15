@@ -8,7 +8,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type HarnessLikePlugin from './main'
 import { AgentEditModal, ConfirmModal, ModelPickModal } from './modals'
 import { BUILTIN_AGENTS, type AgentMode, type AgentPreset } from './settings'
-import { agentDisplayDesc, agentDisplayName, setLanguage, t, type Language } from './i18n'
+import { agentDisplayDesc, agentDisplayName, resolveLanguage, setLanguage, t, type LanguagePreference } from './i18n'
 
 export type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
 
@@ -490,12 +490,13 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       .setName(t('settings.ui.language'))
       .setDesc(t('settings.ui.languageDesc'))
       .addDropdown((d) => {
+        d.addOption('auto', t('settings.ui.lang.auto'))
         d.addOption('zh', t('settings.ui.lang.zh'))
         d.addOption('en', t('settings.ui.lang.en'))
         d.setValue(settings.uiLanguage)
         d.onChange(async (v) => {
-          settings.uiLanguage = v as Language
-          setLanguage(settings.uiLanguage)
+          settings.uiLanguage = v as LanguagePreference
+          setLanguage(resolveLanguage(settings.uiLanguage))
           await this.plugin.saveSettings()
           this.display()
         })

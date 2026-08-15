@@ -26,7 +26,7 @@ import {
   type ProviderConfig,
 } from './settings'
 import { HarnessLikeSettingsTab, type TabId } from './settings-tab'
-import { setLanguage, t } from './i18n'
+import { getLanguage, resolveLanguage, setLanguage, t } from './i18n'
 import { WriteApprovalModal, GrantModal, ConfirmModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
 import { pluginDevToolsPlugin } from './tools/plugin-dev'
@@ -48,11 +48,13 @@ export default class HarnessLikePlugin extends Plugin {
   private ctx: Context | null = null
   private settingsTab?: HarnessLikeSettingsTab
   private fibers: Array<{ dispose(): Promise<void> }> = []
+  /** auto 语言跟随轮询（Obsidian 切语言无事件，3s 对比 localStorage['language']） */
+  private langWatch: ReturnType<typeof setInterval> | null = null
 
   override async onload(): Promise<void> {
     await this.loadSettings()
-    // 界面语言：按设置生效（命令名/面板标题等注册时即定稿）
-    setLanguage(this.settings.uiLanguage)
+    // 界面语言：按设置解析（auto = 跟随 Obsidian 应用语言；命令名/面板标题注册时定稿）
+    setLanguage(resolveLanguage(this.settings.uiLanguage))
 
     const vaultRoot = (
       this.app.vault.adapter as { getBasePath?: () => string }
@@ -233,6 +235,16 @@ export default class HarnessLikePlugin extends Plugin {
     })
     this.addRibbonIcon('bot', t('cmd.ribbonTitle'), () => void this.activateView(CHAT_VIEW_TYPE))
 
+    // auto 语言跟随：Obsidian 应用语言变化无事件通知，低频率轮询对比
+    this.langWatch = setInterval(() => {
+      if (!this.ctx) return
+      const resolved = resolveLanguage(this.settings.uiLanguage)
+      if (resolved !== getLanguage()) {
+        setLanguage(resolved)
+        this.ctx.emit('dsh/settings-updated', 'all')
+      }
+    }, 3000)
+
     // 启动时加载已授权用户插件
     await this.loadUserPlugins()
     // 会话保留策略：清理过期会话
@@ -241,6 +253,10 @@ export default class HarnessLikePlugin extends Plugin {
   }
 
   override async onunload(): Promise<void> {
+    if (this.langWatch) {
+      clearInterval(this.langWatch)
+      this.langWatch = null
+    }
     for (const fiber of [...this.fibers].reverse()) {
       try {
         await fiber.dispose()

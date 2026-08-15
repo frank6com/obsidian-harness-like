@@ -1,5 +1,5 @@
 import type { GrantRecord, LogLevel } from '@harness-like/harness-base'
-import { detectLanguage, type Language } from './i18n'
+import type { LanguagePreference } from './i18n'
 
 /** 智能体模式（对齐 dsh 的预设模式） */
 export type AgentMode = 'chat' | 'edit' | 'create'
@@ -83,8 +83,8 @@ export interface HarnessLikeSettings {
   streamingEnabled: boolean
   /** Markdown 渲染（关闭时消息显示纯文本） */
   renderMarkdown: boolean
-  /** 界面语言（zh / en） */
-  uiLanguage: Language
+  /** 界面语言偏好：auto = 跟随 Obsidian 应用语言（默认）；或显式 zh / en */
+  uiLanguage: LanguagePreference
   /** 插件 grant（单勾/双勾），key = 插件 id */
   grants: Record<string, GrantRecord>
 }
@@ -133,7 +133,7 @@ export function defaultSettings(): HarnessLikeSettings {
     confineToCurrentNote: false,
     streamingEnabled: true,
     renderMarkdown: true,
-    uiLanguage: detectLanguage(),
+    uiLanguage: 'auto',
     grants: {},
   }
 }
@@ -245,7 +245,8 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
   base.confineToCurrentNote = r.confineToCurrentNote === true
   base.streamingEnabled = r.streamingEnabled !== false
   base.renderMarkdown = r.renderMarkdown !== false
-  base.uiLanguage = r.uiLanguage === 'en' ? 'en' : 'zh'
+  base.uiLanguage =
+    r.uiLanguage === 'en' ? 'en' : r.uiLanguage === 'zh' ? 'zh' : 'auto'
   base.grants = (r.grants as Record<string, GrantRecord>) ?? {}
   return base
 }

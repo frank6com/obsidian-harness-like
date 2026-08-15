@@ -7,7 +7,7 @@ import { ItemView, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import { ConfirmModal, GrantModal } from '../modals'
 import { grantDisplay } from '../settings'
-import { getLanguage, setLanguage, t, type Language } from '../i18n'
+import { getLanguage, resolveLanguage, setLanguage, t, type LanguagePreference } from '../i18n'
 
 export const PLUGIN_MANAGER_VIEW_TYPE = 'dsh-plugin-manager'
 
@@ -40,10 +40,11 @@ export class PluginManagerView extends ItemView {
   override async onOpen(): Promise<void> {
     this.disposers.push(
       this.ctx.on('dsh/settings-updated', () => {
-        // 界面语言切换：整体重渲染
-        const lang = this.ctx.settings.get('uiLanguage', 'zh') as Language
-        if (lang !== getLanguage()) {
-          setLanguage(lang)
+        // 界面语言切换：整体重渲染（auto 模式跟随 Obsidian 语言）
+        const pref = this.ctx.settings.get('uiLanguage', 'auto') as LanguagePreference
+        const resolved = resolveLanguage(pref)
+        if (resolved !== getLanguage()) {
+          setLanguage(resolved)
           void this.refresh()
         }
       }),

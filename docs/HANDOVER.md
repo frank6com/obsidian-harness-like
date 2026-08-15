@@ -43,7 +43,7 @@
 - 输入区工具栏：智能体上拉菜单（向上展开）+ 模型上拉菜单（向上展开，管理入口在菜单内）
 - 阶段状态条 / 工具卡片实时状态 / 流式光标 / 三态发送按钮 / 错误持久化 + 重试
 - Markdown 渲染（marked + DOMPurify + 自研样式层）/ 轮次分组（一次问答一组）+ 轮末"复制本段对话" / 代码块独立复制
-- **界面语言 zh/en**（`apps/plugin/src/i18n.ts` 字典 + `t()`；设置 → 界面 切换，视图监听 `dsh/settings-updated` 重建；命令名/面板标题注册时定稿，切换后需重载插件）
+- **界面语言 zh/en**：字典按语言分文件 `apps/plugin/src/i18n/{zh,en}.ts`（键一一对应），API 在 `i18n/index.ts`（`t()`/`resolveLanguage()`）；语言偏好 `uiLanguage`：`auto`（默认，跟随 Obsidian 应用语言 `localStorage['language']`，主插件 3s 轮询广播 `dsh/settings-updated`）或显式 `zh`/`en`（设置 → 界面）；视图监听事件重建；命令名/面板标题注册时定稿，切换后需重载插件
 
 ### 3.3 插件系统（创造模式）
 - 用户插件：`.obsidian/dsh-plugins/<id>/`（package.json 含 dsh 字段 + 预编译 main.js）
@@ -90,7 +90,7 @@ dev-vault/                  项目内 Obsidian 测试库（gitignore）
 3. **发布（P3，SOP §7）**：远程仓库创建（名 `harness-like`）→ BRAT → 社区商店申报；发布前建议补：README 英文版、LICENSE、CHANGELOG
 4. 插件加载失败时的视图注册残留清理（Obsidian viewRegistry 无公开清理 API，agent 曾用换视图名绕开）
 5. 协议支持（OpenAI 兼容已覆盖主流；Anthropic/Gemini 按需添加，架构已支持多 provider 注册）
-6. i18n 边界：`plugin_guide` 等 agent 提示面保持中文（LLM 工作语言）；工具名/命令 id 为协议面不翻译；切换语言后需重载插件才更新命令名
+6. i18n 边界：`plugin_guide` 等 agent 提示面保持中文（LLM 工作语言）；工具名/命令 id 为协议面不翻译；命令名在插件注册时定稿，切换语言后需重载插件才更新（面板/设置内即时生效，命令名不即时）
 
 ## 7. 开发速查
 

@@ -1,13 +1,13 @@
 /**
- * i18n 单元测试：语言切换、占位符、字典完整性、内置智能体显示名映射。
+ * i18n 单元测试：语言切换、占位符、字典完整性、内置智能体显示名映射、auto 跟随。
  */
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   agentDisplayDesc,
   agentDisplayName,
-  detectLanguage,
   getLanguage,
+  resolveLanguage,
   setLanguage,
   t,
 } from '../i18n'
@@ -15,7 +15,6 @@ import { migrateSettings } from '../settings'
 
 describe('i18n 基础', () => {
   it('node 环境默认中文；缺失 key 回退 key 本身', () => {
-    expect(detectLanguage()).toBe('zh')
     expect(getLanguage()).toBe('zh')
     expect(t('common.cancel')).toBe('取消')
     expect(t('no.such.key')).toBe('no.such.key')
@@ -52,6 +51,23 @@ describe('i18n 基础', () => {
   })
 })
 
+describe('resolveLanguage（auto 跟随 Obsidian 应用语言）', () => {
+  it('显式 zh/en 直接生效', () => {
+    expect(resolveLanguage('zh')).toBe('zh')
+    expect(resolveLanguage('en')).toBe('en')
+  })
+
+  it('auto：localStorage["language"] 优先（Obsidian 应用语言），zh* 判定中文', () => {
+    vi.stubGlobal('localStorage', { getItem: (k: string) => (k === 'language' ? 'zh-cn' : null) })
+    expect(resolveLanguage('auto')).toBe('zh')
+    vi.stubGlobal('localStorage', { getItem: (k: string) => (k === 'language' ? 'en' : null) })
+    expect(resolveLanguage('auto')).toBe('en')
+    vi.stubGlobal('localStorage', { getItem: () => null })
+    expect(resolveLanguage('auto')).toBe('zh') // node 无 navigator → 中文兜底
+    vi.unstubAllGlobals()
+  })
+})
+
 describe('内置智能体显示名映射', () => {
   it('内置 id 按语言显示，自定义智能体用存储值', () => {
     setLanguage('zh')
@@ -71,9 +87,10 @@ describe('内置智能体显示名映射', () => {
 })
 
 describe('uiLanguage 设置迁移', () => {
-  it('默认跟随系统（node 下为 zh）；显式 en 保留；非法值回落 zh', () => {
-    expect(migrateSettings({} as Record<string, unknown>).uiLanguage).toBe('zh')
+  it('默认 auto（跟随 Obsidian）；显式 zh/en 保留；非法值回落 auto', () => {
+    expect(migrateSettings({} as Record<string, unknown>).uiLanguage).toBe('auto')
+    expect(migrateSettings({ uiLanguage: 'zh' } as Record<string, unknown>).uiLanguage).toBe('zh')
     expect(migrateSettings({ uiLanguage: 'en' } as Record<string, unknown>).uiLanguage).toBe('en')
-    expect(migrateSettings({ uiLanguage: 'fr' } as Record<string, unknown>).uiLanguage).toBe('zh')
+    expect(migrateSettings({ uiLanguage: 'fr' } as Record<string, unknown>).uiLanguage).toBe('auto')
   })
 })

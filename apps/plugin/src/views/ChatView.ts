@@ -18,7 +18,7 @@ import { attachCodeCopyButtons, renderMarkdown } from '../markdown'
 import { agentAllows } from '../mode'
 import { listVisibleAgents, type AgentPreset } from '../settings'
 import { safeFileName, sessionToMarkdown } from '../export'
-import { agentDisplayDesc, agentDisplayName, getLanguage, setLanguage, t, type Language } from '../i18n'
+import { agentDisplayDesc, agentDisplayName, getLanguage, resolveLanguage, setLanguage, t, type LanguagePreference } from '../i18n'
 import { ConfirmModal } from '../modals'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
@@ -173,10 +173,11 @@ export class ChatView extends ItemView {
         this.refreshAgentBtn()
         // 欢迎界面（如配置提示）随设置变化刷新
         if (this.messagesEl.querySelector('.dsh-welcome')) this.renderWelcome()
-        // 界面语言切换：立即重建（生成中则等本轮结束）
-        const lang = this.ctx.settings.get('uiLanguage', 'zh') as Language
-        if (lang !== getLanguage()) {
-          setLanguage(lang)
+        // 界面语言切换：立即重建（生成中则等本轮结束）；auto 模式跟随 Obsidian 语言
+        const pref = this.ctx.settings.get('uiLanguage', 'auto') as LanguagePreference
+        const resolved = resolveLanguage(pref)
+        if (resolved !== getLanguage()) {
+          setLanguage(resolved)
           if (this.running) this.pendingRebuild = true
           else void this.rebuild()
         }
