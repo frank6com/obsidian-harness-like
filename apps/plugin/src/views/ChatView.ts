@@ -227,6 +227,8 @@ export class ChatView extends ItemView {
     if (e.type === 'turn/start') {
       // 新一轮次容器（send() 已先建好含用户消息的容器，这里幂等）
       this.openTurnContainer()
+      this.streamingEl = null
+      this.streamingText = ''
     } else if (e.type === 'turn/end') {
       this.closeTurn()
       void this.refreshSessions()
@@ -243,6 +245,9 @@ export class ChatView extends ItemView {
       } else {
         this.appendMessage('assistant', e.content)
       }
+      // 关键：多轮 agent 循环内 finally 不执行，必须在此重置流式累积，
+      // 否则下一轮流式气泡会拼接上一轮残留文本
+      this.streamingText = ''
       this.lastAssistantRaw = e.content
       this.turnText.push(`${t('chat.msg.assistant')}：\n${e.content}`)
     } else if (e.type === 'system/message') {
