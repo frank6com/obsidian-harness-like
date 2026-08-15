@@ -32,3 +32,15 @@ details > summary {
 details[open] > summary {
   margin-bottom: 8px;
 }
+
+/* 页面底部评论（giscus，基于 GitHub Discussions） */
+.dsh-giscus {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--vp-c-divider);
+  width: 100%;
+}
+.dsh-giscus iframe {
+  width: 100%;
+  border: none;
+}
