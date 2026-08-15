@@ -16,7 +16,10 @@ const enNav = [
 const zhTutorial = [
   {
     text: '入门',
-    items: [{ text: '快速开始', link: '/guide/quickstart' }],
+    items: [
+      { text: '项目概览', link: '/overview' },
+      { text: '快速开始', link: '/guide/quickstart' },
+    ],
   },
   {
     text: '日常使用',
@@ -43,7 +46,10 @@ const zhTutorial = [
 const enTutorial = [
   {
     text: 'Getting Started',
-    items: [{ text: 'Quick Start', link: '/en/guide/quickstart' }],
+    items: [
+      { text: 'Overview', link: '/en/overview' },
+      { text: 'Quick Start', link: '/en/guide/quickstart' },
+    ],
   },
   {
     text: 'Daily Use',

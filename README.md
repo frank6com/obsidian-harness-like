@@ -2,6 +2,8 @@
 
 **An Obsidian implementation inspired by DeepSeek Harness** — run a Cordis plugin system and an AI agent inside Obsidian. The agent reads and writes your notes, calls tools and goes through approvals; you (or the agent) can write your own Cordis plugins to extend Obsidian's commands, tools, panels, ribbon icons, status bar and settings tabs.
 
+![Create a Game](docs/public/screenshots/zh/CreateAGame.gif)
+
 > **Status: beta** — core features are complete; the UI supports Chinese & English (and can follow Obsidian's language).
 >
 > **Desktop only** — Harness Like runs in the Obsidian **desktop** app (macOS / Windows / Linux). Obsidian Mobile is **not** supported.
@@ -23,9 +25,11 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 
 ### Screenshots
 
-![Chat panel](screenshots/en/chat.png)
-![Settings — Models tab](screenshots/en/settings.png)
-![Plugin Manager](screenshots/en/plugin-manager.png)
+![Chat panel](docs/public/screenshots/zh/Chat.png)
+
+![Settings — Models tab](docs/public/screenshots/zh/Settings.gif)
+
+![Plugin Manager](docs/public/screenshots/zh/Plugins.png)
 
 ### Installation
 
@@ -86,9 +90,11 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 
 ### 界面截图
 
-![对话面板](screenshots/zh/chat.png)
-![设置 — 模型](screenshots/zh/settings.png)
-![插件管理器](screenshots/zh/plugin-manager.png)
+![对话面板](docs/public/screenshots/zh/Chat.png)
+
+![设置 — 模型](docs/public/screenshots/zh/Settings.gif)
+
+![插件管理器](docs/public/screenshots/zh/Plugins.png)
 
 ### 安装
 
