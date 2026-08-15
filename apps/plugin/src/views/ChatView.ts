@@ -99,6 +99,7 @@ export class ChatView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
+    renderLog('onOpen 调用 currentSessionId=' + this.currentSessionId)
     this.buildUi()
     await this.refreshSessions()
     this.setPhase({ kind: 'idle' })
@@ -368,6 +369,7 @@ export class ChatView extends ItemView {
 
   /** 消息气泡（挂到当前轮次容器内；无容器时直接挂消息区） */
   private appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
+    renderLog('appendMessage', role, 'len=' + content.length)
     const el = (this.turnEl ?? this.messagesEl).createDiv({ cls: `dsh-msg dsh-msg-${role}` })
     if (role === 'assistant' && this.ctx.settings.get('renderMarkdown', true)) {
       this.renderMarkdown(el, content)
@@ -382,7 +384,10 @@ export class ChatView extends ItemView {
   private renderMarkdown(el: HTMLElement, markdown: string): void {
     // 官方渲染器（@since 0.10.6）：主题原生一致，避免 innerHTML（审核要求）；
     // component = 本视图，视图卸载时渲染的子组件自动清理
+    renderLog('renderMarkdown 开始', 'len=' + markdown.length)
     void MarkdownRenderer.render(this.app, markdown, el, '', this)
+      .then(() => renderLog('renderMarkdown 完成', 'el.text=' + (el.textContent ?? '').length))
+      .catch((err) => renderLog('renderMarkdown 失败', String(err)))
     attachCodeCopyButtons(el)
   }
 
@@ -835,6 +840,7 @@ export class ChatView extends ItemView {
   }
 
   private async renderSession(): Promise<void> {
+    renderLog('renderSession 开始 currentSessionId=' + this.currentSessionId)
     this.messagesEl.empty()
     this.streamingEl = null
     this.streamingText = ''
