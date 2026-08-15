@@ -149,7 +149,17 @@ export default class HarnessLikePlugin extends Plugin {
         }),
       ),
     )
-    this.fibers.push(ctx.plugin(runtimePlugin({ pluginsDir, require: cordisShim })))
+    this.fibers.push(
+      ctx.plugin(
+        runtimePlugin({
+          pluginsDir,
+          require: cordisShim,
+          // 命令命名空间：以主插件 id/名起始（Harness Like: 命令（子插件id）），命令面板可快速查找
+          hostId: this.manifest.id,
+          hostName: this.manifest.name,
+        }),
+      ),
+    )
     await Promise.all(this.fibers)
 
     // 编辑器桥：把 Obsidian 的 activeEditor 暴露为 ctx.editor

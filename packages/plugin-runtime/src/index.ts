@@ -41,6 +41,10 @@ export function readPluginManifest(dir: string): UserPluginManifest {
 export interface LoaderDeps {
   /** 解析外部模块：'@deepseek-ai/cordis' → 宿主内同一个模块实例 */
   require(id: string): unknown
+  /** 主插件 id：命令 id 统一以 `<主插件id>:<插件id>:` 起始（如 harness-like:note-counter:open-view） */
+  hostId?: string
+  /** 主插件显示名：命令显示名统一为 `<主插件名>: <命令名>（<插件id>）` */
+  hostName?: string
 }
 
 export interface LoadedPlugin {
@@ -90,12 +94,32 @@ export async function loadUserPlugin(
     throw new Error(`插件 ${manifest.id} 的入口没有导出 Cordis 插件（需 default 导出或 { apply } 对象）`)
   }
 
-  // 命令前缀强制（API 层）：用户插件注册的命令统一带 `<插件id>:` 前缀，不依赖
-  // 插件作者自觉——无前缀自动补，已带前缀先剥离避免重复；显示名也带来源前缀，
-  // 命令面板中可直接区分来源。通过子上下文 extend 注入包装服务，不影响宿主。
+  // 命令前缀强制（API 层）：不依赖插件作者自觉。
+  // - 命令 id 统一为 `<主插件id>:<插件id>:<命令>`（如 harness-like:note-counter:open-view），
+  //   用户按主插件名即可在命令面板找到全部功能；
+  // - 命令显示名统一为 `<主插件名>: <命令名>（<插件id>）`（对齐 Obsidian 原生
+  //   plugin.addCommand 的「插件名: 命令名」惯例，并附加来源子插件 id）。
+  // 已带任意旧格式前缀（主插件/子插件）先剥离，避免重复。
+  // 未提供 hostId（独立使用 plugin-runtime）时回退为 `<插件id>:` 前缀。
   const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const idPattern = new RegExp(`^${escapeRegExp(manifest.id)}:`)
-  const namePattern = new RegExp(`^${escapeRegExp(manifest.id)}:\\s*`)
+  const hostId = deps.hostId
+  const hostName = deps.hostName ?? deps.hostId
+  const stripLeading = (s: string, prefix: string): string =>
+    s.replace(new RegExp(`^${escapeRegExp(prefix)}:\\s*`), '')
+  const bareCommandId = (id: string): string => {
+    let out = id
+    if (hostId) out = stripLeading(out, `${hostId}:${manifest.id}`)
+    out = stripLeading(out, manifest.id)
+    if (hostId) out = stripLeading(out, hostId)
+    return out
+  }
+  const bareCommandName = (name: string): string => {
+    let out = name
+    if (hostId) out = stripLeading(out, `${hostId}:${manifest.id}`)
+    out = stripLeading(out, manifest.id)
+    if (hostName) out = stripLeading(out, hostName)
+    return out.replace(new RegExp(`\\s*（${escapeRegExp(manifest.id)}）\\s*$`), '')
+  }
   const baseCommands = ctx.get('commands') as
     | { addCommand(cmd: { id: string; name?: string }): unknown }
     | undefined
@@ -105,9 +129,13 @@ export async function loadUserPlugin(
           addCommand: (cmd: { id: string; name?: string }) =>
             baseCommands.addCommand({
               ...cmd,
-              id: `${manifest.id}:${cmd.id.replace(idPattern, '')}`,
+              id: hostId
+                ? `${hostId}:${manifest.id}:${bareCommandId(cmd.id)}`
+                : `${manifest.id}:${bareCommandId(cmd.id)}`,
               name: cmd.name
-                ? `${manifest.id}: ${cmd.name.replace(namePattern, '')}`
+                ? hostId
+                  ? `${hostName}: ${bareCommandName(cmd.name)}（${manifest.id}）`
+                  : `${manifest.id}: ${bareCommandName(cmd.name)}`
                 : cmd.name,
             }),
         },
@@ -139,6 +167,10 @@ export interface PluginRecord {
 export interface RuntimeOptions {
   pluginsDir: string
   require(id: string): unknown
+  /** 主插件 id：命令 id 统一以 `<主插件id>:<插件id>:` 起始 */
+  hostId?: string
+  /** 主插件显示名：命令显示名统一为 `<主插件名>: <命令名>（<插件id>）` */
+  hostName?: string
 }
 
 export class PluginRuntime {
@@ -190,7 +222,11 @@ export class PluginRuntime {
       return base
     }
     try {
-      const loaded = await loadUserPlugin(this.ctx, dir, { require: this.opts.require })
+      const loaded = await loadUserPlugin(this.ctx, dir, {
+        require: this.opts.require,
+        hostId: this.opts.hostId,
+        hostName: this.opts.hostName,
+      })
       const rec: PluginRecord = { id, dir, manifest: loaded.manifest, status: 'running', loaded }
       this.records.set(id, rec)
       return rec
