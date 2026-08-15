@@ -86,6 +86,24 @@ export interface HarnessLikeSettings {
   grants: Record<string, GrantRecord>
 }
 
+/** 授权记录的展示状态（管理器与设置页共用）：
+ * - stale = 插件目录已不存在（残留授权）
+ * - mismatch = 单勾授权但插件版本已更新，需重新授权 */
+export function grantDisplay(
+  grant: GrantRecord | undefined,
+  dirExists: boolean,
+  currentVersion?: string,
+): { badge: string; needsRegrant: boolean } {
+  if (!grant) return { badge: '未授权', needsRegrant: false }
+  const modeLabel = grant.mode === 'all' ? '双勾' : '单勾'
+  const base = `已授权(${modeLabel} v${grant.version})`
+  if (!dirExists) return { badge: `${base} · 插件目录不存在（残留授权）`, needsRegrant: false }
+  if (grant.mode === 'version' && currentVersion && grant.version !== currentVersion) {
+    return { badge: `${base} · 版本已更新，需重新授权`, needsRegrant: true }
+  }
+  return { badge: base, needsRegrant: false }
+}
+
 export const DEFAULT_PROVIDER: ProviderConfig = {
   id: 'deepseek',
   name: 'DeepSeek',

@@ -141,10 +141,11 @@
 }
 
 /* 选中态：主题没有 --background-modifier-active（无效变量导致选中行无底色），
-   改用存在的 --background-modifier-active-hover（带主题色淡染），并回退 hover 色，
-   保证任何主题下选中行都比普通行的 hover 更明显（不再"反了"） */
+   改用存在的 --background-modifier-active-hover（带主题色淡染），并回退 hover 色；
+   左侧主题色竖条 + 标题主题色加粗，任何主题下选中行都一目了然（不再"反了"） */
 .dsh-session-row.is-active {
   background: var(--background-modifier-active-hover, var(--background-modifier-hover));
+  box-shadow: inset 2px 0 0 0 var(--interactive-accent);
 }
 
 .dsh-session-row.is-active .dsh-session-btn {
@@ -154,6 +155,10 @@
 .dsh-session-row.is-active .dsh-session-title {
   color: var(--text-accent);
   font-weight: 600;
+}
+
+.dsh-session-row.is-active .dsh-session-sub {
+  color: var(--text-muted);
 }
 
 /* 标题与子行单行省略：不允许内容撑宽列表（否则列表横向滚动会裁掉右侧内容，

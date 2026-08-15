@@ -6,6 +6,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import { ConfirmModal, GrantModal } from '../modals'
+import { grantDisplay } from '../settings'
 
 export const PLUGIN_MANAGER_VIEW_TYPE = 'dsh-plugin-manager'
 
@@ -101,10 +102,7 @@ export class PluginManagerView extends ItemView {
         cls: `dsh-pm-status dsh-pm-status-${rec.status}`,
         text: rec.error
           ? `错误: ${rec.error}`
-          : [
-              rec.status,
-              grant ? `· 已授权(${grant.mode === 'all' ? '双勾' : '单勾'} v${grant.version})` : '· 未授权',
-            ].join(' '),
+          : [rec.status, `· ${grantDisplay(grant, true, rec.manifest?.version).badge}`].join(' '),
       })
       const actions = row.createDiv({ cls: 'dsh-pm-actions' })
       if (rec.status === 'running') {

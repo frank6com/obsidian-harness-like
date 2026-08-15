@@ -68,7 +68,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
     }
 
     const content = containerEl.createDiv({ cls: 'dsh-settings-content' })
-    const renderers: Record<TabId, (c: HTMLElement) => void> = {
+    const renderers: Record<TabId, (c: HTMLElement) => void | Promise<void>> = {
       model: (c) => this.renderModelTab(c),
       agent: (c) => this.renderAgentTab(c),
       approval: (c) => this.renderApprovalTab(c),
@@ -78,7 +78,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       log: (c) => this.renderLogTab(c),
       grants: (c) => this.renderGrantsTab(c),
     }
-    renderers[this.activeTab](content)
+    void renderers[this.activeTab](content)
   }
 
   // ---------- 模型（提供方侧向列表 + 参数） ----------
@@ -513,8 +513,11 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
 
   // ---------- 插件授权 ----------
 
-  private renderGrantsTab(c: HTMLElement): void {
+  private async renderGrantsTab(c: HTMLElement): Promise<void> {
     const grants = this.ctx.approval.listGrants()
+    // 与插件管理器对齐：授权记录 ≠ 磁盘现状，标注目录已不存在的残留授权
+    const dirs = new Set(await this.ctx.pluginRuntime.discover())
+    const stale: string[] = []
     if (!grants.length) {
       c.createEl('p', {
         cls: 'setting-item-description',
@@ -522,10 +525,17 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       })
     }
     for (const { pluginId, grant } of grants) {
+      const exists = dirs.has(pluginId)
+      if (!exists) stale.push(pluginId)
       new Setting(c)
         .setName(pluginId)
         .setDesc(
-          `${grant.mode === 'all' ? '信任所有版本（双勾）' : '仅信任当前版本（单勾）'} · v${grant.version} · ${new Date(grant.grantedAt).toLocaleString()}`,
+          [
+            `${grant.mode === 'all' ? '信任所有版本（双勾）' : '仅信任当前版本（单勾）'} · v${grant.version} · ${new Date(grant.grantedAt).toLocaleString()}`,
+            exists ? '' : ' · ⚠ 插件目录已删除，此授权已失效（残留）',
+          ]
+            .filter(Boolean)
+            .join(''),
         )
         .addButton((b) =>
           b.setButtonText('撤销').setWarning().onClick(() => {
@@ -533,6 +543,17 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
             this.display()
           }),
         )
+    }
+    if (stale.length) {
+      new Setting(c).addButton((b) =>
+        b
+          .setButtonText(`清理 ${stale.length} 条残留授权（插件目录已删除）`)
+          .setWarning()
+          .onClick(() => {
+            for (const id of stale) this.ctx.approval.revoke(id)
+            this.display()
+          }),
+      )
     }
   }
 }

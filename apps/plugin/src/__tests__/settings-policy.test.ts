@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { shouldLog, selectSessionsToPrune, type SessionSummary } from '@harness-like/harness-base'
 import {
+  grantDisplay,
   listVisibleAgents,
   migrateSettings,
   parseHeaderLines,
@@ -185,5 +186,36 @@ describe('isConfineAllowed（仅当前笔记）', () => {
     expect(isConfineAllowed('Inbox/a.md', 'Inbox/a.md')).toBe(true)
     expect(isConfineAllowed('Inbox/a.md', 'Inbox/b.md')).toBe(false)
     expect(isConfineAllowed(null, 'Inbox/b.md')).toBe(true)
+  })
+})
+
+describe('grantDisplay（授权记录展示状态）', () => {
+  const grant = { mode: 'version' as const, version: '0.2.0', grantedAt: 1 }
+
+  it('无授权 = 未授权', () => {
+    expect(grantDisplay(undefined, true)).toEqual({ badge: '未授权', needsRegrant: false })
+  })
+
+  it('双勾信任所有版本，不因版本变化需重新授权', () => {
+    const g = { ...grant, mode: 'all' as const }
+    expect(grantDisplay(g, true, '9.9.9')).toEqual({
+      badge: '已授权(双勾 v0.2.0)',
+      needsRegrant: false,
+    })
+  })
+
+  it('单勾且版本一致 = 正常；版本更新 = 需重新授权', () => {
+    expect(grantDisplay(grant, true, '0.2.0')).toEqual({
+      badge: '已授权(单勾 v0.2.0)',
+      needsRegrant: false,
+    })
+    expect(grantDisplay(grant, true, '0.3.0')).toEqual({
+      badge: '已授权(单勾 v0.2.0) · 版本已更新，需重新授权',
+      needsRegrant: true,
+    })
+  })
+
+  it('插件目录不存在 = 残留授权', () => {
+    expect(grantDisplay(grant, false).badge).toContain('插件目录不存在（残留授权）')
   })
 })
