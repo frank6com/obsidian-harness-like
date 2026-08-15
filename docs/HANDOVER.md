@@ -84,7 +84,7 @@ dev-vault/                  项目内 Obsidian 测试库（gitignore）
 
 ## 6. 未完成事项（下一步候选）
 
-> 当前状态：**beta 候选（v0.1.0）**，功能面已收敛。以下均为发布后迭代项，不影响 beta 发布。
+> 当前状态：**beta 候选（v0.5.0）**，功能面已收敛。以下均为发布后迭代项，不影响 beta 发布。
 
 1. **UX 清单剩余**（docs/ux-checklist.md）：消息操作（重新生成/编辑重发/删除）、工具卡片折叠、会话重命名、虚拟滚动、上下文注入可视化
 2. **技术债**：Stage 3b（agent-loop 调度器替换 toolsCompat 门面）、Stage 4（sessions 迁移——**建议继续暂缓**，设计见 seams.md §3.3）、全文倒排索引
