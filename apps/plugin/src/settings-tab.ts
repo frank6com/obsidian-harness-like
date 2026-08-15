@@ -317,7 +317,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         return d
       })
 
-    c.createEl('h4', { text: t('settings.agent.builtin') })
+    new Setting(c).setName(t('settings.agent.builtin')).setHeading()
     c.createEl('p', {
       cls: 'setting-item-description',
       text: t('settings.agent.builtinDesc'),
@@ -342,7 +342,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       }
     }
 
-    c.createEl('h4', { text: t('settings.agent.custom') })
+    new Setting(c).setName(t('settings.agent.custom')).setHeading()
     const customs = settings.agents.filter((a) => !BUILTIN_AGENTS.some((b) => b.id === a.id))
     if (!customs.length) {
       c.createEl('p', { cls: 'setting-item-description', text: t('settings.agent.customEmpty') })

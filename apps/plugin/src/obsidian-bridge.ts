@@ -63,6 +63,7 @@ export function toApiLike(app: App, plugin?: Plugin): ObsidianApiLike {
         }
       },
       async delete(path) {
+        // 注：FileManager.trashFile 需 1.6.6（> minAppVersion 1.5.0），此处维持 vault.delete
         const file = app.vault.getAbstractFileByPath(path)
         if (file instanceof TFile) await app.vault.delete(file)
       },
@@ -117,7 +118,7 @@ export function toApiLike(app: App, plugin?: Plugin): ObsidianApiLike {
           if (!leaf) return
           void leaf.setViewState({ type, active: true })
         }
-        app.workspace.revealLeaf(leaf)
+        app.workspace.setActiveLeaf(leaf)
       },
     },
     ribbon: {

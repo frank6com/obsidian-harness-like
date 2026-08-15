@@ -51,7 +51,7 @@ async function setup(
 
   const ctx = new Context()
   ctx.reflect.provide('vault', fsVault(vaultRoot))
-  ctx.reflect.provide('sandbox', new SandboxPolicy({ vaultRoot, dataDir, pluginsDir, tempDir }))
+  ctx.reflect.provide('sandbox', new SandboxPolicy({ vaultRoot, configDir: '.obsidian', dataDir, pluginsDir, tempDir }))
   ctx.reflect.provide('approval', new ApprovalService({ load: () => ({}), save: () => {} }))
   ctx.reflect.provide('notice', { notice: () => {} })
   const openedViews: string[] = []

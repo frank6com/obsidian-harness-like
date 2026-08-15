@@ -81,6 +81,7 @@ describe('note-counter 重写复现', () => {
       harnessServicesPlugin({
         sandbox: {
           vaultRoot: root,
+          configDir: '.obsidian',
           dataDir,
           pluginsDir,
           tempDir: path.join(dataDir, 'tmp'),

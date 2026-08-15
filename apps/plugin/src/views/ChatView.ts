@@ -6,7 +6,7 @@
  * 流式光标、错误重试、列表可收起、发送中禁用与中止。
  */
 
-import { ItemView, Menu, WorkspaceLeaf } from 'obsidian'
+import { ItemView, MarkdownRenderer, Menu, WorkspaceLeaf } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import {
   runAgentLoop,
@@ -142,7 +142,7 @@ export class ChatView extends ItemView {
     const confine = toolbar.createDiv({ cls: 'dsh-toggle' })
     confine.createSpan({ text: t('chat.toolbar.confine') })
     this.confineCheck = confine.createEl('input', { type: 'checkbox' })
-    this.confineCheck.checked = this.ctx.settings.get('confineToCurrentNote', false) as boolean
+    this.confineCheck.checked = this.ctx.settings.get('confineToCurrentNote', false)
     this.confineCheck.addEventListener('change', () => {
       this.ctx.settings.set('confineToCurrentNote', this.confineCheck.checked)
     })
@@ -154,7 +154,7 @@ export class ChatView extends ItemView {
       attr: { placeholder: t('chat.input.placeholder') },
     })
     this.inputEl.value = draft
-    this.inputEl.addEventListener('input', () => this.autoGrowInput())
+    
     this.inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
@@ -273,7 +273,7 @@ export class ChatView extends ItemView {
     btn.onclick = () => {
       void navigator.clipboard.writeText(this.turnText.join('\n\n')).then(() => {
         btn.setText(t('common.copied'))
-        setTimeout(() => btn.setText(t('chat.copyTurn')), 1200)
+        window.setTimeout(() => btn.setText(t('chat.copyTurn')), 1200)
       })
     }
     this.turnEl = null
@@ -341,7 +341,9 @@ export class ChatView extends ItemView {
 
   /** 渲染 Markdown（marked + DOMPurify；代码块保留独立复制按钮，样式由 styles.css 控制） */
   private renderMarkdown(el: HTMLElement, markdown: string): void {
-    el.innerHTML = renderMarkdown(markdown)
+    // 官方渲染器（@since 0.10.6）：主题原生一致，避免 innerHTML（审核要求）；
+    // component = 本视图，视图卸载时渲染的子组件自动清理
+    void MarkdownRenderer.render(this.app, markdown, el, '', this)
     attachCodeCopyButtons(el)
   }
 
@@ -371,7 +373,6 @@ export class ChatView extends ItemView {
     const text = this.inputEl.value.trim()
     if (!text) return
     this.inputEl.value = ''
-    this.inputEl.style.height = 'auto'
     let sessionId = this.currentSessionId
     if (!sessionId) {
       sessionId = `session-${Date.now()}`
@@ -622,7 +623,7 @@ export class ChatView extends ItemView {
       if (!leaf) return
       void leaf.setViewState({ type, active: true })
     }
-    this.app.workspace.revealLeaf(leaf)
+    this.app.workspace.setActiveLeaf(leaf)
   }
 
   /** 当前激活的智能体预设（跳过已禁用的） */
@@ -822,7 +823,6 @@ export class ChatView extends ItemView {
       chip.onclick = () => {
         this.inputEl.value = text
         this.inputEl.focus()
-        this.autoGrowInput()
       }
     }
     // API Key 检查：任一提供方配置了 key 即视为已配置（旧顶层 apiKey 字段已废弃）
@@ -839,10 +839,6 @@ export class ChatView extends ItemView {
     }
   }
 
-  private autoGrowInput(): void {
-    this.inputEl.style.height = 'auto'
-    this.inputEl.style.height = Math.min(this.inputEl.scrollHeight, 140) + 'px'
-  }
 
   private scrollToBottom(): void {
     this.messagesEl.scrollTop = this.messagesEl.scrollHeight

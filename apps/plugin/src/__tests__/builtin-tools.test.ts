@@ -22,7 +22,7 @@ async function setup(
   const tempDir = path.join(dataDir, 'tmp')
 
   const ctx = new Context()
-  const sandbox = new SandboxPolicy({ vaultRoot, dataDir, pluginsDir, tempDir })
+  const sandbox = new SandboxPolicy({ vaultRoot, configDir: '.obsidian', dataDir, pluginsDir, tempDir })
   const writes: Array<[string, string]> = []
   const opened: string[] = []
 

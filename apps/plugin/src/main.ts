@@ -49,7 +49,7 @@ export default class HarnessLikePlugin extends Plugin {
   private settingsTab?: HarnessLikeSettingsTab
   private fibers: Array<{ dispose(): Promise<void> }> = []
   /** auto 语言跟随轮询（Obsidian 切语言无事件，3s 对比 localStorage['language']） */
-  private langWatch: ReturnType<typeof setInterval> | null = null
+  private langWatch: number | null = null
 
   override async onload(): Promise<void> {
     await this.loadSettings()
@@ -63,8 +63,9 @@ export default class HarnessLikePlugin extends Plugin {
       console.warn('[harness-like] 无法获取 vault 根路径，沙箱将拒绝所有写操作')
     }
     const root = vaultRoot ?? ''
-    const dataDir = path.join(root, '.obsidian', 'dsh')
-    const pluginsDir = path.join(root, '.obsidian', 'dsh-plugins')
+    const configDir = this.app.vault.configDir || '.obsidian'
+    const dataDir = path.join(root, configDir, 'dsh')
+    const pluginsDir = path.join(root, configDir, 'dsh-plugins')
     const tempDir = path.join(dataDir, 'tmp')
 
     const ctx = new cordis.Context()
@@ -126,7 +127,7 @@ export default class HarnessLikePlugin extends Plugin {
     this.fibers.push(
       ctx.plugin(
         harnessServicesPlugin({
-          sandbox: { vaultRoot: root, dataDir, pluginsDir, tempDir },
+          sandbox: { vaultRoot: root, configDir, dataDir, pluginsDir, tempDir },
           sessionDir: path.join(dataDir, 'sessions'),
           approvalStore: {
             load: () => this.settings.grants ?? {},
@@ -155,7 +156,7 @@ export default class HarnessLikePlugin extends Plugin {
       ),
     )
     this.fibers.push(ctx.plugin(runtimePlugin({ pluginsDir, require: cordisShim, hostId: this.manifest.id, hostName: this.manifest.name })))
-    await Promise.all(this.fibers)
+    await Promise.all(this.fibers.map((f) => Promise.resolve(f)))
 
     // 翻译扩展点：用户插件通过 inject: ['dshI18n'] + registerLocale(lang, dict)
     // 覆盖主插件界面文案（返回 disposer，插件停止时自动移除）
@@ -232,7 +233,7 @@ export default class HarnessLikePlugin extends Plugin {
     this.addRibbonIcon('bot', t('cmd.ribbonTitle'), () => void this.activateView(CHAT_VIEW_TYPE))
 
     // auto 语言跟随：Obsidian 应用语言变化无事件通知，低频率轮询对比
-    this.langWatch = setInterval(() => {
+    this.langWatch = window.setInterval(() => {
       if (!this.ctx) return
       const resolved = resolveLanguage(this.settings.uiLanguage)
       if (resolved !== getLanguage()) {
@@ -250,7 +251,7 @@ export default class HarnessLikePlugin extends Plugin {
 
   override async onunload(): Promise<void> {
     if (this.langWatch) {
-      clearInterval(this.langWatch)
+      window.clearInterval(this.langWatch)
       this.langWatch = null
     }
     for (const fiber of [...this.fibers].reverse()) {
@@ -332,6 +333,6 @@ export default class HarnessLikePlugin extends Plugin {
       leaf = right
       void leaf.setViewState({ type, active: true })
     }
-    workspace.revealLeaf(leaf)
+    workspace.setActiveLeaf(leaf)
   }
 }

@@ -4,6 +4,7 @@ import * as path from 'path'
 
 const scope: SandboxScope = {
   vaultRoot: '/vault',
+  configDir: '.obsidian',
   dataDir: '/vault/.obsidian/dsh',
   pluginsDir: '/vault/.obsidian/dsh-plugins',
   tempDir: '/vault/.obsidian/dsh/tmp',

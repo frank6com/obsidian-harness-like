@@ -12,9 +12,11 @@ import * as path from 'path'
 export interface SandboxScope {
   /** vault 根目录（绝对路径） */
   vaultRoot: string
-  /** 本插件数据目录，如 <vault>/.obsidian/dsh */
+  /** Obsidian 配置目录（Vault#configDir，默认 .obsidian，可被用户自定义） */
+  configDir: string
+  /** 本插件数据目录，如 <vault>/<configDir>/dsh */
   dataDir: string
-  /** 用户 Cordis 插件目录，如 <vault>/.obsidian/dsh-plugins */
+  /** 用户 Cordis 插件目录，如 <vault>/<configDir>/dsh-plugins */
   pluginsDir: string
   /** 临时目录（可写） */
   tempDir: string
@@ -53,9 +55,9 @@ export function decideSandbox(
   if (isInside(scope.pluginsDir, abs)) return { allowed: true }
   if (isInside(scope.tempDir, abs)) return { allowed: true }
 
-  const obsidianDir = path.join(scope.vaultRoot, '.obsidian')
-  if (isInside(obsidianDir, abs)) {
-    return { allowed: false, reason: '禁止修改 Obsidian 配置目录（.obsidian/）' }
+  const configDirAbs = path.join(scope.vaultRoot, scope.configDir)
+  if (isInside(configDirAbs, abs)) {
+    return { allowed: false, reason: `禁止修改 Obsidian 配置目录（${scope.configDir}/）` }
   }
   return { allowed: true }
 }

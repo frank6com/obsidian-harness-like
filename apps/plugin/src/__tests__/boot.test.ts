@@ -63,6 +63,7 @@ async function bootHarness() {
         sandbox: {
           vaultRoot: root,
           dataDir,
+          configDir: '.obsidian',
           pluginsDir: path.join(root, '.obsidian', 'dsh-plugins'),
           tempDir: path.join(dataDir, 'tmp'),
         },
