@@ -9,6 +9,8 @@ on:
     tags: ['*.*.*']
   release:
     types: [published]
+  # 手动补跑（如 API 创建 release 不触发事件时，对既有版本补 attestation）
+  workflow_dispatch: {}
 
 permissions:
   contents: write
