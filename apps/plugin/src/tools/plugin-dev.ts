@@ -68,6 +68,20 @@ module.exports = {
 vault（读写笔记）、editor（当前编辑器）、workspace（活跃文件）、notice（通知）、ribbon（侧边栏图标）、
 statusbar（状态栏）、settings（设置/设置页）、sandbox、approval、sessionLog、llmCaller、
 dshI18n（覆盖主插件界面文案，翻译插件用）。
+
+服务方法速查（务必按此签名调用，不要臆测方法名）：
+- ctx.vault：getMarkdownPaths() -> string[]（vault 相对路径列表）；read(path) -> string；write(path, content)；
+  create(path, content)；createFolder(path)（逐层创建）；delete(path)；rename(oldPath, newPath)；
+  on(ev, cb)（ev: vault/modify|create|delete|rename，cb(path, oldPath?)）
+- ctx.views：registerView(type, (leaf) => view)；open(type)
+- ctx.commands：addCommand({ id, name, callback })（id/名称自动带主插件前缀，无需手写）
+- ctx.ribbon：addRibbonIcon(icon, title, callback) -> { remove }
+- ctx.statusbar：addStatusBarItem() -> { el, remove }
+- ctx.notice：notice(message, timeoutMs?)
+- ctx.workspace：getActiveFile() -> string | null；onFileOpen(cb)
+- ctx.editor：getSelection()、insertText(text)、replaceSelection(text)；无活动编辑器时方法返回 null
+- ctx.toolsCompat：register({ name, description, input, execute })（execute 返回 JSON 可序列化对象）
+
 可用事件（ctx.on）：dsh/session/event（会话事件）、vault/modify|create|delete|rename、
 workspace/file-open、dsh/waiting-approval（审批弹窗打开）。
 

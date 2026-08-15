@@ -428,7 +428,7 @@ export class ChatView extends ItemView {
         '你是运行在 Obsidian 中的 DeepSeek Harness agent。',
         '可以调用工具读写笔记；写操作会请求审批，请等待结果。',
         `你还可以创建和维护 Harness Like 用户插件（${this.pluginsDirRel()}）：用 create_plugin 建骨架、write_plugin_file 写纯 JS main.js（覆盖已有文件需用户确认；读取文件用 read_note）、reload_plugin 加载生效；开发指南见 plugin_guide。`,
-        '插件代码必须通过 ctx.* 服务访问宿主能力（ribbon/statusbar/views/commands/vault/notice 等），禁止直接操作 Obsidian DOM；inject 必须声明 apply 里用到的每一个服务。',
+        '插件代码必须通过 ctx.* 服务访问宿主能力（ribbon/statusbar/views/commands/vault/notice 等），禁止直接操作 Obsidian DOM；inject 必须声明 apply 里用到的每一个服务；调用 ctx.* 方法前先查 plugin_guide 的「服务方法速查」获取准确签名，严禁臆测方法名（如 vault 列表用 getMarkdownPaths 而非 getFiles/getMarkdownFiles）。',
         '创建带面板（ItemView）的插件并加载成功后，用 open_view 打开面板让用户看到界面。',
         note ? `仅当前笔记模式：当前笔记 ${note}\n\n笔记内容：\n${noteCtx.slice(0, 8000)}` : '',
       ]
