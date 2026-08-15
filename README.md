@@ -3,6 +3,8 @@
 **An Obsidian implementation inspired by DeepSeek Harness** — run a Cordis plugin system and an AI agent inside Obsidian. The agent reads and writes your notes, calls tools and goes through approvals; you (or the agent) can write your own Cordis plugins to extend Obsidian's commands, tools, panels, ribbon icons, status bar and settings tabs.
 
 > **Status: beta (v0.28.15)** — core features are complete; the UI supports Chinese & English (and can follow Obsidian's language).
+>
+> **Desktop only** — Harness Like runs in the Obsidian **desktop** app (macOS / Windows / Linux). Obsidian Mobile is **not** supported.
 
 [English](#en) · [中文](#zh)
 
@@ -27,6 +29,7 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 ### Installation
 
 > The plugin is currently in beta. Community-store & BRAT installation will be available after the first release.
+> **Desktop only** — this plugin requires the Obsidian **desktop** app (macOS / Windows / Linux); it cannot be installed on Obsidian Mobile.
 
 1. Get the build: clone the repository and run `pnpm install && pnpm build`, or download a release package when published.
 2. Create the folder `.obsidian/plugins/harness-like/` inside your vault.
@@ -85,6 +88,7 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 ### 安装
 
 > 当前为 beta。首个发布版上线后支持社区商店与 BRAT 安装。
+> **仅限桌面端**：Harness Like 只运行在 Obsidian **桌面版**（macOS / Windows / Linux），不支持 Obsidian 移动端（manifest 已声明 `isDesktopOnly`，移动端商店与插件列表会自动隐藏）。
 
 1. 获取产物：克隆仓库后执行 `pnpm install && pnpm build`，或等发布后在 Releases 下载。
 2. 在 vault 内创建目录 `.obsidian/plugins/harness-like/`。
