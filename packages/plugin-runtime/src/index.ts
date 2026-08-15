@@ -90,19 +90,25 @@ export async function loadUserPlugin(
     throw new Error(`插件 ${manifest.id} 的入口没有导出 Cordis 插件（需 default 导出或 { apply } 对象）`)
   }
 
-  // 命令前缀强制：用户插件注册的命令自动带 `<插件id>:` 前缀（无前缀时自动补），
-  // 便于在命令面板区分来源。通过子上下文 extend 注入包装服务，不影响宿主。
+  // 命令前缀强制（API 层）：用户插件注册的命令统一带 `<插件id>:` 前缀，不依赖
+  // 插件作者自觉——无前缀自动补，已带前缀先剥离避免重复；显示名也带来源前缀，
+  // 命令面板中可直接区分来源。通过子上下文 extend 注入包装服务，不影响宿主。
+  const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const idPattern = new RegExp(`^${escapeRegExp(manifest.id)}:`)
+  const namePattern = new RegExp(`^${escapeRegExp(manifest.id)}:\\s*`)
   const baseCommands = ctx.get('commands') as
-    | { addCommand(cmd: { id: string }): unknown }
+    | { addCommand(cmd: { id: string; name?: string }): unknown }
     | undefined
   const pluginCtx = baseCommands
     ? ctx.extend({
         commands: {
-          addCommand: (cmd: { id: string }) =>
+          addCommand: (cmd: { id: string; name?: string }) =>
             baseCommands.addCommand({
               ...cmd,
-              // 统一强制插件名前缀，便于命令面板区分来源
-              id: cmd.id.startsWith(`${manifest.id}:`) ? cmd.id : `${manifest.id}:${cmd.id}`,
+              id: `${manifest.id}:${cmd.id.replace(idPattern, '')}`,
+              name: cmd.name
+                ? `${manifest.id}: ${cmd.name.replace(namePattern, '')}`
+                : cmd.name,
             }),
         },
       })

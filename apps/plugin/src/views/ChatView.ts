@@ -79,14 +79,15 @@ export class ChatView extends ItemView {
     this.contentEl.empty()
     this.root = this.contentEl.createDiv({ cls: 'dsh-chat' })
 
-    // 头部：折叠按钮 + 标题 + 绑定笔记 + 会话级允许写
+    // 头部：折叠按钮 + 标题（左），新会话 + 插件管理器（右对齐）
     const header = this.root.createDiv({ cls: 'dsh-chat-header' })
     const collapseBtn = header.createEl('button', { cls: 'dsh-btn dsh-btn-icon', text: '☰' })
     collapseBtn.onclick = () => this.toggleSessionList()
     header.createSpan({ cls: 'dsh-chat-title', text: 'Harness Like' })
-    const newBtn = header.createEl('button', { cls: 'dsh-btn', text: '＋ 新会话' })
+    const actions = header.createDiv({ cls: 'dsh-chat-actions' })
+    const newBtn = actions.createEl('button', { cls: 'dsh-btn', text: '＋ 新会话' })
     newBtn.onclick = () => this.newSession()
-    const pluginBtn = header.createEl('button', { cls: 'dsh-btn', text: '插件' })
+    const pluginBtn = actions.createEl('button', { cls: 'dsh-btn', text: '插件管理器' })
     pluginBtn.onclick = () => this.openPluginManager()
 
     // 主体：会话列表 + 消息
@@ -137,6 +138,8 @@ export class ChatView extends ItemView {
       this.ctx.on('dsh/settings-updated', () => {
         this.refreshModelBtn()
         this.refreshAgentBtn()
+        // 欢迎界面（如配置提示）随设置变化刷新
+        if (this.messagesEl.querySelector('.dsh-welcome')) this.renderWelcome()
       }),
     )
     await this.refreshSessions()
@@ -285,6 +288,8 @@ export class ChatView extends ItemView {
       sessionId = `session-${Date.now()}`
       this.currentSessionId = sessionId
       this.sessions.set(sessionId, { notePath: null })
+      // 新会话从第一条消息开始：清掉欢迎界面
+      this.messagesEl.empty()
       // 会话元信息（标题 + 绑定笔记）落盘，重启后仍可恢复
       void this.ctx.sessionLog.append(sessionId, {
         type: 'session/meta',
@@ -686,7 +691,7 @@ export class ChatView extends ItemView {
     const examples = [
       '统计 vault 里有多少笔记',
       '搜索包含"读书"的笔记',
-      '把当前笔记绑定到本会话',
+      '总结当前笔记的要点',
       '写一篇周记到 Inbox',
     ]
     for (const text of examples) {
@@ -697,14 +702,16 @@ export class ChatView extends ItemView {
         this.autoGrowInput()
       }
     }
-    const key = this.ctx.settings.get('apiKey', '')
-    if (!key) {
+    // API Key 检查：任一提供方配置了 key 即视为已配置（旧顶层 apiKey 字段已废弃）
+    const providers = this.ctx.settings.get('providers', [] as Array<{ apiKey?: string }>)
+    const hasKey = providers.some((p) => p.apiKey && p.apiKey.trim().length > 0)
+    if (!hasKey) {
       const hint = wrap.createDiv({ cls: 'dsh-welcome-hint' })
       hint.createSpan({ text: '还没有配置 API Key，先' })
       const btn = hint.createEl('button', { cls: 'dsh-btn', text: '打开设置' })
       btn.onclick = () => {
-        // app.setting 在 1.13 类型面外，运行时存在
-        ;(this.app as unknown as { setting: { open(): void } }).setting.open()
+        // 跳转到本插件设置页的"模型" tab（API Key 配置处）
+        ;(this.ctx.get('dshSettingsUi') as { openTo(t: string): void } | undefined)?.openTo('model')
       }
     }
   }

@@ -23,10 +23,21 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
     super(app, plugin)
   }
 
-  /** 打开 Obsidian 设置并定位到指定 tab */
+  /** 打开 Obsidian 设置并定位到本插件指定 tab */
   openTo(tabId: TabId): void {
     this.activeTab = tabId
-    ;(this.app as unknown as { setting: { open(): void } }).setting.open()
+    // app.setting 在 1.13 类型面外，运行时存在；openTabById 直接定位到本插件设置页
+    // （PluginSettingTab 的 tab id = 插件 manifest id），避免只打开通用设置。
+    const setting = (this.app as unknown as {
+      setting?: { openTabById?(id: string): void; open?(): void }
+    }).setting
+    if (!setting) return
+    if (setting.openTabById) {
+      setting.openTabById(this.plugin.manifest.id)
+    } else {
+      // 旧版 Obsidian 兜底：只打开设置页
+      setting.open?.()
+    }
     this.display()
   }
 

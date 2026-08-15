@@ -28,6 +28,14 @@
   font-weight: 600;
 }
 
+/* 头部右侧操作组：新会话 + 插件管理器，整体靠右 */
+.dsh-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .dsh-bound {
   color: var(--text-muted);
   font-size: 12px;

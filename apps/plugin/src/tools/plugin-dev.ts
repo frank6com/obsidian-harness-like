@@ -112,6 +112,8 @@ module.exports = {
 
 注意：
 - 工具 execute 返回 JSON 可序列化对象。
+- ctx.commands.addCommand 注册的命令会自动带 \`<插件id>:\` 前缀（命令面板可直接区分来源）：
+  id 无需手写前缀，写了也会被归一化去重；命令显示名同样自动带来源前缀。
 - 修改 main.js 后调用 reload_plugin 生效；运行中插件重载需用户确认授权。
 - 插件构建命令把 obsidian 也 external：esbuild src/main.js --bundle --external:@deepseek-ai/cordis --external:obsidian --format=cjs --outfile=main.js`
 
