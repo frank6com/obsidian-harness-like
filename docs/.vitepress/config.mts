@@ -152,7 +152,17 @@ export default defineConfig({
   },
   themeConfig: {
     logo: '/harness.svg',
-    socialLinks: [{ icon: 'github', link: 'https://github.com/frank6com/obsidian-harness-like' }],
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/frank6com/obsidian-harness-like' },
+      {
+        // Obsidian 官方插件目录入口
+        icon: {
+          svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.8 22.2 12 12 22.2 1.8 12z"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M7.2 12h9.6M12 7.2v9.6"/></svg>',
+        },
+        link: 'https://community.obsidian.md/plugins/harness-like',
+        ariaLabel: 'Obsidian Plugin Directory',
+      },
+    ],
     outline: { level: [2, 3] },
   },
 })
