@@ -2,7 +2,7 @@
 
 **DeepSeek Harness for Obsidian**：在 Obsidian 内运行一个 Cordis 运行时，把 Obsidian 的 API 暴露为 Cordis 服务——用户编写的 Cordis 插件可以直接扩展 Obsidian（注册工具、命令、服务、面板），agent 直接操作你的笔记库。
 
-设计文档见 [docs/design.md](docs/design.md)，开发/发布规范见 [docs/SOP.md](docs/SOP.md)。
+设计文档见 [docs/design.md](docs/design.md)，开发/发布规范见 [docs/SOP.md](docs/SOP.md)，**会话交接（约束与上下文）见 [docs/HANDOVER.md](docs/HANDOVER.md)**。
 
 ## P0 已实现
 
