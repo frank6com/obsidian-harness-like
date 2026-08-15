@@ -101,6 +101,11 @@ export default class HarnessLikePlugin extends Plugin {
       const targetPath = String(args.path ?? '')
       const decision = ctx.sandbox.decide(targetPath, 'write')
       if (!decision.allowed) return 'deny'
+      // 仅当前笔记模式：写操作只能写当前活动笔记
+      if (this.settings.confineToCurrentNote) {
+        const active = ctx.workspace.getActiveFile()
+        if (active && targetPath !== active) return 'deny'
+      }
       // 目录级白名单：命中则免审批
       if (isPathInDirs(targetPath, this.settings.writeAllowDirs)) return 'allow'
       const mode = ctx.approval.decideWrite(this.settings.approvalDefault)
@@ -194,12 +199,12 @@ export default class HarnessLikePlugin extends Plugin {
     )
     this.addCommand({
       id: 'open-chat',
-      name: '打开 dsh Chat 面板',
+      name: '打开 Harness Like 面板',
       callback: () => void this.activateView(CHAT_VIEW_TYPE),
     })
     this.addCommand({
       id: 'open-plugin-manager',
-      name: '打开 dsh 插件管理器',
+      name: '打开 Harness Like 插件管理器',
       callback: () => void this.activateView(PLUGIN_MANAGER_VIEW_TYPE),
     })
     this.addCommand({
@@ -213,7 +218,7 @@ export default class HarnessLikePlugin extends Plugin {
     ctx.reflect.provide('dshSettingsUi', {
       openTo: (tab: string) => this.settingsTab?.openTo(tab as TabId),
     })
-    this.addRibbonIcon('bot', '打开 dsh Chat', () => void this.activateView(CHAT_VIEW_TYPE))
+    this.addRibbonIcon('bot', '打开 Harness Like', () => void this.activateView(CHAT_VIEW_TYPE))
 
     // 启动时加载已授权用户插件
     await this.loadUserPlugins()

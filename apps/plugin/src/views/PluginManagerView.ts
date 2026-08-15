@@ -28,7 +28,7 @@ export class PluginManagerView extends ItemView {
   }
 
   override getDisplayText(): string {
-    return 'dsh 插件管理器'
+    return 'Harness Like 插件管理器'
   }
 
   override getIcon(): string {
@@ -78,6 +78,25 @@ export class PluginManagerView extends ItemView {
         cls: 'dsh-pm-name',
         text: `${id}${rec.manifest ? ` v${rec.manifest.version}` : ''}`,
       })
+      if (rec.manifest?.description) {
+        info.createDiv({ cls: 'dsh-pm-desc', text: rec.manifest.description })
+      }
+      // 能力徽章（静态检测）
+      const caps = rec.capabilities ?? []
+      if (caps.length) {
+        const capRow = info.createDiv({ cls: 'dsh-pm-caps' })
+        const LABELS: Record<string, string> = {
+          panel: '面板',
+          ribbon: '图标',
+          commands: '命令',
+          tools: '工具',
+          statusbar: '状态栏',
+          settings: '设置页',
+        }
+        for (const c of caps) {
+          capRow.createSpan({ cls: 'dsh-pm-cap', text: LABELS[c] ?? c })
+        }
+      }
       info.createDiv({
         cls: `dsh-pm-status dsh-pm-status-${rec.status}`,
         text: rec.error
@@ -89,6 +108,10 @@ export class PluginManagerView extends ItemView {
       })
       const actions = row.createDiv({ cls: 'dsh-pm-actions' })
       if (rec.status === 'running') {
+        if (rec.viewType) {
+          const open = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: '打开面板' })
+          open.onclick = () => this.ctx.views.open(rec.viewType!)
+        }
         const reload = actions.createEl('button', { cls: 'dsh-btn', text: '重新加载' })
         reload.onclick = () => void this.reload(id)
         const stop = actions.createEl('button', { cls: 'dsh-btn', text: '停止' })

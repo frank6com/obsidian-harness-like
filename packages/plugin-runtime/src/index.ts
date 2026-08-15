@@ -50,6 +50,26 @@ export interface LoadedPlugin {
   fiber: { dispose(): Promise<void> }
 }
 
+export interface PluginCapabilities {
+  /** 能力标签：panel/ribbon/commands/tools/statusbar/settings */
+  capabilities: string[]
+  /** 第一个注册的面板视图类型（可快速打开） */
+  viewType?: string
+}
+
+/** 静态检测插件产物的能力（扫描 main.js 文本中的注册调用） */
+export function detectCapabilities(code: string): PluginCapabilities {
+  const capabilities: string[] = []
+  if (/registerView\s*\(/.test(code)) capabilities.push('panel')
+  if (/addRibbonIcon\s*\(/.test(code)) capabilities.push('ribbon')
+  if (/addCommand\s*\(/.test(code)) capabilities.push('commands')
+  if (/toolsCompat\.register|ctx\.tools\.register/.test(code)) capabilities.push('tools')
+  if (/addStatusBarItem\s*\(/.test(code)) capabilities.push('statusbar')
+  if (/registerSettingTab/.test(code)) capabilities.push('settings')
+  const m = code.match(/registerView\s*\(\s*['"]([^'"]+)['"]/)
+  return { capabilities, viewType: m?.[1] }
+}
+
 /** 读取并执行入口产物，挂载为 Cordis 插件 */
 export async function loadUserPlugin(
   ctx: Context,
@@ -70,7 +90,25 @@ export async function loadUserPlugin(
     throw new Error(`插件 ${manifest.id} 的入口没有导出 Cordis 插件（需 default 导出或 { apply } 对象）`)
   }
 
-  const fiber = ctx.plugin(exported as { apply(ctx: never): unknown }) as unknown as {
+  // 命令前缀强制：用户插件注册的命令自动带 `<插件id>:` 前缀（无前缀时自动补），
+  // 便于在命令面板区分来源。通过子上下文 extend 注入包装服务，不影响宿主。
+  const baseCommands = ctx.get('commands') as
+    | { addCommand(cmd: { id: string }): unknown }
+    | undefined
+  const pluginCtx = baseCommands
+    ? ctx.extend({
+        commands: {
+          addCommand: (cmd: { id: string }) =>
+            baseCommands.addCommand({
+              ...cmd,
+              // 统一强制插件名前缀，便于命令面板区分来源
+              id: cmd.id.startsWith(`${manifest.id}:`) ? cmd.id : `${manifest.id}:${cmd.id}`,
+            }),
+        },
+      })
+    : ctx
+
+  const fiber = pluginCtx.plugin(exported as { apply(ctx: never): unknown }) as unknown as {
     dispose(): Promise<void>
   } & PromiseLike<unknown>
   await fiber
@@ -86,6 +124,10 @@ export interface PluginRecord {
   status: PluginStatus
   error?: string
   loaded?: LoadedPlugin
+  /** 静态检测的能力标签 */
+  capabilities?: string[]
+  /** 面板视图类型（可快速打开） */
+  viewType?: string
 }
 
 export interface RuntimeOptions {
@@ -112,12 +154,17 @@ export class PluginRuntime {
     return names.filter((n) => !n.startsWith('.'))
   }
 
-  /** 只读检查：解析 manifest，不执行任何代码（用于授权前展示） */
+  /** 只读检查：解析 manifest + 能力检测，不执行任何代码（用于授权前展示） */
   inspect(id: string): PluginRecord {
     const dir = path.join(this.opts.pluginsDir, id)
     const rec: PluginRecord = { id, dir, status: 'stopped' }
     try {
       rec.manifest = readPluginManifest(dir)
+      const entry = path.join(dir, rec.manifest.entry)
+      const code = fs.readFileSync(entry, 'utf8')
+      const detected = detectCapabilities(code)
+      rec.capabilities = detected.capabilities
+      rec.viewType = detected.viewType
     } catch (err) {
       rec.status = 'error'
       rec.error = err instanceof Error ? err.message : String(err)

@@ -52,7 +52,7 @@ describe('示例插件真实产物冒烟', () => {
     const tool = tools.get('count_notes')
     expect(tool).toBeDefined()
     expect(await tool!.execute({})).toEqual({ count: 2 })
-    expect(added).toContain('dsh-example:hello')
+    expect(added).toContain('my-first-plugin:dsh-example:hello')
 
     await loaded.fiber.dispose()
     expect(tools.get('count_notes')).toBeUndefined()

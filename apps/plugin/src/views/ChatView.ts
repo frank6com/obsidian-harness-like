@@ -36,7 +36,6 @@ function summarize(value: unknown): string {
 
 export class ChatView extends ItemView {
   private currentSessionId: string | null = null
-  private boundNote: string | null = null
   private sessions = new Map<string, SessionMeta>()
   private sessionModels = new Map<string, string>()
   private modelBtn!: HTMLButtonElement
@@ -44,11 +43,10 @@ export class ChatView extends ItemView {
   private root!: HTMLElement
   private listEl!: HTMLElement
   private messagesEl!: HTMLElement
-  private boundEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
   private sendBtn!: HTMLButtonElement
   private phaseEl!: HTMLElement
-  private allowWriteEl!: HTMLInputElement
+  private confineCheck!: HTMLInputElement
   private streamingEl: HTMLElement | null = null
   private streamingText = ''
   private toolCards = new Map<string, HTMLElement>()
@@ -70,7 +68,7 @@ export class ChatView extends ItemView {
   }
 
   override getDisplayText(): string {
-    return 'dsh Chat'
+    return 'Harness Like'
   }
 
   override getIcon(): string {
@@ -85,23 +83,11 @@ export class ChatView extends ItemView {
     const header = this.root.createDiv({ cls: 'dsh-chat-header' })
     const collapseBtn = header.createEl('button', { cls: 'dsh-btn dsh-btn-icon', text: '☰' })
     collapseBtn.onclick = () => this.toggleSessionList()
-    header.createSpan({ cls: 'dsh-chat-title', text: 'dsh Chat' })
+    header.createSpan({ cls: 'dsh-chat-title', text: 'Harness Like' })
     const newBtn = header.createEl('button', { cls: 'dsh-btn', text: '＋ 新会话' })
     newBtn.onclick = () => this.newSession()
-    this.boundEl = header.createSpan({ cls: 'dsh-bound' })
-    const bindBtn = header.createEl('button', { cls: 'dsh-btn', text: '绑定当前笔记' })
-    const toggle = header.createDiv({ cls: 'dsh-toggle' })
-    toggle.createSpan({ text: '本会话允许写' })
-    this.allowWriteEl = toggle.createEl('input', { type: 'checkbox' })
-    this.allowWriteEl.addEventListener('change', () => {
-      this.ctx.approval.setSessionAllow(this.allowWriteEl.checked)
-    })
-
-    bindBtn.onclick = () => {
-      this.boundNote = this.ctx.workspace.getActiveFile()
-      this.renderBinding()
-      this.ctx.notice.notice(this.boundNote ? `已绑定: ${this.boundNote}` : '当前没有活动笔记')
-    }
+    const pluginBtn = header.createEl('button', { cls: 'dsh-btn', text: '插件' })
+    pluginBtn.onclick = () => this.openPluginManager()
 
     // 主体：会话列表 + 消息
     const body = this.root.createDiv({ cls: 'dsh-chat-body' })
@@ -120,6 +106,13 @@ export class ChatView extends ItemView {
     this.modelBtn = toolbar.createEl('button', { cls: 'dsh-btn dsh-agent-btn dsh-model-btn' })
     this.refreshModelBtn()
     this.modelBtn.onclick = (e) => this.openModelMenu(e)
+    const confine = toolbar.createDiv({ cls: 'dsh-toggle' })
+    confine.createSpan({ text: '仅当前笔记' })
+    this.confineCheck = confine.createEl('input', { type: 'checkbox' })
+    this.confineCheck.checked = this.ctx.settings.get('confineToCurrentNote', false) as boolean
+    this.confineCheck.addEventListener('change', () => {
+      this.ctx.settings.set('confineToCurrentNote', this.confineCheck.checked)
+    })
 
     // 底部：输入 + 发送/停止
     const footer = this.root.createDiv({ cls: 'dsh-chat-footer' })
@@ -138,6 +131,7 @@ export class ChatView extends ItemView {
     this.sendBtn.onclick = () => void this.onSendClick()
 
     this.disposers.push(this.ctx.on('dsh/session/event', (e) => this.onSessionEvent(e)))
+
     this.disposers.push(this.ctx.on('dsh/waiting-approval', () => this.setPhase({ kind: 'waiting' })))
     this.disposers.push(
       this.ctx.on('dsh/settings-updated', () => {
@@ -146,7 +140,6 @@ export class ChatView extends ItemView {
       }),
     )
     await this.refreshSessions()
-    this.renderBinding()
     this.setPhase({ kind: 'idle' })
     if (!this.currentSessionId) this.renderWelcome()
   }
@@ -291,14 +284,14 @@ export class ChatView extends ItemView {
     if (!sessionId) {
       sessionId = `session-${Date.now()}`
       this.currentSessionId = sessionId
-      this.sessions.set(sessionId, { notePath: this.boundNote })
+      this.sessions.set(sessionId, { notePath: null })
       // 会话元信息（标题 + 绑定笔记）落盘，重启后仍可恢复
       void this.ctx.sessionLog.append(sessionId, {
         type: 'session/meta',
         ts: Date.now(),
         sessionId,
         title: text.length > 24 ? text.slice(0, 24) + '…' : text,
-        notePath: this.boundNote,
+        notePath: null,
         modelId: this.sessionModelValue(),
       } satisfies SessionEvent)
       void this.refreshSessions()
@@ -326,21 +319,22 @@ export class ChatView extends ItemView {
         (e) => e.type !== 'turn/start' && e.type !== 'turn/end',
       )
       let noteCtx = ''
-      const bound = this.sessions.get(sessionId)?.notePath ?? null
-      if (bound) {
+      const confine = this.ctx.settings.get('confineToCurrentNote', false) as boolean
+      const note = confine ? this.ctx.workspace.getActiveFile() : null
+      if (note) {
         try {
-          noteCtx = await this.ctx.vault.read(bound)
+          noteCtx = await this.ctx.vault.read(note)
         } catch {
-          noteCtx = '(无法读取绑定笔记)'
+          noteCtx = '(无法读取当前笔记)'
         }
       }
       const system = [
         '你是运行在 Obsidian 中的 DeepSeek Harness agent。',
         '可以调用工具读写笔记；写操作会请求审批，请等待结果。',
-        '你还可以创建和维护 dsh 用户插件（.obsidian/dsh-plugins/）：用 create_plugin 建骨架、write_plugin_file 写纯 JS main.js（覆盖已有文件需用户确认；读取文件用 read_note）、reload_plugin 加载生效；开发指南见 plugin_guide。',
+        '你还可以创建和维护 Harness Like 用户插件（.obsidian/dsh-plugins/）：用 create_plugin 建骨架、write_plugin_file 写纯 JS main.js（覆盖已有文件需用户确认；读取文件用 read_note）、reload_plugin 加载生效；开发指南见 plugin_guide。',
         '插件代码必须通过 ctx.* 服务访问宿主能力（ribbon/statusbar/views/commands/vault/notice 等），禁止直接操作 Obsidian DOM；inject 必须声明 apply 里用到的每一个服务。',
         '创建带面板（ItemView）的插件并加载成功后，用 open_view 打开面板让用户看到界面。',
-        bound ? `当前绑定笔记: ${bound}\n\n笔记内容：\n${noteCtx.slice(0, 8000)}` : '',
+        note ? `仅当前笔记模式：当前笔记 ${note}\n\n笔记内容：\n${noteCtx.slice(0, 8000)}` : '',
       ]
         .filter(Boolean)
         .join('\n\n')
@@ -518,6 +512,19 @@ export class ChatView extends ItemView {
     return `${p.id}/${p.models?.length ? p.models[0] : p.model ?? ''}`
   }
 
+  /** 打开插件管理器面板 */
+  private openPluginManager(): void {
+    const type = 'dsh-plugin-manager'
+    const leaves = this.app.workspace.getLeavesOfType(type)
+    let leaf: WorkspaceLeaf | undefined | null = leaves[0]
+    if (!leaf) {
+      leaf = this.app.workspace.getRightLeaf(false)
+      if (!leaf) return
+      void leaf.setViewState({ type, active: true })
+    }
+    this.app.workspace.revealLeaf(leaf)
+  }
+
   /** 当前激活的智能体预设（跳过已禁用的） */
   private activeAgent(): AgentPreset | undefined {
     const agents = listVisibleAgents(this.ctx.settings.get('agents', [] as AgentPreset[]))
@@ -560,9 +567,7 @@ export class ChatView extends ItemView {
   /** 开始新会话：回到空状态，绑定清零 */
   private newSession(): void {
     this.currentSessionId = null
-    this.boundNote = null
     this.refreshModelBtn()
-    this.renderBinding()
     void this.renderSession()
     void this.refreshSessions()
     this.inputEl.focus()
@@ -633,8 +638,6 @@ export class ChatView extends ItemView {
     this.sessions.delete(id)
     if (this.currentSessionId === id) {
       this.currentSessionId = null
-      this.boundNote = null
-      this.renderBinding()
       await this.renderSession()
     }
     await this.refreshSessions()
@@ -655,13 +658,8 @@ export class ChatView extends ItemView {
       this.renderWelcome()
       return
     }
-    // 恢复绑定与模型选择：内存 map 优先，其次会话元信息
+    // 恢复模型选择：会话元信息
     const meta = await this.ctx.sessionLog.readMeta(id)
-    if (!this.sessions.has(id) && meta) {
-      this.sessions.set(id, { notePath: meta.notePath })
-      this.boundNote = meta.notePath
-      this.renderBinding()
-    }
     if (meta?.modelId) {
       this.sessionModels.set(id, meta.modelId)
     }
@@ -681,7 +679,7 @@ export class ChatView extends ItemView {
   private renderWelcome(): void {
     this.messagesEl.empty()
     const wrap = this.messagesEl.createDiv({ cls: 'dsh-welcome' })
-    wrap.createEl('h3', { text: 'dsh Chat' })
+    wrap.createEl('h3', { text: 'Harness Like' })
     wrap.createEl('p', {
       text: '在 Obsidian 内运行 Cordis 插件体系与 agent。试试下面的示例，或直接输入你的问题。',
     })
@@ -709,10 +707,6 @@ export class ChatView extends ItemView {
         ;(this.app as unknown as { setting: { open(): void } }).setting.open()
       }
     }
-  }
-
-  private renderBinding(): void {
-    this.boundEl.setText(this.boundNote ? `绑定: ${this.boundNote}` : '未绑定笔记')
   }
 
   private autoGrowInput(): void {

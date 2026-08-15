@@ -17,3 +17,8 @@ export function isPathInDirs(vaultRel: string, dirs: string[]): boolean {
     return norm === dir || norm.startsWith(dir + '/')
   })
 }
+
+/** 仅当前笔记模式：写目标必须等于当前活动笔记（无活动笔记时不限制） */
+export function isConfineAllowed(activeNote: string | null, target: string): boolean {
+  return !activeNote || target === activeNote
+}

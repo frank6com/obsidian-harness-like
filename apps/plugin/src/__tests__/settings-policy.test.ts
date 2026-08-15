@@ -12,7 +12,7 @@ import {
   parseToolPolicy,
 } from '../settings'
 import { modeAllows } from '../mode'
-import { isPathInDirs, normalizeVaultPath } from '../policy'
+import { isConfineAllowed, isPathInDirs, normalizeVaultPath } from '../policy'
 
 describe('shouldLog', () => {
   it('级别过滤：info 配置下 warn/error 输出，debug 不输出', () => {
@@ -168,5 +168,13 @@ describe('listVisibleAgents（启用过滤）', () => {
     ]
     const visible = listVisibleAgents(agents)
     expect(visible.map((a) => a.id)).toEqual(['a', 'c'])
+  })
+})
+
+describe('isConfineAllowed（仅当前笔记）', () => {
+  it('目标等于当前笔记放行，其他拒绝，无活动笔记放行', () => {
+    expect(isConfineAllowed('Inbox/a.md', 'Inbox/a.md')).toBe(true)
+    expect(isConfineAllowed('Inbox/a.md', 'Inbox/b.md')).toBe(false)
+    expect(isConfineAllowed(null, 'Inbox/b.md')).toBe(true)
   })
 })

@@ -74,6 +74,8 @@ export interface HarnessLikeSettings {
   sessionRetentionDays: number
   /** 日志级别 */
   logLevel: LogLevel
+  /** 仅当前笔记：注入当前活动笔记上下文，写操作限于该笔记 */
+  confineToCurrentNote: boolean
   /** 流式输出（关闭时等完整消息再显示） */
   streamingEnabled: boolean
   /** Markdown 渲染（关闭时消息显示纯文本） */
@@ -104,6 +106,7 @@ export function defaultSettings(): HarnessLikeSettings {
     toolPolicy: [],
     sessionRetentionDays: 0,
     logLevel: 'info',
+    confineToCurrentNote: false,
     streamingEnabled: true,
     renderMarkdown: true,
     grants: {},
@@ -213,6 +216,7 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
   base.logLevel = (['debug', 'info', 'warn', 'error'] as const).includes(r.logLevel as never)
     ? (r.logLevel as LogLevel)
     : 'info'
+  base.confineToCurrentNote = r.confineToCurrentNote === true
   base.streamingEnabled = r.streamingEnabled !== false
   base.renderMarkdown = r.renderMarkdown !== false
   base.grants = (r.grants as Record<string, GrantRecord>) ?? {}

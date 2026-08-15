@@ -22,7 +22,7 @@ export interface PluginDevToolsOptions {
 
 const PLUGIN_ID_RE = /^[a-z0-9][a-z0-9-_]{0,63}$/
 
-export const PLUGIN_GUIDE = `# dsh 用户插件开发指南（纯 JS 路径）
+export const PLUGIN_GUIDE = `# Harness Like 用户插件开发指南（纯 JS 路径）
 
 插件位于 vault 的 .obsidian/dsh-plugins/<id>/ 目录，结构：
 
@@ -126,7 +126,7 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
 
       ctx.toolsCompat.register({
         name: 'plugin_guide',
-        description: '获取 dsh 用户插件开发指南（模板代码、API、流程）',
+        description: '获取 Harness Like 用户插件开发指南（模板代码、API、流程）',
         input: { type: 'object', properties: {} },
         execute() {
           return { guide: PLUGIN_GUIDE }
@@ -135,7 +135,7 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
 
       ctx.toolsCompat.register({
         name: 'create_plugin',
-        description: '创建 dsh 用户插件骨架：建目录并写 package.json（纯 JS 插件随后用 write_plugin_file 写 main.js）',
+        description: '创建 Harness Like 用户插件骨架：建目录并写 package.json（纯 JS 插件随后用 write_plugin_file 写 main.js）',
         input: {
           type: 'object',
           properties: {
