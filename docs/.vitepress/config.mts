@@ -32,10 +32,8 @@ const zhTutorial = [
   {
     text: '扩展',
     items: [
+      { text: '通过对话创建插件', link: '/guide/plugin-agent' },
       { text: '用户插件体系', link: '/guide/plugins' },
-      { text: '开发你的第一个插件', link: '/dev/hello-world' },
-      { text: 'ctx.* 服务速查', link: '/dev/services' },
-      { text: '翻译插件', link: '/dev/translation' },
     ],
   },
   {
@@ -63,10 +61,8 @@ const enTutorial = [
   {
     text: 'Extending',
     items: [
+      { text: 'Creating Plugins in Conversation', link: '/en/guide/plugin-agent' },
       { text: 'User Plugins', link: '/en/guide/plugins' },
-      { text: 'Your First Plugin', link: '/en/dev/hello-world' },
-      { text: 'ctx.* Services', link: '/en/dev/services' },
-      { text: 'Translation Plugins', link: '/en/dev/translation' },
     ],
   },
   {
@@ -92,6 +88,14 @@ const zhDevDocs = [
       { text: '架构约定', link: '/development/conventions' },
     ],
   },
+  {
+    text: '用户插件开发（进阶）',
+    items: [
+      { text: '开发你的第一个插件', link: '/dev/hello-world' },
+      { text: 'ctx.* 服务速查', link: '/dev/services' },
+      { text: '翻译插件', link: '/dev/translation' },
+    ],
+  },
 ]
 
 const enDevDocs = [
@@ -108,6 +112,14 @@ const enDevDocs = [
     items: [
       { text: 'Versioning', link: '/en/development/versioning' },
       { text: 'Conventions', link: '/en/development/conventions' },
+    ],
+  },
+  {
+    text: 'User Plugin Development (advanced)',
+    items: [
+      { text: 'Your First Plugin', link: '/en/dev/hello-world' },
+      { text: 'ctx.* Services', link: '/en/dev/services' },
+      { text: 'Translation Plugins', link: '/en/dev/translation' },
     ],
   },
 ]

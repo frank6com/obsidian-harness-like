@@ -1,25 +1,25 @@
 # User Plugins
 
-User plugins are **Cordis plugins** running inside Obsidian (not Obsidian-native plugins), living in `.obsidian/harness-like-plugins/<id>/` (a `package.json` + a compiled `main.js`). Through `ctx.*` services they can register:
+User plugins are **Cordis plugins** running inside Obsidian (loaded by Harness Like) that extend commands, tools, panels and more.
 
-- Tools (callable by the agent)
-- Commands (auto-grouped as `Harness Like: command (plugin-id)`)
-- Custom panels (ItemView)
-- Ribbon icons, status-bar items, settings tabs
+## Two ways to get one
 
-## Getting plugins
+- **Create in conversation (recommended, zero-code)**: in Create Mode, let the agent build, load and open it — see [Creating Plugins in Conversation](/en/guide/plugin-agent);
+- **Manually**: copy a plugin folder to `.obsidian/harness-like-plugins/<id>/` in your vault (a `package.json` + a compiled `main.js`).
 
-- **In conversation**: switch to Create Mode and let the agent run `create_plugin` → `write_plugin_file` → `reload_plugin`.
-- **Manually**: copy a plugin folder to `.obsidian/harness-like-plugins/<id>/`.
+## Authorization & loading
 
-## Plugin Manager
+Plugin Manager (top-right "Plugin Manager" button in the chat header):
 
-Open via the "Plugin Manager" button in the chat header:
+- **Authorize & Load**: single-check = this version only; double-check = trust future versions;
+- While running: **Open Panel / Reload / Stop / Delete**;
+- Grants can be reviewed/revoked in Settings → Plugin Grants.
 
-- Refresh / open the plugins folder;
-- **Authorize & Load** (single/double-check) → running plugins offer Open Panel / Reload / Stop / Delete;
-- Each row shows capability badges (Panel/Commands/Tools/Icon/Status bar/Settings) and grant info.
+## Security
 
-## Example
+- Plugins only execute local files under `.obsidian/harness-like-plugins/`; nothing is downloaded or executed remotely;
+- Plugin writes still go through the approval chain — the security model cannot be bypassed.
 
-See `apps/plugin/examples/my-first-plugin/` in the repo (precompiled, copy directly). Dev docs: [Plugin Development](/en/dev/hello-world).
+## Going further
+
+Want to hand-write plugins? See [Development → User Plugin Development](/en/development/index).

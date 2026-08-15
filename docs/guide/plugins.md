@@ -1,25 +1,25 @@
 # 用户插件体系
 
-用户插件是运行在 Obsidian 内的 **Cordis 插件**（非 Obsidian 原生插件），位于 `.obsidian/harness-like-plugins/<id>/`（一个 `package.json` + 编译好的 `main.js`），通过 `ctx.*` 服务适配 Obsidian，可注册：
+用户插件是运行在 Obsidian 内的 **Cordis 插件**（由 Harness Like 加载），用于扩展命令、工具、面板等能力。
 
-- 工具（agent 可调用）
-- 命令（自动以 `Harness Like: 命令（插件id）` 归组显示）
-- 自定义面板（ItemView）
-- 侧边栏图标、状态栏、设置页
+## 两种获得方式
 
-## 获取插件
+- **对话创建（推荐，零代码）**：创造模式下让 agent 直接创建、加载并打开——见[通过对话创建插件](/guide/plugin-agent)；
+- **手动放置**：把插件目录复制到 vault 的 `.obsidian/harness-like-plugins/<id>/`（含 `package.json` 与编译好的 `main.js`）。
 
-- **对话内创建**：切到「创造模式」，让 agent 用 `create_plugin` → `write_plugin_file` → `reload_plugin` 三步产出插件。
-- **手动放置**：复制插件目录到 `.obsidian/harness-like-plugins/<id>/`。
+## 授权与加载
 
-## 插件管理器
+对话面板头部右侧「插件管理器」：
 
-对话面板头部右侧「插件管理器」按钮：
+- **授权并加载**：单勾 = 仅信任当前版本；双勾 = 信任后续所有版本；
+- 运行中可：**打开面板 / 重新加载 / 停止 / 删除**；
+- 授权记录可在 设置 → 插件授权 查看/撤销。
 
-- 刷新 / 打开插件目录；
-- **授权并加载**（单勾/双勾）→ 运行中可：打开面板、重新加载、停止、删除；
-- 状态行显示能力徽章（面板/命令/工具/图标/状态栏/设置页）与授权信息。
+## 安全
 
-## 示例
+- 插件只执行本地文件（`.obsidian/harness-like-plugins/`），不会下载或远程执行代码；
+- 插件的写操作仍走审批链，不会绕过安全模型。
 
-仓库 `apps/plugin/examples/my-first-plugin/`（含预编译产物，可直接复制）。开发文档见本站[插件开发](/dev/hello-world)章节。
+## 进阶
+
+想手写插件？见[开发文档 → 用户插件开发](/development/index)。
