@@ -25,7 +25,7 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 
 ### Screenshots
 
-![Chat panel](docs/public/screenshots/zh/Chat.png)
+![Chat panel](docs/public/screenshots/zh/chat.png)
 
 ![Settings — Models tab](docs/public/screenshots/zh/Settings.gif)
 
@@ -90,7 +90,7 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 
 ### 界面截图
 
-![对话面板](docs/public/screenshots/zh/Chat.png)
+![对话面板](docs/public/screenshots/zh/chat.png)
 
 ![设置 — 模型](docs/public/screenshots/zh/Settings.gif)
 

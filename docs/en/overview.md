@@ -19,7 +19,7 @@ The animation above shows the whole flow: say "create a small game plugin I can 
 
 ## Interface preview
 
-![Chat panel](/screenshots/zh/Chat.png)
+![Chat panel](/screenshots/zh/chat.png)
 ![Settings — Models](/screenshots/zh/Settings.gif)
 ![Plugin Manager](/screenshots/zh/Plugins.png)
 
