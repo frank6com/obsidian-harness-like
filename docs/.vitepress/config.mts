@@ -3,11 +3,13 @@ import { defineConfig } from 'vitepress'
 const zhNav = [
   { text: '首页', link: '/' },
   { text: '使用教程', link: '/guide/quickstart' },
+  { text: '开发文档', link: '/development/index' },
 ]
 
 const enNav = [
   { text: 'Home', link: '/en/' },
   { text: 'Tutorial', link: '/en/guide/quickstart' },
+  { text: 'Development', link: '/en/development/index' },
 ]
 
 const zhSidebar = {
@@ -41,6 +43,18 @@ const zhSidebar = {
       items: [{ text: '常见问题', link: '/guide/faq' }],
     },
   ],
+  '/development/': [
+    {
+      text: '开发文档（本插件）',
+      items: [
+        { text: '开发总览', link: '/development/index' },
+        { text: '开发流程', link: '/development/workflow' },
+        { text: '版本号规范', link: '/development/versioning' },
+        { text: '发布与审核', link: '/development/release' },
+        { text: '架构约定', link: '/development/conventions' },
+      ],
+    },
+  ],
 }
 
 const enSidebar = {
@@ -72,6 +86,18 @@ const enSidebar = {
     {
       text: 'Help',
       items: [{ text: 'FAQ', link: '/en/guide/faq' }],
+    },
+  ],
+  '/en/development/': [
+    {
+      text: 'Development (this plugin)',
+      items: [
+        { text: 'Overview', link: '/en/development/index' },
+        { text: 'Workflow', link: '/en/development/workflow' },
+        { text: 'Versioning', link: '/en/development/versioning' },
+        { text: 'Release & Review', link: '/en/development/release' },
+        { text: 'Conventions', link: '/en/development/conventions' },
+      ],
     },
   ],
 }
