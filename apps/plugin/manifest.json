@@ -1,7 +1,7 @@
 {
   "id": "harness-like",
   "name": "Harness Like",
-  "version": "0.9.0",
+  "version": "0.28.15",
   "minAppVersion": "1.5.0",
   "description": "DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 内运行 Cordis 插件体系与 agent，用户插件可直接扩展命令、工具与面板。中英文界面。 / An Obsidian implementation inspired by DeepSeek Harness: run a Cordis plugin system and agents inside Obsidian; user plugins extend commands, tools and panels. UI in Chinese & English.",
   "author": "frank6com",
