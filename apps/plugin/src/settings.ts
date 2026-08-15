@@ -72,6 +72,8 @@ export interface HarnessLikeSettings {
   toolPolicy: string[]
   /** 会话保留天数：启动时清理超过 N 天未更新的会话（0 = 不清理） */
   sessionRetentionDays: number
+  /** 会话导出 Markdown 的 vault 相对目录（默认 'sessions' = 根目录下的 sessions 文件夹；空串 = 根目录） */
+  exportDir: string
   /** 日志级别 */
   logLevel: LogLevel
   /** 仅当前笔记：注入当前活动笔记上下文，写操作限于该笔记 */
@@ -105,6 +107,7 @@ export function defaultSettings(): HarnessLikeSettings {
     writeAllowDirs: [],
     toolPolicy: [],
     sessionRetentionDays: 0,
+    exportDir: 'sessions',
     logLevel: 'info',
     confineToCurrentNote: false,
     streamingEnabled: true,
@@ -213,6 +216,7 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
   base.toolPolicy = Array.isArray(r.toolPolicy) ? (r.toolPolicy as string[]) : []
   base.sessionRetentionDays =
     typeof r.sessionRetentionDays === 'number' ? (r.sessionRetentionDays as number) : 0
+  base.exportDir = typeof r.exportDir === 'string' ? (r.exportDir as string).trim() : 'sessions'
   base.logLevel = (['debug', 'info', 'warn', 'error'] as const).includes(r.logLevel as never)
     ? (r.logLevel as LogLevel)
     : 'info'

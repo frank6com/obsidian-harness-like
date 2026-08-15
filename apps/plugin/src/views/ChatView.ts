@@ -595,7 +595,7 @@ export class ChatView extends ItemView {
         cls: 'dsh-session-row' + (s.id === this.currentSessionId ? ' is-active' : ''),
       })
       const btn = row.createEl('button', { cls: 'dsh-session-btn' })
-      btn.createDiv({ text: s.title ?? s.id })
+      btn.createDiv({ cls: 'dsh-session-title', text: s.title ?? s.id })
       btn.createDiv({
         cls: 'dsh-session-sub',
         text: `${s.notePath ?? '全局'} · ${s.count} 条`,
@@ -625,8 +625,15 @@ export class ChatView extends ItemView {
       const [events, meta] = await Promise.all([this.ctx.sessionLog.read(id), this.ctx.sessionLog.readMeta(id)])
       const md = sessionToMarkdown({ title: title ?? id, notePath: meta?.notePath ?? null }, events)
       const fileName = safeFileName(title ?? id, id)
-      await this.ctx.vault.write(fileName, md)
-      this.ctx.notice.notice(`已导出: ${fileName}`)
+      // 导出目录：设置中可配置（默认 'sessions' = vault 根下的 sessions 文件夹；空串 = 根目录）
+      const exportDir = (this.ctx.settings.get('exportDir', 'sessions') as string).trim().replace(/^\/+|\/+$/g, '')
+      if (exportDir) {
+        // 目录可能不存在：逐层创建（已存在则忽略）
+        await this.ctx.vault.createFolder(exportDir)
+      }
+      const target = exportDir ? `${exportDir}/${fileName}` : fileName
+      await this.ctx.vault.write(target, md)
+      this.ctx.notice.notice(`已导出: ${target}`)
     } catch (err) {
       this.ctx.notice.notice(`导出失败: ${err instanceof Error ? err.message : String(err)}`)
     }

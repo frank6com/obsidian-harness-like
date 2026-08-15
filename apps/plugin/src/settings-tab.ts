@@ -435,6 +435,16 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
           await this.plugin.saveSettings()
         }),
       )
+    new Setting(c)
+      .setName('导出目录')
+      .setDesc('会话导出 Markdown 的 vault 相对目录（默认 sessions = 根目录下的 sessions 文件夹；留空 = 导出到根目录）')
+      .addText((t) =>
+        t.setValue(settings.exportDir).onChange(async (v) => {
+          settings.exportDir = v.trim().replace(/^\/+|\/+$/g, '')
+          t.setValue(settings.exportDir)
+          await this.plugin.saveSettings()
+        }),
+      )
   }
 
   // ---------- 数据 ----------

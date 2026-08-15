@@ -74,6 +74,15 @@ describe('migrateSettings（旧版单提供方 → 多提供方）', () => {
     expect(s.providers[0]!.id).toBe('deepseek')
     expect(s.streamingEnabled).toBe(true)
     expect(s.renderMarkdown).toBe(true)
+    expect(s.exportDir).toBe('sessions')
+  })
+
+  it('导出目录迁移：缺失用默认 sessions，非法留空归一为空串', () => {
+    expect(migrateSettings({} as Record<string, unknown>).exportDir).toBe('sessions')
+    expect(migrateSettings({ exportDir: ' Exports/ ' } as Record<string, unknown>).exportDir).toBe(
+      'Exports/',
+    )
+    expect(migrateSettings({ exportDir: '' } as Record<string, unknown>).exportDir).toBe('')
   })
 
   it('旧字段迁移为 providers[0]', () => {

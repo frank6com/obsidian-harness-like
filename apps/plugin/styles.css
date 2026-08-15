@@ -140,12 +140,36 @@
   margin-bottom: 4px;
 }
 
+/* 选中态：主题没有 --background-modifier-active（无效变量导致选中行无底色），
+   改用存在的 --background-modifier-active-hover（带主题色淡染），并回退 hover 色，
+   保证任何主题下选中行都比普通行的 hover 更明显（不再"反了"） */
 .dsh-session-row.is-active {
-  background: var(--background-modifier-active);
+  background: var(--background-modifier-active-hover, var(--background-modifier-hover));
 }
 
 .dsh-session-row.is-active .dsh-session-btn {
   background: transparent;
+}
+
+.dsh-session-row.is-active .dsh-session-title {
+  color: var(--text-accent);
+  font-weight: 600;
+}
+
+/* 标题与子行单行省略：不允许内容撑宽列表（否则列表横向滚动会裁掉右侧内容，
+   如"全局 · N 条"的"条"显示不全） */
+.dsh-session-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsh-session-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dsh-session-actions {
@@ -177,11 +201,6 @@
 
 .dsh-session-action-danger:hover {
   color: var(--text-error);
-}
-
-.dsh-session-sub {
-  font-size: 11px;
-  color: var(--text-faint);
 }
 
 .dsh-chat-messages {
