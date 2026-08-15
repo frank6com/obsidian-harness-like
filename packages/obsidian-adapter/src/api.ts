@@ -28,6 +28,8 @@ export interface VaultLike {
 export interface WorkspaceLike {
   getActiveFile(): string | null
   onFileOpen(cb: (path: string) => void): { unref(): void }
+  /** 打开的同类型 leaf（卸载视图前先关闭，避免 Obsidian 拒绝注销使用中的视图） */
+  getLeavesOfType(type: string): Array<{ detach(): void }>
 }
 
 export interface CommandLike {

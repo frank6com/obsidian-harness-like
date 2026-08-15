@@ -27,7 +27,7 @@ function stubApi(records: { commands: Array<{ id: string; name?: string }> }): O
       getMarkdownPaths: () => [],
       on: () => ({ unref: () => {} }),
     },
-    workspace: { getActiveFile: () => null, onFileOpen: () => ({ unref: () => {} }) },
+    workspace: { getActiveFile: () => null, onFileOpen: () => ({ unref: () => {} }), getLeavesOfType: () => [] },
     commands: {
       addCommand: (cmd) => {
         records.commands.push({ id: cmd.id, name: cmd.name })

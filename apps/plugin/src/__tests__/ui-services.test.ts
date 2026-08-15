@@ -18,7 +18,7 @@ function stubApi(overrides: Record<string, unknown> = {}) {
       getMarkdownPaths: () => [],
       on: () => ({ unref: () => {} }),
     },
-    workspace: { getActiveFile: () => null, onFileOpen: () => ({ unref: () => {} }) },
+    workspace: { getActiveFile: () => null, onFileOpen: () => ({ unref: () => {} }), getLeavesOfType: () => [] },
     commands: { addCommand: (c: { id: string; name: string }) => c, removeCommand: () => {} },
     viewRegistry: { registerView: () => {}, unregisterView: () => {}, openView: () => {} },
     ribbon: { addRibbonIcon: () => ({ remove: () => {} }) },
@@ -95,5 +95,31 @@ describe('命令卸载与 vault 别名（真实 Obsidian 行为）', () => {
     await ctx.plugin(obsidianAdapterPlugin(stubApi()))
     expect(ctx.vault.getMarkdownPaths()).toEqual([])
     expect(ctx.vault.listMarkdown()).toEqual([])
+  })
+})
+
+describe('视图卸载容错（dispose 链不中断）', () => {
+  it('卸载视图：先 detach 打开的 leaf；unregisterView 抛错被吞，不影响后续 disposer', async () => {
+    const detach = vi.fn()
+    const unregisterView = vi.fn(() => {
+      throw new Error('view type in use')
+    })
+    const ctx = new Context()
+    await ctx.plugin(
+      obsidianAdapterPlugin(
+        stubApi({
+          workspace: {
+            getActiveFile: () => null,
+            onFileOpen: () => ({ unref: () => {} }),
+            getLeavesOfType: () => [{ detach }],
+          },
+          viewRegistry: { registerView: () => {}, unregisterView, openView: () => {} },
+        }),
+      ),
+    )
+    const dispose = ctx.views.registerView('my-view', () => {})
+    expect(() => dispose()).not.toThrow()
+    expect(detach).toHaveBeenCalled()
+    expect(unregisterView).toHaveBeenCalled()
   })
 })

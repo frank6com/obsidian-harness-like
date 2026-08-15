@@ -88,6 +88,9 @@ export function toApiLike(app: App, plugin?: Plugin): ObsidianApiLike {
       getActiveFile() {
         return app.workspace.getActiveFile()?.path ?? null
       },
+      getLeavesOfType(type) {
+        return app.workspace.getLeavesOfType(type)
+      },
       onFileOpen(cb) {
         const ref = app.workspace.on('file-open', (file) => {
           if (file) cb(file.path)

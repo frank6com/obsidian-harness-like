@@ -29,7 +29,7 @@ function stubApi(records: {
       getMarkdownPaths: () => ['a.md', 'Inbox/b.md'],
       on: () => ({ unref: () => {} }),
     },
-    workspace: { getActiveFile: () => null, onFileOpen: () => ({ unref: () => {} }) },
+    workspace: { getActiveFile: () => null, onFileOpen: () => ({ unref: () => {} }), getLeavesOfType: () => [] },
     commands: {
       addCommand: (cmd) => {
         records.commands.push(cmd.id)

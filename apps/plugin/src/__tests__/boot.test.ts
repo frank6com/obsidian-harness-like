@@ -28,6 +28,7 @@ function stubApi(): ObsidianApiLike {
     workspace: {
       getActiveFile: () => null,
       onFileOpen: () => ({ unref: () => {} }),
+      getLeavesOfType: () => [],
     },
     commands: {
       addCommand: (cmd) => cmd,

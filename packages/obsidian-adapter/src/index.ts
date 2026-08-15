@@ -131,7 +131,16 @@ export class ViewsService {
 
   registerView(type: string, creator: unknown): () => void {
     this.api.viewRegistry.registerView(type, creator)
-    return () => this.api.viewRegistry.unregisterView(type)
+    return () => {
+      try {
+        // 先关闭该类型所有打开的 leaf：Obsidian 拒绝注销使用中的视图类型，
+        // 若在此抛错会中断 Cordis 串行 dispose 链，导致 ribbon/命令等后续 disposer 不执行
+        for (const leaf of this.api.workspace.getLeavesOfType(type)) leaf.detach()
+        this.api.viewRegistry.unregisterView(type)
+      } catch (err) {
+        console.warn('[dsh] 视图卸载失败（忽略）:', err)
+      }
+    }
   }
 
   /** 打开（或聚焦）已注册类型的视图面板 */
@@ -175,7 +184,13 @@ export class RibbonService {
 
   addRibbonIcon(icon: string, title: string, callback: () => void): () => void {
     const handle = this.api.ribbon.addRibbonIcon(icon, title, callback)
-    return () => handle.remove()
+    return () => {
+      try {
+        handle.remove()
+      } catch (err) {
+        console.warn('[dsh] 图标卸载失败（忽略）:', err)
+      }
+    }
   }
 }
 
