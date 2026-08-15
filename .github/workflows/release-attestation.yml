@@ -1,0 +1,45 @@
+# Release 资产来源证明（GitHub Artifact Attestations）
+# 触发：推版本 tag（未来版本自动）或 release 发布（含手动重建）
+# 流程：检出 tag → 锁定依赖构建 → 对根目录插件包生成 attestation 并附加到 release，
+# 让用户可加密验证 release 资产确实由本仓库源码构建。
+name: release-attestation
+
+on:
+  push:
+    tags: ['*.*.*']
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build plugin package
+        run: pnpm build
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            styles.css
+            manifest.json
