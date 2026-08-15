@@ -1,5 +1,5 @@
 /**
- * dsh-obsidian 主入口。
+ * harness-like 主入口。
  *
  * onload：启动 Cordis 运行时（obsidian-adapter + harness-base + plugin-runtime），
  * 注册内置工具、视图、命令、设置页，加载已授权用户插件。
@@ -11,10 +11,10 @@ import { Plugin, type Editor, type WorkspaceLeaf } from 'obsidian'
 import * as obsidianModule from 'obsidian'
 import * as cordis from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
-import { harnessServicesPlugin, selectSessionsToPrune, shouldLog } from '@dsh-obsidian/harness-base'
+import { harnessServicesPlugin, selectSessionsToPrune, shouldLog } from '@harness-like/harness-base'
 import { isPathInDirs } from './policy'
-import { obsidianAdapterPlugin } from '@dsh-obsidian/obsidian-adapter'
-import { runtimePlugin } from '@dsh-obsidian/plugin-runtime'
+import { obsidianAdapterPlugin } from '@harness-like/obsidian-adapter'
+import { runtimePlugin } from '@harness-like/plugin-runtime'
 import { toApiLike } from './obsidian-bridge'
 import {
   defaultSettings,
@@ -22,10 +22,10 @@ import {
   parseHeaderLines,
   parseModelId,
   parseToolPolicy,
-  type DshSettings,
+  type HarnessLikeSettings,
   type ProviderConfig,
 } from './settings'
-import { DshSettingsTab, type TabId } from './settings-tab'
+import { HarnessLikeSettingsTab, type TabId } from './settings-tab'
 import { WriteApprovalModal, GrantModal, ConfirmModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
 import { pluginDevToolsPlugin } from './tools/plugin-dev'
@@ -42,10 +42,10 @@ const cordisShim = (id: string): unknown => {
   return require(id)
 }
 
-export default class DshObsidianPlugin extends Plugin {
-  override settings: DshSettings = defaultSettings()
+export default class HarnessLikePlugin extends Plugin {
+  override settings: HarnessLikeSettings = defaultSettings()
   private ctx: Context | null = null
-  private settingsTab?: DshSettingsTab
+  private settingsTab?: HarnessLikeSettingsTab
   private fibers: Array<{ dispose(): Promise<void> }> = []
 
   override async onload(): Promise<void> {
@@ -55,7 +55,7 @@ export default class DshObsidianPlugin extends Plugin {
       this.app.vault.adapter as { getBasePath?: () => string }
     ).getBasePath?.()
     if (!vaultRoot) {
-      console.warn('[dsh-obsidian] 无法获取 vault 根路径，沙箱将拒绝所有写操作')
+      console.warn('[harness-like] 无法获取 vault 根路径，沙箱将拒绝所有写操作')
     }
     const root = vaultRoot ?? ''
     const dataDir = path.join(root, '.obsidian', 'dsh')
@@ -72,7 +72,7 @@ export default class DshObsidianPlugin extends Plugin {
         obsidianAdapterPlugin(apiLike, {
           load: () => this.settings,
           save: (d) => {
-            this.settings = d as unknown as DshSettings
+            this.settings = d as unknown as HarnessLikeSettings
             void this.saveSettings()
           },
         }),
@@ -207,7 +207,7 @@ export default class DshObsidianPlugin extends Plugin {
       name: '重载已授权的用户插件',
       callback: () => void this.loadUserPlugins(),
     })
-    this.settingsTab = new DshSettingsTab(this.app, this, ctx)
+    this.settingsTab = new HarnessLikeSettingsTab(this.app, this, ctx)
     this.addSettingTab(this.settingsTab)
     // 设置 UI 桥：对话面板可跳转到指定设置 tab
     ctx.reflect.provide('dshSettingsUi', {
@@ -219,7 +219,7 @@ export default class DshObsidianPlugin extends Plugin {
     await this.loadUserPlugins()
     // 会话保留策略：清理过期会话
     await this.pruneSessions()
-    console.info('[dsh-obsidian] onload 完成')
+    console.info('[harness-like] onload 完成')
   }
 
   override async onunload(): Promise<void> {
@@ -227,7 +227,7 @@ export default class DshObsidianPlugin extends Plugin {
       try {
         await fiber.dispose()
       } catch (err) {
-        console.warn('[dsh-obsidian] 卸载 fiber 异常', err)
+        console.warn('[harness-like] 卸载 fiber 异常', err)
       }
     }
     this.fibers = []
@@ -272,7 +272,7 @@ export default class DshObsidianPlugin extends Plugin {
       if (!this.ctx.approval.isGranted(id, manifest.version)) continue
       const result = await this.ctx.pluginRuntime.load(id)
       if (result.status === 'error') {
-        console.warn(`[dsh-obsidian] 插件加载失败 ${id}: ${result.error}`)
+        console.warn(`[harness-like] 插件加载失败 ${id}: ${result.error}`)
       }
     }
   }
@@ -285,10 +285,10 @@ export default class DshObsidianPlugin extends Plugin {
       const stale = selectSessionsToPrune(list, Date.now(), this.settings.sessionRetentionDays)
       for (const id of stale) await this.ctx.sessionLog.remove(id)
       if (stale.length > 0 && shouldLog('info', this.settings.logLevel)) {
-        console.info(`[dsh-obsidian] 已清理 ${stale.length} 个过期会话（保留 ${this.settings.sessionRetentionDays} 天）`)
+        console.info(`[harness-like] 已清理 ${stale.length} 个过期会话（保留 ${this.settings.sessionRetentionDays} 天）`)
       }
     } catch (err) {
-      console.warn('[dsh-obsidian] 会话清理失败', err)
+      console.warn('[harness-like] 会话清理失败', err)
     }
   }
 

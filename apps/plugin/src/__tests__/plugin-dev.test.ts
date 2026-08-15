@@ -13,8 +13,8 @@ import {
   ApprovalService,
   SandboxPolicy,
   toolsCompatPlugin,
-} from '@dsh-obsidian/harness-base'
-import { runtimePlugin } from '@dsh-obsidian/plugin-runtime'
+} from '@harness-like/harness-base'
+import { runtimePlugin } from '@harness-like/plugin-runtime'
 import { pluginDevToolsPlugin } from '../tools/plugin-dev'
 
 /** 基于真实文件系统的 vault stub（createFolder 需要真实目录） */

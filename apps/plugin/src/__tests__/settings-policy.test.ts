@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { shouldLog, selectSessionsToPrune, type SessionSummary } from '@dsh-obsidian/harness-base'
+import { shouldLog, selectSessionsToPrune, type SessionSummary } from '@harness-like/harness-base'
 import {
   listVisibleAgents,
   migrateSettings,

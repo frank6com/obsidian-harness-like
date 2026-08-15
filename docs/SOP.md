@@ -1,4 +1,4 @@
-# dsh-obsidian 开发与发布 SOP
+# harness-like 开发与发布 SOP
 
 > 适用：本仓库所有开发/发布/维护动作。涉及上游依赖升级、发布、数据安全相关操作，必须遵循本规范。
 > 基线：dsh rc 期（2026-08，`@deepseek-ai/dsh` 0.1.0-rc.6）。所有版本号以 `research/` 缓存与 `npm view` 实时核对为准。
@@ -30,7 +30,7 @@ pnpm dev             # watch 构建；onEnd 钩子自动把产物同步进 dev-v
 4. **备选（接真实 vault）**：`pnpm link:vault <vault>` 做文件级软链（禁止目录级软链，会把 `data.json` 穿透进仓库）。
 5. DevTools（`Cmd+Opt+I`）查看 console；常见问题见 §6。
 6. 提交前：`pnpm lint && pnpm test` + 手动验收清单（§5）。
-7. 提交信息规范：`feat|fix|chore(dsh-obsidian|adapter|runtime|ui|docs): 摘要`，中英文均可，附上游版本号（涉及升级时）。
+7. 提交信息规范：`feat|fix|chore(harness-like|adapter|runtime|ui|docs): 摘要`，中英文均可，附上游版本号（涉及升级时）。
 
 ## 3. 编码规范
 

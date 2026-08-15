@@ -5,19 +5,19 @@
 
 import { App, PluginSettingTab, Setting } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
-import type DshObsidianPlugin from './main'
+import type HarnessLikePlugin from './main'
 import { AgentEditModal, ConfirmModal, ModelPickModal } from './modals'
 import { BUILTIN_AGENTS, type AgentMode, type AgentPreset } from './settings'
 
 export type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
 
-export class DshSettingsTab extends PluginSettingTab {
+export class HarnessLikeSettingsTab extends PluginSettingTab {
   private activeTab: TabId = 'model'
   private activeProviderId = ''
 
   constructor(
     app: App,
-    private plugin: DshObsidianPlugin,
+    private plugin: HarnessLikePlugin,
     private ctx: Context,
   ) {
     super(app, plugin)

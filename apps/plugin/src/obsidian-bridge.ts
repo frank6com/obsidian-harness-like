@@ -7,7 +7,7 @@
  */
 
 import { App, Notice, Plugin, TFile, type EventRef, type WorkspaceLeaf } from 'obsidian'
-import type { CommandsLike, ObsidianApiLike, ViewRegistryLike } from '@dsh-obsidian/obsidian-adapter'
+import type { CommandsLike, ObsidianApiLike, ViewRegistryLike } from '@harness-like/obsidian-adapter'
 
 /** esbuild bundle 内可见的宿主 require（解析 node 内置模块 / electron / obsidian） */
 declare function require(id: string): unknown

@@ -1,4 +1,4 @@
-# dsh-obsidian 设计文档
+# harness-like 设计文档
 
 > 状态：草案 v0.1 ｜ 日期：2026-08-14 ｜ 上游基线：`@deepseek-ai/dsh` 0.1.0-rc.6（开发者预览期，官方声明存在破坏性变更）
 >
@@ -153,7 +153,7 @@ obsidian-harness-cordis/
 ### 5.5 动态插件子系统
 
 - **存储**：每个插件一个目录 `.obsidian/dsh-plugins/<id>/`（`package.json` + `src/` + 编译产物 `main.js`）。**只执行用户本地编写的文件，绝不自动下载/执行远程代码**（商店审核与安全底线）。执行机制见 5.5.1。
-- **为什么不放插件自身目录**（`.obsidian/plugins/dsh-obsidian/`）：该目录由 Obsidian 插件管理器/更新流程接管，发布更新会覆盖目录内的发布文件，官方仅保证 `data.json` 保留——用户插件源码放进去会在每次升级/卸载时被删除。用户内容一律放 vault 级目录（`.obsidian/dsh-plugins/`），随 vault 备份/同步，与插件生命周期解耦。我们的插件目录只承载**内置示例插件模板**（只读，用户复制到 `.obsidian/dsh-plugins/` 后创作）。
+- **为什么不放插件自身目录**（`.obsidian/plugins/harness-like/`）：该目录由 Obsidian 插件管理器/更新流程接管，发布更新会覆盖目录内的发布文件，官方仅保证 `data.json` 保留——用户插件源码放进去会在每次升级/卸载时被删除。用户内容一律放 vault 级目录（`.obsidian/dsh-plugins/`），随 vault 备份/同步，与插件生命周期解耦。我们的插件目录只承载**内置示例插件模板**（只读，用户复制到 `.obsidian/dsh-plugins/` 后创作）。
 - **状态机**：`defined → (审批) → running → stopped`；update / rollback 语义对齐 dsh 动态插件（保留 pluginId / packageId / runId 概念）。
 - **审批与 grant**：define 不执行；run 需用户确认（原生 modal）；单勾 = 仅当前版本，双勾 = 信任后续版本；grant 持久化到插件 data.json。
 - **管理 UI**：PluginManagerView 列出插件/版本/运行状态/诊断（对齐 dsh 的 run 卡片概念），提供 define / run / stop / undefine / update / rollback。
@@ -189,7 +189,7 @@ obsidian-harness-cordis/
 
 | 数据 | 位置 | 说明 |
 |---|---|---|
-| 插件配置 | `<vault>/.obsidian/plugins/dsh-obsidian/data.json` | Obsidian 标准 |
+| 插件配置 | `<vault>/.obsidian/plugins/harness-like/data.json` | Obsidian 标准 |
 | 会话日志 | `.obsidian/dsh/sessions/*.jsonl` | 追加式；损坏时归档重建 |
 | 用户插件 | `.obsidian/dsh-plugins/` | 本地源码 |
 | 凭据 | `data.json`（明文，Obsidian 惯例） | 文档提示风险；支持系统钥匙串为后续优化项 |

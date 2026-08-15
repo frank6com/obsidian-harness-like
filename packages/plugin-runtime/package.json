@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-obsidian/plugin-runtime",
+  "name": "@harness-like/plugin-runtime",
   "version": "0.0.1",
   "private": true,
   "main": "src/index.ts",

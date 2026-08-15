@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# link-dev.sh —— 把 dsh-obsidian 构建产物以【文件级软链】接入测试 vault。
+# link-dev.sh —— 把 harness-like 构建产物以【文件级软链】接入测试 vault。
 #
 # 原理：vault 侧插件目录保持真实目录，仅软链四个产物文件；
 # Obsidian 的 data.json 写入真实目录（vault 侧），永不污染项目仓库。
@@ -17,7 +17,7 @@ if [[ -z "$VAULT" ]]; then
 fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PLUGIN_DIR="$VAULT/.obsidian/plugins/dsh-obsidian"
+PLUGIN_DIR="$VAULT/.obsidian/plugins/harness-like"
 mkdir -p "$PLUGIN_DIR"
 
 # 名称 → 仓库内相对路径（main.js 在 dist/，其余在 apps/plugin/ 根）

@@ -1,5 +1,5 @@
 /**
- * dsh-obsidian harness-base: 共享类型。
+ * harness-like harness-base: 共享类型。
  *
  * 会话事件命名对齐 dsh 的持久事件域（session/event）：
  * turn/*、user/message、assistant/message、tool/call、tool/result。

@@ -9,8 +9,8 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 import { Context } from '@deepseek-ai/cordis'
 import * as cordis from '@deepseek-ai/cordis'
-import { ToolRegistry } from '@dsh-obsidian/harness-base'
-import { loadUserPlugin } from '@dsh-obsidian/plugin-runtime'
+import { ToolRegistry } from '@harness-like/harness-base'
+import { loadUserPlugin } from '@harness-like/plugin-runtime'
 
 const exampleDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

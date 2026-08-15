@@ -4,7 +4,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { obsidianAdapterPlugin } from '@dsh-obsidian/obsidian-adapter'
+import { obsidianAdapterPlugin } from '@harness-like/obsidian-adapter'
 
 function stubApi(overrides: Record<string, unknown> = {}) {
   return {

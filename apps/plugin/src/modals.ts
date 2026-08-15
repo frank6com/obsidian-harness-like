@@ -4,7 +4,7 @@
 
 import { App, Modal, Setting } from 'obsidian'
 import type { AgentMode, AgentPreset } from './settings'
-import type { GrantMode } from '@dsh-obsidian/harness-base'
+import type { GrantMode } from '@harness-like/harness-base'
 
 export type GrantChoice = { mode: GrantMode } | { cancel: true }
 

@@ -10,7 +10,7 @@ const DEV_VAULT_DIR = path.resolve(
   ROOT,
   process.env.DEV_VAULT_DIR || 'dev-vault',
 )
-const PLUGIN_DIR = path.join(DEV_VAULT_DIR, '.obsidian', 'plugins', 'dsh-obsidian')
+const PLUGIN_DIR = path.join(DEV_VAULT_DIR, '.obsidian', 'plugins', 'harness-like')
 
 /** 构建后把四个产物同步进 dev-vault 的插件目录（dev-vault 不存在则跳过） */
 function syncDevVault() {

@@ -14,9 +14,9 @@ import * as os from 'os'
 import * as path from 'path'
 import { Context } from '@deepseek-ai/cordis'
 import * as cordis from '@deepseek-ai/cordis'
-import { toolsCompatPlugin } from '@dsh-obsidian/harness-base'
-import { CommandsService } from '@dsh-obsidian/obsidian-adapter'
-import { runtimePlugin, loadUserPlugin } from '@dsh-obsidian/plugin-runtime'
+import { toolsCompatPlugin } from '@harness-like/harness-base'
+import { CommandsService } from '@harness-like/obsidian-adapter'
+import { runtimePlugin, loadUserPlugin } from '@harness-like/plugin-runtime'
 
 async function setup(removeCommandThrows: boolean) {
   const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-reload-'))

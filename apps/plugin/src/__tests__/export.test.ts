@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { safeFileName, sessionToMarkdown } from '../export'
-import type { SessionEvent } from '@dsh-obsidian/harness-base'
+import type { SessionEvent } from '@harness-like/harness-base'
 
 const events: SessionEvent[] = [
   { type: 'user/message', ts: 1, sessionId: 's1', content: '统计笔记' },

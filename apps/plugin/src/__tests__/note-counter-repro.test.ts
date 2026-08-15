@@ -9,9 +9,9 @@ import * as os from 'os'
 import * as path from 'path'
 import { Context } from '@deepseek-ai/cordis'
 import * as cordis from '@deepseek-ai/cordis'
-import { harnessServicesPlugin } from '@dsh-obsidian/harness-base'
-import { obsidianAdapterPlugin, type ObsidianApiLike } from '@dsh-obsidian/obsidian-adapter'
-import { runtimePlugin, loadUserPlugin } from '@dsh-obsidian/plugin-runtime'
+import { harnessServicesPlugin } from '@harness-like/harness-base'
+import { obsidianAdapterPlugin, type ObsidianApiLike } from '@harness-like/obsidian-adapter'
+import { runtimePlugin, loadUserPlugin } from '@harness-like/plugin-runtime'
 
 function stubApi(records: {
   views: string[]

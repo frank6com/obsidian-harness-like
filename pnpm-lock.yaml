@@ -23,13 +23,13 @@ importers:
       '@deepseek-ai/cordis':
         specifier: 4.0.1
         version: 4.0.1
-      '@dsh-obsidian/harness-base':
+      '@harness-like/harness-base':
         specifier: workspace:*
         version: link:../../packages/harness-base
-      '@dsh-obsidian/obsidian-adapter':
+      '@harness-like/obsidian-adapter':
         specifier: workspace:*
         version: link:../../packages/obsidian-adapter
-      '@dsh-obsidian/plugin-runtime':
+      '@harness-like/plugin-runtime':
         specifier: workspace:*
         version: link:../../packages/plugin-runtime
       dompurify:

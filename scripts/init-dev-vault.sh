@@ -37,7 +37,7 @@ DEV_VAULT_DIR="$VAULT" pnpm --dir "$ROOT" build
 
 echo ""
 echo "dev-vault 就绪: $VAULT_ABS"
-echo "  插件目录: $VAULT_ABS/.obsidian/plugins/dsh-obsidian/（构建后自动同步）"
+echo "  插件目录: $VAULT_ABS/.obsidian/plugins/harness-like/（构建后自动同步）"
 echo "  示例插件: $VAULT_ABS/.obsidian/dsh-plugins/my-first-plugin/"
 echo ""
 echo "用 Obsidian 打开:  open -a Obsidian \"$VAULT_ABS\""

@@ -1,5 +1,5 @@
 /**
- * my-first-plugin：dsh-obsidian 示例 Cordis 插件。
+ * my-first-plugin：harness-like 示例 Cordis 插件。
  *
  * - 注册一个工具 count_notes（进入 agent 的工具表）
  * - 注册一条 Obsidian 命令（出现在命令面板）

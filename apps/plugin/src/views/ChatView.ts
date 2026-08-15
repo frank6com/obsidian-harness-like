@@ -13,7 +13,7 @@ import {
   type AgentPhase,
   type SessionEvent,
   type ToolExecution,
-} from '@dsh-obsidian/harness-base'
+} from '@harness-like/harness-base'
 import { attachCodeCopyButtons, renderMarkdown } from '../markdown'
 import { agentAllows } from '../mode'
 import { listVisibleAgents, type AgentPreset } from '../settings'

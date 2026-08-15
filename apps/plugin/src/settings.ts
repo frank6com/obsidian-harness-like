@@ -1,4 +1,4 @@
-import type { GrantRecord, LogLevel } from '@dsh-obsidian/harness-base'
+import type { GrantRecord, LogLevel } from '@harness-like/harness-base'
 
 /** 智能体模式（对齐 dsh 的预设模式） */
 export type AgentMode = 'chat' | 'edit' | 'create'
@@ -55,7 +55,7 @@ export interface ProviderConfig {
   extraHeaders: string[]
 }
 
-export interface DshSettings {
+export interface HarnessLikeSettings {
   /** 模型提供方（通道）列表 */
   providers: ProviderConfig[]
   /** 默认模型（"providerId/model" 粒度），新会话兜底 */
@@ -93,7 +93,7 @@ export const DEFAULT_PROVIDER: ProviderConfig = {
   extraHeaders: [],
 }
 
-export function defaultSettings(): DshSettings {
+export function defaultSettings(): HarnessLikeSettings {
   return {
     providers: [{ ...DEFAULT_PROVIDER, models: [...DEFAULT_PROVIDER.models] }],
     defaultModelId: 'deepseek/deepseek-chat',
@@ -137,7 +137,7 @@ function asProvider(p: Partial<ProviderConfig> & { model?: string }): ProviderCo
 }
 
 /** 旧版配置 → 新版（多提供方 + 模型列表 + 模型级默认） */
-export function migrateSettings(raw: Record<string, unknown> | undefined): DshSettings {
+export function migrateSettings(raw: Record<string, unknown> | undefined): HarnessLikeSettings {
   const base = defaultSettings()
   if (!raw || typeof raw !== 'object') return base
   const r = raw as Record<string, unknown>

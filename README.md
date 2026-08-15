@@ -1,4 +1,4 @@
-# dsh-obsidian
+# harness-like
 
 **DeepSeek Harness for Obsidian**：在 Obsidian 内运行一个 Cordis 运行时，把 Obsidian 的 API 暴露为 Cordis 服务——用户编写的 Cordis 插件可以直接扩展 Obsidian（注册工具、命令、服务、面板），agent 直接操作你的笔记库。
 
@@ -19,13 +19,13 @@
 ## 安装（手动，BRAT 待仓库上线 GitHub）
 
 1. 构建：`pnpm install && pnpm build`
-2. 在 vault 下创建目录 `.obsidian/plugins/dsh-obsidian/`
+2. 在 vault 下创建目录 `.obsidian/plugins/harness-like/`
 3. 复制 `apps/plugin/dist/main.js`、`apps/plugin/manifest.json`、`apps/plugin/styles.css` 到该目录
-4. Obsidian 设置 → 第三方插件 → 重新加载 → 启用 **dsh-obsidian**
+4. Obsidian 设置 → 第三方插件 → 重新加载 → 启用 **harness-like**
 
 ## 使用
 
-1. **设置**：命令面板 → "打开 dsh 设置"（或 设置 → 第三方插件 → dsh-obsidian）→ 填写 API Key（默认 DeepSeek 端点）
+1. **设置**：命令面板 → "打开 dsh 设置"（或 设置 → 第三方插件 → harness-like）→ 填写 API Key（默认 DeepSeek 端点）
 2. **Chat**：点击侧边栏机器人图标 → 输入消息 → agent 可调用工具读写笔记；写操作会弹审批（可"本会话允许写"）
 3. **示例插件**：把 `apps/plugin/examples/my-first-plugin/` 复制到 `.obsidian/dsh-plugins/my-first-plugin/` → 插件管理器 → "授权并加载"（单勾=仅此版本 / 双勾=信任后续）
 
@@ -50,7 +50,7 @@ open -a Obsidian dev-vault   # 用 Obsidian 打开测试库
 pnpm dev                  # watch 构建，构建后自动同步产物到 dev-vault 插件目录
 ```
 
-构建后的四个产物由 esbuild 的 onEnd 钩子自动写入 `dev-vault/.obsidian/plugins/dsh-obsidian/`（`DEV_VAULT_DIR` 环境变量可改目录），所以日常就是：改代码 → 自动构建 → Obsidian 重载（配合 obsidian-hot-reload 自动刷新）。
+构建后的四个产物由 esbuild 的 onEnd 钩子自动写入 `dev-vault/.obsidian/plugins/harness-like/`（`DEV_VAULT_DIR` 环境变量可改目录），所以日常就是：改代码 → 自动构建 → Obsidian 重载（配合 obsidian-hot-reload 自动刷新）。
 
 **接入真实 vault（替代方案）**：文件级软链，零复制、数据留在 vault 侧：
 

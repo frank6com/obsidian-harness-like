@@ -1,5 +1,5 @@
 {
-  "name": "dsh-obsidian-plugin",
+  "name": "harness-like-plugin",
   "version": "0.1.0",
   "private": true,
   "main": "dist/main.js",
@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.1",
-    "@dsh-obsidian/harness-base": "workspace:*",
-    "@dsh-obsidian/obsidian-adapter": "workspace:*",
-    "@dsh-obsidian/plugin-runtime": "workspace:*",
+    "@harness-like/harness-base": "workspace:*",
+    "@harness-like/obsidian-adapter": "workspace:*",
+    "@harness-like/plugin-runtime": "workspace:*",
     "dompurify": "^3.4.13",
     "marked": "^18.0.9"
   },

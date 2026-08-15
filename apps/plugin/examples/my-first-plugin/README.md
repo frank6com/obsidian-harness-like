@@ -1,6 +1,6 @@
 # my-first-plugin（示例插件）
 
-dsh-obsidian 的入门示例：注册一个工具（agent 可用）和一条命令（Obsidian 命令面板可见）。
+harness-like 的入门示例：注册一个工具（agent 可用）和一条命令（Obsidian 命令面板可见）。
 
 ## 安装
 

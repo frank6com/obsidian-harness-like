@@ -11,7 +11,7 @@
 
 import * as path from 'path'
 import type { Plugin } from '@deepseek-ai/cordis'
-import type { PluginRecord } from '@dsh-obsidian/plugin-runtime'
+import type { PluginRecord } from '@harness-like/plugin-runtime'
 
 export interface PluginDevToolsOptions {
   /** 授权确认（宿主弹窗）；返回是否已授权 */

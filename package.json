@@ -1,10 +1,10 @@
 {
-  "name": "dsh-obsidian",
+  "name": "harness-like",
   "private": true,
   "packageManager": "pnpm@10.30.3",
   "scripts": {
-    "build": "pnpm --filter dsh-obsidian-plugin build",
-    "dev": "pnpm --filter dsh-obsidian-plugin dev",
+    "build": "pnpm --filter harness-like-plugin build",
+    "dev": "pnpm --filter harness-like-plugin dev",
     "test": "vitest run",
     "init:vault": "bash scripts/init-dev-vault.sh",
     "link:vault": "bash scripts/link-dev.sh",

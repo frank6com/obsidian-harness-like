@@ -110,7 +110,7 @@ export class DeepSeekAdapter extends LlmAdapter {
 
   override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     const cfg = this.getConfigByProvider(options.provider)
-    const apiKey = assertUsableApiKey(cfg.apiKey, 'dsh-obsidian', 'settings.apiKey')
+    const apiKey = assertUsableApiKey(cfg.apiKey, 'harness-like', 'settings.apiKey')
     const url = cfg.baseURL.replace(/\/+$/, '') + '/chat/completions'
 
     const body: Record<string, unknown> = {

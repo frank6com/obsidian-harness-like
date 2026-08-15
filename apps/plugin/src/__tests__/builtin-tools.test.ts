@@ -9,8 +9,8 @@ import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import { Context } from '@deepseek-ai/cordis'
-import { SandboxPolicy, toolsCompatPlugin } from '@dsh-obsidian/harness-base'
-import { EditorService } from '@dsh-obsidian/obsidian-adapter'
+import { SandboxPolicy, toolsCompatPlugin } from '@harness-like/harness-base'
+import { EditorService } from '@harness-like/obsidian-adapter'
 import { builtinToolsPlugin } from '../tools/builtin'
 
 async function setup(

@@ -3,7 +3,7 @@
  * 纯函数，可单测。
  */
 
-import type { SessionEvent } from '@dsh-obsidian/harness-base'
+import type { SessionEvent } from '@harness-like/harness-base'
 
 export interface SessionExportOptions {
   title: string
