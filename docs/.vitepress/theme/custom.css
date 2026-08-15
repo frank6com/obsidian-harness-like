@@ -1,0 +1,6 @@
+/* 首页 hero 副标题缩小 */
+.VPHero .description {
+  font-size: 17px;
+  line-height: 1.6;
+  max-width: 720px;
+}
