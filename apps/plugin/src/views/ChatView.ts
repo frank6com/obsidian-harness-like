@@ -65,6 +65,8 @@ export class ChatView extends ItemView {
   private turnText: string[] = []
   /** 当前轮次是否已挂复制按钮 */
   private turnCopied = false
+  /** 最近一次渲染的 assistant 原始内容（防重比较用，textContent 不可靠） */
+  private lastAssistantRaw: string | null = null
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -229,10 +231,9 @@ export class ChatView extends ItemView {
       this.closeTurn()
       void this.refreshSessions()
     } else if (e.type === 'assistant/message') {
-      // 防重：多个 Chat 面板实例会同时收到同一事件；
-      // 若最后一条已渲染的 assistant 内容与本次相同（且非流式进行中）则跳过
-      const lastAssistant = [...this.messagesEl.querySelectorAll('.dsh-msg-assistant')].pop()
-      if (!this.streamingEl && lastAssistant && lastAssistant.textContent === e.content) {
+      // 防重：多个 Chat 面板实例会同时收到同一事件（广播），
+      // 同一实例内相同原始内容只渲染一次（用原始内容比较，textContent 受渲染影响不可靠）
+      if (!this.streamingEl && this.lastAssistantRaw === e.content) {
         return
       }
       if (this.streamingEl) {
@@ -242,6 +243,7 @@ export class ChatView extends ItemView {
       } else {
         this.appendMessage('assistant', e.content)
       }
+      this.lastAssistantRaw = e.content
       this.turnText.push(`${t('chat.msg.assistant')}：\n${e.content}`)
     } else if (e.type === 'system/message') {
       this.appendMessage('system', e.content)
@@ -774,6 +776,7 @@ export class ChatView extends ItemView {
     this.turnEl = null
     this.turnText = []
     this.turnCopied = false
+    this.lastAssistantRaw = null
     const id = this.currentSessionId
     if (!id) {
       this.renderWelcome()
@@ -803,6 +806,7 @@ export class ChatView extends ItemView {
       } else if (e.type === 'assistant/message') {
         this.openTurnContainer()
         this.turnText.push(`${t('chat.msg.assistant')}：\n${e.content}`)
+        this.lastAssistantRaw = e.content
         this.appendMessage('assistant', e.content)
       } else if (e.type === 'system/message') {
         this.openTurnContainer()
