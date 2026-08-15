@@ -64,7 +64,7 @@ async function bootHarness() {
           vaultRoot: root,
           dataDir,
           configDir: '.obsidian',
-          pluginsDir: path.join(root, '.obsidian', 'dsh-plugins'),
+          pluginsDir: path.join(root, '.obsidian', 'harness-like-plugins'),
           tempDir: path.join(dataDir, 'tmp'),
         },
         sessionDir: path.join(dataDir, 'sessions'),
@@ -79,7 +79,7 @@ async function bootHarness() {
         defaultModel: () => 'deepseek-chat',
       }),
     ),
-    ctx.plugin(runtimePlugin({ pluginsDir: path.join(root, '.obsidian', 'dsh-plugins'), require: () => undefined })),
+    ctx.plugin(runtimePlugin({ pluginsDir: path.join(root, '.obsidian', 'harness-like-plugins'), require: () => undefined })),
     ctx.plugin(
       builtinToolsPlugin({
         

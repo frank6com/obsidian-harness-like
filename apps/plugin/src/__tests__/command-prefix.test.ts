@@ -49,7 +49,7 @@ function stubApi(records: { commands: Array<{ id: string; name?: string }> }): O
 }
 
 async function makePlugin(root: string, js: string): Promise<string> {
-  const dir = path.join(root, '.obsidian', 'dsh-plugins', 'prefix-test')
+  const dir = path.join(root, '.obsidian', 'harness-like-plugins', 'prefix-test')
   await fs.promises.mkdir(dir, { recursive: true })
   await fs.promises.writeFile(path.join(dir, 'main.js'), js)
   await fs.promises.writeFile(

@@ -1,8 +1,8 @@
-# Harness Like（harness-like）
+# Harness Like
 
 **An Obsidian implementation inspired by DeepSeek Harness** — run a Cordis plugin system and an AI agent inside Obsidian. The agent reads and writes your notes, calls tools and goes through approvals; you (or the agent) can write your own Cordis plugins to extend Obsidian's commands, tools, panels, ribbon icons, status bar and settings tabs.
 
-> **Status: beta (v0.28.20)** — core features are complete; the UI supports Chinese & English (and can follow Obsidian's language).
+> **Status: beta (v0.28.21)** — core features are complete; the UI supports Chinese & English (and can follow Obsidian's language).
 >
 > **Desktop only** — Harness Like runs in the Obsidian **desktop** app (macOS / Windows / Linux). Obsidian Mobile is **not** supported.
 
@@ -21,7 +21,7 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 
 - **AI chat with tools** — streaming responses, tool call cards with live status, phase indicator, stop/retry.
 - **Note operations with approval** — the agent reads/writes your notes; writes go through a configurable approval flow (per-tool policy, directory whitelist, per-session allowance).
-- **Plugin system** — your own Cordis plugins (not Obsidian-native plugins) live in `.obsidian/dsh-plugins/<id>/` (a `package.json` + a compiled `main.js`). They adapt Obsidian through `ctx.*` services and can register tools, commands, panels, ribbon icons, status-bar items and settings tabs.
+- **Plugin system** — your own Cordis plugins (not Obsidian-native plugins) live in `.obsidian/harness-like-plugins/<id>/` (a `package.json` + a compiled `main.js`). They adapt Obsidian through `ctx.*` services and can register tools, commands, panels, ribbon icons, status-bar items and settings tabs.
 - **Create Mode** — the agent creates, modifies and reloads plugins for you in the chat: `create_plugin` → `write_plugin_file` → `reload_plugin`.
 - **Agents & models** — three built-in agent modes (Chat / Edit / Create) plus custom agents with capability whitelists; multiple model providers with per-model defaults (OpenAI-compatible endpoints).
 - **Privacy** — requests go only to the endpoints you configure; zero telemetry; everything runs locally.
@@ -59,8 +59,8 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 ### FAQ
 
 - **Where are my API keys stored?** In plain text inside `.obsidian/plugins/harness-like/data.json` — keep the file safe.
-- **Where are chats stored?** Session logs live in `.obsidian/dsh/sessions/*.jsonl` inside your vault.
-- **Is it safe to run user Cordis plugins?** Plugins are only executed from local files you placed in `.obsidian/dsh-plugins/`; nothing is downloaded or executed remotely. Loading requires your authorization, and the grant can be revoked in Settings → Plugin Grants.
+- **Where are chats stored?** Session logs live in `.obsidian/harness-like/sessions/*.jsonl` inside your vault.
+- **Is it safe to run user Cordis plugins?** Plugins are only executed from local files you placed in `.obsidian/harness-like-plugins/`; nothing is downloaded or executed remotely. Loading requires your authorization, and the grant can be revoked in Settings → Plugin Grants.
 - **What does single-check vs double-check mean?** Single-check trusts only the current version; double-check trusts future versions of that plugin (no prompt on updates).
 - **Can the agent write anywhere?** No — writes are restricted to the vault and filtered by approval policy; Obsidian's own configuration is never modified.
 - **Does it phone home?** No telemetry. Model requests go only to the providers you configured.
@@ -82,7 +82,7 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 
 - **对话 + 工具**：流式输出、工具卡片实时状态、阶段提示条、停止/重试。
 - **读写笔记带审批**：写操作按「工具级策略 → 仅当前笔记限制 → 目录白名单 → 审批弹窗（可"本会话允许写"）」逐级放行。
-- **插件体系**：你自己的 **Cordis 插件**（非 Obsidian 原生插件）位于 `.obsidian/dsh-plugins/<id>/`（一个 `package.json` + 编译好的 `main.js`），通过 `ctx.*` 服务适配 Obsidian，可注册工具、命令、面板、侧边栏图标、状态栏与设置页。
+- **插件体系**：你自己的 **Cordis 插件**（非 Obsidian 原生插件）位于 `.obsidian/harness-like-plugins/<id>/`（一个 `package.json` + 编译好的 `main.js`），通过 `ctx.*` 服务适配 Obsidian，可注册工具、命令、面板、侧边栏图标、状态栏与设置页。
 - **创造模式**：在对话里让 agent 帮你 `create_plugin` → `write_plugin_file` → `reload_plugin`，插件从无到有全程对话内完成。
 - **智能体与模型**：内置对话/修编/创造三种模式 + 自定义智能体（能力白名单勾选）；多模型提供方、模型级默认（OpenAI 兼容端点）。
 - **隐私**：请求只发往你配置的端点；零遥测；全部本地运行。
@@ -120,8 +120,8 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 ### 常见问题
 
 - **API Key 存在哪里？** 明文保存在 `.obsidian/plugins/harness-like/data.json`，请注意保管该文件。
-- **对话记录存在哪里？** 会话日志在 vault 内 `.obsidian/dsh/sessions/*.jsonl`。
-- **跑用户 Cordis 插件安全吗？** 插件只执行你放在 `.obsidian/dsh-plugins/` 的本地文件，不会下载或远程执行代码；加载需要授权，且可在 设置 → 插件授权 中随时撤销。
+- **对话记录存在哪里？** 会话日志在 vault 内 `.obsidian/harness-like/sessions/*.jsonl`。
+- **跑用户 Cordis 插件安全吗？** 插件只执行你放在 `.obsidian/harness-like-plugins/` 的本地文件，不会下载或远程执行代码；加载需要授权，且可在 设置 → 插件授权 中随时撤销。
 - **单勾和双勾的区别？** 单勾=只信任当前版本；双勾=信任该插件后续所有版本（更新不再弹窗）。
 - **agent 能随便写文件吗？** 不能——写操作限制在 vault 内并经过审批策略过滤，不会改动 Obsidian 自身配置。
 - **会上传数据吗？** 零遥测；模型请求只发往你配置的提供方端点。

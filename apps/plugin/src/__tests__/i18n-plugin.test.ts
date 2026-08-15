@@ -28,7 +28,7 @@ module.exports = {
 `
 
 async function makePlugin(root: string): Promise<string> {
-  const dir = path.join(root, '.obsidian', 'dsh-plugins', 'translation-demo')
+  const dir = path.join(root, '.obsidian', 'harness-like-plugins', 'translation-demo')
   await fs.promises.mkdir(dir, { recursive: true })
   await fs.promises.writeFile(path.join(dir, 'main.js'), PLUGIN_JS)
   await fs.promises.writeFile(

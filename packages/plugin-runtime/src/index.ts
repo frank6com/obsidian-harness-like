@@ -1,5 +1,5 @@
 /**
- * plugin-runtime：用户 Cordis 插件（.obsidian/dsh-plugins/<id>/）的发现、加载与管理。
+ * plugin-runtime：用户 Cordis 插件（.obsidian/harness-like-plugins/<id>/）的发现、加载与管理。
  *
  * 执行机制（设计文档 §5.5.1 定稿）：只执行本地预编译产物（main.js）。
  * 产物以 CJS 打包、@deepseek-ai/cordis 标记为 external，加载时经 require shim

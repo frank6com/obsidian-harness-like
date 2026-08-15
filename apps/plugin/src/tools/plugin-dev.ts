@@ -24,7 +24,7 @@ const PLUGIN_ID_RE = /^[a-z0-9][a-z0-9-_]{0,63}$/
 
 export const PLUGIN_GUIDE = `# Harness Like 用户插件开发指南（纯 JS 路径）
 
-插件位于 vault 的 .obsidian/dsh-plugins/<id>/ 目录，结构：
+插件位于 vault 的 .obsidian/harness-like-plugins/<id>/ 目录，结构：
 
 - package.json：声明插件元数据（dsh 字段必填）
 - main.js：CJS 产物，module.exports 导出插件对象
@@ -156,7 +156,7 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
     apply(ctx) {
       const pluginsDir = ctx.sandbox.scope.pluginsDir
       /** vault API 一律用 vault 相对路径（绝对路径会破坏 Obsidian 路径语义） */
-      const pluginsDirRel = path.posix.join(ctx.sandbox.scope.configDir, 'dsh-plugins')
+      const pluginsDirRel = path.posix.join(ctx.sandbox.scope.configDir, 'harness-like-plugins')
 
       ctx.toolsCompat.register({
         name: 'plugin_guide',

@@ -61,16 +61,16 @@ describe('note-counter 重写复现', () => {
   it('真实装配下加载重写文件，注册全部生效', async () => {
     const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-nc-'))
     const dataDir = path.join(root, '.obsidian', 'dsh')
-    const pluginsDir = path.join(root, '.obsidian', 'dsh-plugins')
+    const pluginsDir = path.join(root, '.obsidian', 'harness-like-plugins')
     // 把重写文件复制进临时插件目录
     const pluginDir = path.join(pluginsDir, 'note-counter')
     await fs.promises.mkdir(pluginDir, { recursive: true })
     await fs.promises.copyFile(
-      path.join(process.cwd(), 'dev-vault/.obsidian/dsh-plugins/note-counter/main.js'),
+      path.join(process.cwd(), 'dev-vault/.obsidian/harness-like-plugins/note-counter/main.js'),
       path.join(pluginDir, 'main.js'),
     )
     await fs.promises.copyFile(
-      path.join(process.cwd(), 'dev-vault/.obsidian/dsh-plugins/note-counter/package.json'),
+      path.join(process.cwd(), 'dev-vault/.obsidian/harness-like-plugins/note-counter/package.json'),
       path.join(pluginDir, 'package.json'),
     )
 

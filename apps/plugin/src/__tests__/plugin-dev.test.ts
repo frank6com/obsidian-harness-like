@@ -46,7 +46,7 @@ async function setup(
 ) {
   const vaultRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-dev-'))
   const dataDir = path.join(vaultRoot, '.obsidian', 'dsh')
-  const pluginsDir = path.join(vaultRoot, '.obsidian', 'dsh-plugins')
+  const pluginsDir = path.join(vaultRoot, '.obsidian', 'harness-like-plugins')
   const tempDir = path.join(dataDir, 'tmp')
 
   const ctx = new Context()

@@ -6,6 +6,7 @@
  * onunload：逆序 dispose 全部 fiber（Cordis 保证副作用可逆撤销）。
  */
 
+import * as fs from 'fs'
 import * as path from 'path'
 import { Plugin, type Editor, type WorkspaceLeaf } from 'obsidian'
 import * as obsidianModule from 'obsidian'
@@ -64,9 +65,12 @@ export default class HarnessLikePlugin extends Plugin {
     }
     const root = vaultRoot ?? ''
     const configDir = this.app.vault.configDir
-    const dataDir = path.join(root, configDir, 'dsh')
-    const pluginsDir = path.join(root, configDir, 'dsh-plugins')
+    const dataDir = path.join(root, configDir, 'harness-like')
+    const pluginsDir = path.join(root, configDir, 'harness-like-plugins')
     const tempDir = path.join(dataDir, 'tmp')
+    // 旧版数据目录迁移（≤0.28.20：.obsidian/dsh 与 .obsidian/dsh-plugins）：
+    // 新目录不存在时整体搬移，保留已有会话/授权/用户插件
+    await this.migrateLegacyDirs(root, configDir)
 
     const ctx = new cordis.Context()
     this.ctx = ctx
@@ -268,6 +272,28 @@ export default class HarnessLikePlugin extends Plugin {
   async loadSettings(): Promise<void> {
     const data = await this.loadData()
     this.settings = migrateSettings(data as Record<string, unknown> | undefined)
+  }
+
+  /**
+   * 旧版数据目录迁移：.obsidian/dsh → .obsidian/harness-like、
+   * .obsidian/dsh-plugins → .obsidian/harness-like-plugins。
+   * 仅在新目录不存在时执行（避免覆盖）；失败仅告警不阻断启动。
+   */
+  private async migrateLegacyDirs(root: string, configDir: string): Promise<void> {
+    const pairs: Array<[string, string]> = [
+      [path.join(root, configDir, 'dsh'), path.join(root, configDir, 'harness-like')],
+      [path.join(root, configDir, 'dsh-plugins'), path.join(root, configDir, 'harness-like-plugins')],
+    ]
+    for (const [oldDir, newDir] of pairs) {
+      try {
+        if (fs.existsSync(oldDir) && !fs.existsSync(newDir)) {
+          await fs.promises.rename(oldDir, newDir)
+          console.info(`[harness-like] 数据目录迁移: ${oldDir} → ${newDir}`)
+        }
+      } catch (err) {
+        console.warn(`[harness-like] 数据目录迁移失败（忽略）: ${oldDir}`, err)
+      }
+    }
   }
 
   /** 按 id 取提供方（未知 id 回退默认） */

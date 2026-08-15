@@ -20,7 +20,7 @@ import { runtimePlugin, loadUserPlugin } from '@harness-like/plugin-runtime'
 
 async function setup(removeCommandThrows: boolean) {
   const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-reload-'))
-  const pluginsDir = path.join(root, '.obsidian', 'dsh-plugins')
+  const pluginsDir = path.join(root, '.obsidian', 'harness-like-plugins')
   const exampleDir = path.join(process.cwd(), 'apps/plugin/examples/my-first-plugin')
 
   const ctx = new Context()

@@ -5,9 +5,9 @@ import * as path from 'path'
 const scope: SandboxScope = {
   vaultRoot: '/vault',
   configDir: '.obsidian',
-  dataDir: '/vault/.obsidian/dsh',
-  pluginsDir: '/vault/.obsidian/dsh-plugins',
-  tempDir: '/vault/.obsidian/dsh/tmp',
+  dataDir: '/vault/.obsidian/harness-like',
+  pluginsDir: '/vault/.obsidian/harness-like-plugins',
+  tempDir: '/vault/.obsidian/harness-like/tmp',
 }
 
 describe('decideSandbox', () => {
@@ -29,13 +29,13 @@ describe('decideSandbox', () => {
   })
 
   it('写操作允许数据目录与插件目录', () => {
-    expect(decideSandbox(scope, '/vault/.obsidian/dsh/sessions/s.jsonl', 'write').allowed).toBe(
+    expect(decideSandbox(scope, '/vault/.obsidian/harness-like/sessions/s.jsonl', 'write').allowed).toBe(
       true,
     )
-    expect(decideSandbox(scope, '/vault/.obsidian/dsh-plugins/my/main.js', 'write').allowed).toBe(
+    expect(decideSandbox(scope, '/vault/.obsidian/harness-like-plugins/my/main.js', 'write').allowed).toBe(
       true,
     )
-    expect(decideSandbox(scope, '/vault/.obsidian/dsh/tmp/x', 'write').allowed).toBe(true)
+    expect(decideSandbox(scope, '/vault/.obsidian/harness-like/tmp/x', 'write').allowed).toBe(true)
   })
 
   it('拒绝 vault 外路径（含目录穿越）', () => {

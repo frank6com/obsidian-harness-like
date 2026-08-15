@@ -3,7 +3,7 @@
  *
  * v1 白名单（设计文档 §5.8）：
  * - 读：整个 vault 根 + 临时目录
- * - 写/删：vault 内笔记区、.obsidian/dsh/、.obsidian/dsh-plugins/、临时目录
+ * - 写/删：vault 内笔记区、.obsidian/harness-like/、.obsidian/harness-like-plugins/、临时目录
  * - 拒绝：vault 外任何路径；.obsidian/ 内其他区域（plugins/、app.json、workspace.json 等）
  */
 

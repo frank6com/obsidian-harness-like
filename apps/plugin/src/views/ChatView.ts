@@ -509,7 +509,7 @@ export class ChatView extends ItemView {
 
   /** 用户插件目录（vault 相对，跟随 configDir） */
   private pluginsDirRel(): string {
-    return path.posix.join(this.ctx.sandbox.scope.configDir, 'dsh-plugins')
+    return path.posix.join(this.ctx.sandbox.scope.configDir, 'harness-like-plugins')
   }
 
   private setPhase(phase: UiPhase): void {
