@@ -31,12 +31,6 @@ interface SessionMeta {
 /** 宿主侧额外阶段：idle / waiting（等待审批）/ stopped */
 type UiPhase = AgentPhase | { kind: 'idle' } | { kind: 'waiting' } | { kind: 'stopped' }
 
-/** 渲染调试日志开关（定位重复渲染；定位后置 false） */
-const RENDER_DEBUG = true
-function renderLog(...args: unknown[]): void {
-  if (RENDER_DEBUG) console.info('[dsh-render]', ...args)
-}
-
 function summarize(value: unknown): string {
   const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
   return text.length > 300 ? text.slice(0, 300) + ' …' : text
@@ -104,7 +98,6 @@ export class ChatView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
-    renderLog('onOpen 调用 currentSessionId=' + this.currentSessionId)
     this.buildUi()
     await this.refreshSessions()
     this.setPhase({ kind: 'idle' })
@@ -268,9 +261,7 @@ export class ChatView extends ItemView {
     } else if (e.type === 'assistant/message') {
       // 防重：多个 Chat 面板实例会同时收到同一事件（广播），
       // 同一实例内相同原始内容只渲染一次（用原始内容比较，textContent 受渲染影响不可靠）
-      renderLog('assistant msg', 'streamingEl=' + !!this.streamingEl, 'rawDedup=' + (this.lastAssistantRaw === e.content))
       if (!this.streamingEl && this.lastAssistantRaw === e.content) {
-        renderLog('  -> raw-dedup skip')
         return
       }
       if (this.streamingEl) {
@@ -380,7 +371,6 @@ export class ChatView extends ItemView {
 
   /** 消息气泡（挂到当前轮次容器内；无容器时直接挂消息区） */
   private appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
-    renderLog('appendMessage', role, 'len=' + content.length)
     const el = (this.turnEl ?? this.messagesEl).createDiv({ cls: `dsh-msg dsh-msg-${role}` })
     if (role === 'assistant' && this.ctx.settings.get('renderMarkdown', true)) {
       this.renderMarkdown(el, content)
@@ -395,27 +385,20 @@ export class ChatView extends ItemView {
   private renderMarkdown(el: HTMLElement, markdown: string): void {
     // 官方渲染器（@since 0.10.6）：主题原生一致，避免 innerHTML（审核要求）；
     // component = 本视图，视图卸载时渲染的子组件自动清理
-    renderLog('renderMarkdown 开始', 'len=' + markdown.length)
     // 先清空流式残留文本，避免异步渲染期间显示旧内容
     el.textContent = ''
-    void MarkdownRenderer.render(this.app, markdown, el, '', this)
-      .then(() => renderLog('renderMarkdown 完成', 'el.text=' + (el.textContent ?? '').length))
-      .catch((err) => {
-        renderLog('renderMarkdown 失败', String(err))
-        el.textContent = markdown // 兜底：渲染失败时显示原始文本
-      })
+    void MarkdownRenderer.render(this.app, markdown, el, '', this).catch(() => {
+      el.textContent = markdown // 兜底：渲染失败时显示原始文本
+    })
     attachCodeCopyButtons(el)
   }
 
   private appendStream(delta: string): void {
     if (!this.streamingEl) {
       // 流式气泡用纯文本（避免 textContent 覆盖已渲染子元素）；结束后再渲染 Markdown
-      renderLog('appendStream CREATE', 'len=' + this.streamingText.length)
       this.streamingEl = (this.turnEl ?? this.messagesEl).createDiv({
         cls: 'dsh-msg dsh-msg-assistant dsh-msg-streaming',
       })
-    } else {
-      renderLog('appendStream APPEND', 'len=' + this.streamingText.length)
     }
     this.streamingText += delta
     this.streamingEl.textContent = this.streamingText
@@ -877,7 +860,6 @@ export class ChatView extends ItemView {
   }
 
   private async renderSession(): Promise<void> {
-    renderLog('renderSession 开始 currentSessionId=' + this.currentSessionId)
     this.messagesEl.empty()
     this.streamingEl = null
     this.streamingText = ''
