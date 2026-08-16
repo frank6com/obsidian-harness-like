@@ -151,8 +151,8 @@ describe('ChatView 渲染（单事件 → 单气泡）', () => {
     await new Promise((r) => window.setTimeout(r, 0))
     const bubbles = view.messagesEl.querySelectorAll('.dsh-msg-assistant')
     expect(bubbles.length).toBe(1)
-    expect(bubbles[0].textContent).toBe('最终内容')
-    expect(bubbles[0].textContent).not.toContain('旧的流式残留文本')
+    expect(bubbles[0]!.textContent).toBe('最终内容')
+    expect(bubbles[0]!.textContent).not.toContain('旧的流式残留文本')
   })
 
   it('无流式（streamingEl 为 null）：事件直接生成一个气泡', async () => {

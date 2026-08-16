@@ -17,7 +17,7 @@ import {
 } from '@harness-like/harness-base'
 import { attachCodeCopyButtons } from '../markdown'
 import { agentAllows } from '../mode'
-import { listVisibleAgents, type AgentPreset } from '../settings'
+import { listVisibleAgents, parseModelId, type AgentPreset } from '../settings'
 import { safeFileName, sessionToMarkdown } from '../export'
 import { agentDisplayDesc, agentDisplayName, getLanguage, resolveLanguage, setLanguage, t, type LanguagePreference } from '../i18n'
 import { ConfirmModal } from '../modals'
@@ -62,6 +62,11 @@ export class ChatView extends ItemView {
   private abortController: AbortController | null = null
   private lastFailed: { sessionId: string; text: string } | null = null
   private listCollapsed = false
+  /** 会话列表头部（固定"新会话"按钮，独立于可刷新的行容器） */
+  private listHeadEl!: HTMLElement
+  private sessionRowsEl!: HTMLElement
+  /** 思考文本 DOM 更新节流句柄（长推理文本防卡顿） */
+  private thinkingTimer: number | null = null
   private disposers: Array<() => void> = []
   /** 语言切换时若正在生成，等本轮结束后重建 */
   private pendingRebuild = false
@@ -126,20 +131,22 @@ export class ChatView extends ItemView {
     this.root = this.contentEl.createDiv({ cls: 'dsh-chat' })
     this.root.classList.toggle('is-collapsed', this.listCollapsed)
 
-    // 头部：折叠按钮 + 标题（左），新会话 + 插件管理器（右对齐）
+    // 头部：折叠按钮 + 标题（左），插件管理器（右对齐）；新会话按钮移至会话列表顶部
     const header = this.root.createDiv({ cls: 'dsh-chat-header' })
     const collapseBtn = header.createEl('button', { cls: 'dsh-btn dsh-btn-icon', text: '☰' })
     collapseBtn.onclick = () => this.toggleSessionList()
     header.createSpan({ cls: 'dsh-chat-title', text: 'Harness Like' })
     const actions = header.createDiv({ cls: 'dsh-chat-actions' })
-    const newBtn = actions.createEl('button', { cls: 'dsh-btn', text: t('chat.header.newSession') })
-    newBtn.onclick = () => this.newSession()
     const pluginBtn = actions.createEl('button', { cls: 'dsh-btn', text: t('chat.header.pluginManager') })
     pluginBtn.onclick = () => this.openPluginManager()
 
-    // 主体：会话列表 + 消息
+    // 主体：会话列表（顶部固定新会话按钮）+ 消息
     const body = this.root.createDiv({ cls: 'dsh-chat-body' })
     this.listEl = body.createDiv({ cls: 'dsh-chat-list' })
+    this.listHeadEl = this.listEl.createDiv({ cls: 'dsh-list-head' })
+    const newBtn = this.listHeadEl.createEl('button', { cls: 'dsh-btn-new-session', text: t('chat.header.newSession') })
+    newBtn.onclick = () => this.newSession()
+    this.sessionRowsEl = this.listEl.createDiv({ cls: 'dsh-session-rows' })
     this.messagesEl = body.createDiv({ cls: 'dsh-chat-messages' })
 
     // 阶段状态条（思考/工具/等待审批/已停止）
@@ -221,6 +228,10 @@ export class ChatView extends ItemView {
 
   override onClose(): Promise<void> {
     this.abortController?.abort()
+    if (this.thinkingTimer !== null) {
+      window.clearTimeout(this.thinkingTimer)
+      this.thinkingTimer = null
+    }
     for (const d of this.disposers) {
       try {
         d()
@@ -564,13 +575,20 @@ export class ChatView extends ItemView {
     return path.posix.join(this.ctx.sandbox.scope.configDir, 'harness-like-plugins')
   }
 
-  /** 对话内思考折叠卡：推理过程增量（reasoning_content）实时追加 */
+  /** 对话内思考折叠卡：推理过程增量（reasoning_content）实时追加（DOM 更新节流） */
   private appendThinking(delta: string): void {
     if (!this.thinkingEl) this.openThinking()
     this.thinkingText += delta
-    const body = this.thinkingEl?.querySelector('.dsh-thinking-body')
-    if (body) body.textContent = this.thinkingText
-    this.scrollToBottom()
+    // 节流：逐 delta 全量重设 textContent + scrollToBottom 会持续触发整页布局，
+    // 长推理文本下明显卡顿；每 ~100ms 批量刷新一次
+    if (this.thinkingTimer === null) {
+      this.thinkingTimer = window.setTimeout(() => {
+        this.thinkingTimer = null
+        const body = this.thinkingEl?.querySelector('.dsh-thinking-body')
+        if (body) body.textContent = this.thinkingText
+        this.scrollToBottom()
+      }, 100)
+    }
   }
 
   private openThinking(): void {
@@ -584,11 +602,17 @@ export class ChatView extends ItemView {
     this.scrollToBottom()
   }
 
-  /** 收尾思考卡：自动折叠，保留可展开查看 */
+  /** 收尾思考卡：自动折叠，保留可展开查看（先冲刷节流文本，保证展开可见完整推理） */
   private closeThinking(): void {
     if (!this.thinkingEl) return
+    if (this.thinkingTimer !== null) {
+      window.clearTimeout(this.thinkingTimer)
+      this.thinkingTimer = null
+    }
     const summary = this.thinkingEl.querySelector('summary')
     if (summary) summary.textContent = '🧠 已思考'
+    const body = this.thinkingEl.querySelector('.dsh-thinking-body')
+    if (body) body.textContent = this.thinkingText
     this.thinkingEl.removeAttribute('open')
     this.thinkingEl.classList.remove('is-active')
     this.thinkingEl = null
@@ -598,10 +622,9 @@ export class ChatView extends ItemView {
     // 思考/工具阶段：对话内折叠卡（思考中 → 工具调用），避免"卡死"感
     if (phase.kind === 'thinking') this.openThinking()
     else if (phase.kind === 'tool') this.closeThinking()
+    // 思考阶段不再显示底部状态条文字：轮内思考折叠卡已覆盖，避免重复
     const text =
-      phase.kind === 'thinking'
-        ? t('chat.phase.thinking')
-        : phase.kind === 'tool'
+      phase.kind === 'tool'
           ? t('chat.phase.tool', { name: phase.name })
           : phase.kind === 'waiting'
             ? t('chat.phase.waiting')
@@ -691,17 +714,26 @@ export class ChatView extends ItemView {
     }, 0)
   }
 
-  /** 默认模型选择（defaultProviderId + 其默认模型） */
+  /** 默认模型：defaultModelId（"providerId/model"）优先，回退第一个提供方的第一个模型 */
   private defaultModelId(): string {
     const providers = this.ctx.settings.get('providers', [] as Array<{
       id: string
       model?: string
       models?: string[]
     }>)
-    const defaultId = this.ctx.settings.get('defaultProviderId', '') as string
-    const p = providers.find((x) => x.id === defaultId) ?? providers[0]
-    if (!p) return ''
-    return `${p.id}/${p.models?.length ? p.models[0] : p.model ?? ''}`
+    const defaultId = this.ctx.settings.get('defaultModelId', '') as string
+    const mid = parseModelId(defaultId)
+    if (mid) {
+      const p = providers.find((x) => x.id === mid.provider)
+      if (p) {
+        const models = p.models?.length ? p.models : p.model ? [p.model] : []
+        if (models.includes(mid.model)) return `${p.id}/${mid.model}`
+        if (models.length) return `${p.id}/${models[0]}`
+      }
+    }
+    const first = providers[0]
+    if (!first) return ''
+    return `${first.id}/${first.models?.length ? first.models[0] : first.model ?? ''}`
   }
 
   /** 打开插件管理器面板 */
@@ -773,14 +805,14 @@ export class ChatView extends ItemView {
   }
 
   private async refreshSessions(): Promise<void> {
-    this.listEl.empty()
+    this.sessionRowsEl.empty()
     const list = await this.ctx.sessionLog.list()
     if (!list.length) {
-      this.listEl.createDiv({ cls: 'dsh-session-empty', text: t('chat.list.empty') })
+      this.sessionRowsEl.createDiv({ cls: 'dsh-session-empty', text: t('chat.list.empty') })
       return
     }
     for (const s of list) {
-      const row = this.listEl.createDiv({
+      const row = this.sessionRowsEl.createDiv({
         cls: 'dsh-session-row' + (s.id === this.currentSessionId ? ' is-active' : ''),
       })
       const btn = row.createEl('button', { cls: 'dsh-session-btn' })
@@ -857,6 +889,10 @@ export class ChatView extends ItemView {
     this.lastEventKey = ''
     this.thinkingEl = null
     this.thinkingText = ''
+    if (this.thinkingTimer !== null) {
+      window.clearTimeout(this.thinkingTimer)
+      this.thinkingTimer = null
+    }
     const id = this.currentSessionId
     if (!id) {
       this.renderWelcome()

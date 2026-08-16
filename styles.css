@@ -67,6 +67,34 @@
   padding: 4px;
 }
 
+/* 会话列表头部：新会话按钮（置顶通栏，虚线表意"新建"） */
+.dsh-list-head {
+  padding: 2px 0 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dsh-btn-new-session {
+  display: block;
+  width: 100%;
+  height: auto; /* 覆盖 Obsidian 全局 button 固定高度 */
+  min-height: 0;
+  padding: 6px 8px;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.dsh-btn-new-session:hover {
+  border-color: var(--interactive-accent);
+  color: var(--text-accent);
+  background: var(--background-modifier-hover);
+}
+
 .dsh-session-empty {
   color: var(--text-faint);
   font-size: 12px;
@@ -892,11 +920,11 @@
   user-select: none;
 }
 
+/* 思考正文随面板滚动（常规文档流）；此前 max-height+overflow 让内容只在自己的
+   小滚动区里滚，展开后与面板滚动脱节，长文本还会拖慢展开/收起 */
 .dsh-thinking-body {
   margin-top: 6px;
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--text-muted);
-  max-height: 240px;
-  overflow-y: auto;
 }
