@@ -241,6 +241,20 @@
   color: var(--text-error);
 }
 
+/* 执行中标记（会话级运行状态；多面板广播显示） */
+.dsh-session-running {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--interactive-accent);
+  color: var(--text-accent);
+  background: var(--background-secondary);
+}
+
 .dsh-chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -611,31 +625,88 @@
 
 /* 插件管理器 */
 .dsh-pm-bar {
-  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .dsh-pm-empty {
   color: var(--text-muted);
   font-size: 13px;
+  padding: 16px;
+  text-align: center;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: 8px;
+}
+
+.dsh-pm-empty ol {
+  margin: 8px auto;
+  padding-left: 20px;
+  text-align: left;
+  max-width: 420px;
 }
 
 .dsh-pm-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px;
+  gap: 12px;
+  padding: 10px 12px;
   border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
-  margin-bottom: 6px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--background-secondary);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dsh-pm-row:hover {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.dsh-pm-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .dsh-pm-name {
   font-weight: 600;
+  font-size: 14px;
+  color: var(--text-normal);
+}
+
+.dsh-pm-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dsh-pm-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.dsh-pm-cap {
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  background: var(--background-primary);
 }
 
 .dsh-pm-status {
   font-size: 12px;
   color: var(--text-muted);
+  margin-top: 4px;
 }
 
 .dsh-pm-status-running {
@@ -646,9 +717,16 @@
   color: var(--text-error);
 }
 
+.dsh-pm-status-stopped {
+  color: var(--text-faint);
+}
+
 .dsh-pm-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
+  max-width: 230px;
 }
 
 /* 审批弹窗 */
@@ -949,10 +1027,49 @@
   color: var(--text-accent);
 }
 
+.dsh-thinking {
+  position: relative;
+}
+
 .dsh-thinking summary {
   cursor: pointer;
   font-weight: 600;
   user-select: none;
+}
+
+/* 思考快捷操作（展开时可见）：回到思考顶部 / 收起 */
+.dsh-thinking-actions {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  display: none;
+  gap: 4px;
+}
+
+.dsh-thinking[open] .dsh-thinking-actions {
+  display: flex;
+}
+
+.dsh-thinking[open] summary {
+  padding-right: 72px; /* 给操作按钮留位，避免遮挡标题 */
+}
+
+.dsh-thinking-action {
+  height: auto;
+  min-height: 0;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 1.6;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dsh-thinking-action:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
 }
 
 /* 思考正文随面板滚动（常规文档流）；此前 max-height+overflow 让内容只在自己的

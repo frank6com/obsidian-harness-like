@@ -386,3 +386,114 @@ describe('停止后新一轮的状态修复（0.28.37）', () => {
     expect(v.thinkingEl).toBeNull()
   })
 })
+
+describe('会话列表前置 / 执行状态 / 思考快捷操作（0.30.0）', () => {
+  /** 构造可捕获 on 处理器 + list 探针的 ctx */
+  function ctxWithHandlers(listImpl?: () => Promise<unknown[]>) {
+    const handlers: Record<string, (arg: unknown) => void> = {}
+    return {
+      ctx: {
+        settings: {
+          get: (k: string, d: unknown) => (k === 'providers' ? PROVIDERS : d),
+          set: () => {},
+        },
+        on: (ev: string, cb: (arg: unknown) => void) => {
+          handlers[ev] = cb
+          return () => {}
+        },
+        sessionLog: {
+          append: async () => {},
+          list: listImpl ?? (async () => []),
+          read: async () => [],
+          readMeta: async () => null,
+          remove: async () => {},
+        },
+        toolsCompat: { list: () => [] },
+        llmCaller: {},
+        emit: vi.fn(),
+        sandbox: { scope: { configDir: '.obsidian' } },
+        notice: { notice: () => {} },
+        vault: { read: async () => '' },
+        workspace: { getActiveFile: () => null },
+        get: () => undefined,
+      },
+      handlers,
+    }
+  }
+
+  it('其他会话的 turn/end 也触发列表刷新（有新进展的会话前置）', async () => {
+    const listSpy = vi.fn(async () => [])
+    const { ctx } = ctxWithHandlers(listSpy as never)
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { sessionRowsEl: HTMLElement }).sessionRowsEl = document.createElement('div')
+    v.currentSessionId = 'current'
+    await (v as { refreshSessions(): Promise<void> }).refreshSessions()
+    listSpy.mockClear()
+    // 非当前会话的 turn/end：不渲染，但必须刷新列表
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({
+      sessionId: 'other',
+      type: 'turn/end',
+      ts: 1,
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(listSpy).toHaveBeenCalled()
+  })
+
+  it('会话行显示"执行中"标记（含其他面板正在运行的会话）', async () => {
+    const { ctx } = ctxWithHandlers(async () => [
+      { id: 's1', updatedAt: 1, count: 1, title: 't1', notePath: null, modelId: undefined },
+      { id: 's2', updatedAt: 2, count: 2, title: 't2', notePath: null, modelId: undefined },
+    ] as never)
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { sessionRowsEl: HTMLElement }).sessionRowsEl = document.createElement('div')
+    ;(v as { runningSessions: Set<string> }).runningSessions.add('s2')
+    await (v as { refreshSessions(): Promise<void> }).refreshSessions()
+    const rows = (v as { sessionRowsEl: HTMLElement }).sessionRowsEl.querySelectorAll('.dsh-session-row')
+    expect(rows.length).toBe(2)
+    expect(rows[1]!.querySelector('.dsh-session-running')).toBeTruthy()
+    expect(rows[0]!.querySelector('.dsh-session-running')).toBeNull()
+  })
+
+  it('dsh/run/start 广播：列表自动刷新并显示执行中标记', async () => {
+    const { ctx, handlers } = ctxWithHandlers(async () => [
+      { id: 's1', updatedAt: 1, count: 1, title: 't', notePath: null, modelId: undefined },
+    ] as never)
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { buildUi(): void }).buildUi()
+    handlers['dsh/run/start']?.('s1')
+    await new Promise((r) => setTimeout(r, 0))
+    expect((v as { contentEl: HTMLElement }).contentEl.querySelector('.dsh-session-running')).toBeTruthy()
+  })
+
+  it('scrollToBottom：用户离开底部时不强制下拉；贴近底部时跟随；force 强制', () => {
+    const v = makeView() as unknown as Record<string, unknown>
+    const el = document.createElement('div')
+    Object.defineProperty(el, 'scrollHeight', { value: 1000, configurable: true })
+    Object.defineProperty(el, 'clientHeight', { value: 100, configurable: true })
+    el.scrollTop = 500 // 用户正在向上阅读
+    v.messagesEl = el
+    ;(v as { scrollToBottom(f?: boolean): void }).scrollToBottom()
+    expect(el.scrollTop).toBe(500) // 不被拽回底部
+    ;(v as { scrollToBottom(f?: boolean): void }).scrollToBottom(true)
+    expect(el.scrollTop).toBe(1000) // jsdom 不 clamp；真实浏览器为 scrollHeight-clientHeight
+    el.scrollTop = 880 // 贴近底部（差 20 < 120）
+    ;(v as { scrollToBottom(f?: boolean): void }).scrollToBottom()
+    expect(el.scrollTop).toBe(1000)
+  })
+
+  it('思考卡提供"回到顶部 / 收起"快捷操作', () => {
+    const v = makeView() as unknown as Record<string, unknown>
+    ;(v as { messagesEl: HTMLElement }).messagesEl = document.createElement('div')
+    ;(v as { openThinking(): void }).openThinking()
+    const details = (v as { messagesEl: HTMLElement }).messagesEl.querySelector('.dsh-thinking') as HTMLElement
+    const actions = details.querySelector('.dsh-thinking-actions')!
+    expect(actions.querySelectorAll('button').length).toBe(2)
+    details.setAttribute('open', '')
+    const collapseBtn = actions.querySelectorAll('button')[1] as HTMLButtonElement
+    collapseBtn.click()
+    expect(details.hasAttribute('open')).toBe(false)
+  })
+})

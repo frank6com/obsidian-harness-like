@@ -82,8 +82,10 @@ export class ChatView extends ItemView {
   private streamingEl: HTMLElement | null = null
   private streamingText = ''
   private toolCards = new Map<string, HTMLElement>()
-  private running = false
-  private abortController: AbortController | null = null
+  /** 正在执行的会话 id 集合（本面板或他面板广播；支持多会话并发执行） */
+  private runningSessions = new Set<string>()
+  /** 每个运行中会话的中止控制器（停止按钮只中止当前查看会话的运行） */
+  private runControllers = new Map<string, AbortController>()
   private lastFailed: { sessionId: string; text: string } | null = null
   private listCollapsed = false
   /** 会话列表头部（固定"新会话"按钮，独立于可刷新的行容器） */
@@ -211,6 +213,22 @@ export class ChatView extends ItemView {
 
     this.disposers.push(this.ctx.on('dsh/session/event', (e) => this.onSessionEvent(e)))
 
+    // 执行状态广播：任意面板的会话开始/结束执行都同步标记（列表显示"执行中"）
+    this.disposers.push(
+      this.ctx.on('dsh/run/start', (id) => {
+        this.runningSessions.add(id)
+        if (id === this.currentSessionId) this.setSendingState()
+        void this.refreshSessions()
+      }),
+    )
+    this.disposers.push(
+      this.ctx.on('dsh/run/end', (id) => {
+        this.runningSessions.delete(id)
+        if (id === this.currentSessionId) this.setSendingState()
+        void this.refreshSessions()
+      }),
+    )
+
     this.disposers.push(this.ctx.on('dsh/waiting-approval', () => this.setPhase({ kind: 'waiting' })))
     this.disposers.push(
       this.ctx.on('dsh/settings-updated', () => {
@@ -223,7 +241,7 @@ export class ChatView extends ItemView {
         const resolved = resolveLanguage(pref)
         if (resolved !== getLanguage()) {
           setLanguage(resolved)
-          if (this.running) this.pendingRebuild = true
+          if (this.runningSessions.size) this.pendingRebuild = true
           else void this.rebuild()
         }
       }),
@@ -250,7 +268,7 @@ export class ChatView extends ItemView {
   }
 
   override onClose(): Promise<void> {
-    this.abortController?.abort()
+    for (const c of this.runControllers.values()) c.abort()
     if (this.thinkingTimer !== null) {
       window.clearTimeout(this.thinkingTimer)
       this.thinkingTimer = null
@@ -269,7 +287,15 @@ export class ChatView extends ItemView {
   // ---------- 事件与渲染 ----------
 
   private onSessionEvent(e: SessionEvent): void {
-    if (e.sessionId !== this.currentSessionId) return
+    const isCurrent = e.sessionId === this.currentSessionId
+    // 任何会话有进展都前置列表（含其他面板正在执行的会话）；渲染仍只针对当前会话
+    if (e.type === 'turn/end') {
+      this.closeTurn()
+      void this.refreshSessions()
+      if (!isCurrent) return
+    } else if (!isCurrent) {
+      return
+    }
     // 事件级去重：若同一事件（同 ts/内容）被再次投递（如监听器叠加），跳过
     // 指纹 = 会话 + 类型 + ts + 内容/调用 id 前缀，避免不同事件误判
     const frag = 'content' in e && typeof e.content === 'string'
@@ -285,9 +311,6 @@ export class ChatView extends ItemView {
       this.openTurnContainer()
       this.streamingEl = null
       this.streamingText = ''
-    } else if (e.type === 'turn/end') {
-      this.closeTurn()
-      void this.refreshSessions()
     } else if (e.type === 'assistant/message') {
       // 防重：多个 Chat 面板实例会同时收到同一事件（广播），
       // 同一实例内相同原始内容只渲染一次（用原始内容比较，textContent 受渲染影响不可靠）
@@ -330,6 +353,8 @@ export class ChatView extends ItemView {
     this.openTurnContainer()
     this.turnText.push(`${t('chat.msg.user')}：\n${userText}`)
     this.appendMessage('user', userText)
+    // 新轮次强制滚到底（用户自己的消息必须可见）
+    this.scrollToBottom(true)
   }
 
   /** 收尾当前轮次：底部挂"复制本段对话"按钮（幂等） */
@@ -438,11 +463,17 @@ export class ChatView extends ItemView {
   // ---------- 发送 / 中止 / 重试 ----------
 
   private onSendClick(): void {
-    if (this.running) {
-      this.abortController?.abort()
+    if (this.isCurrentRunning()) {
+      // 停止只中止当前查看会话的运行（其他会话并发执行不受影响）
+      this.runControllers.get(this.currentSessionId!)?.abort()
       return
     }
     void this.send()
+  }
+
+  /** 当前查看的会话是否正在执行 */
+  private isCurrentRunning(): boolean {
+    return this.currentSessionId ? this.runningSessions.has(this.currentSessionId) : false
   }
 
   private async send(): Promise<void> {
@@ -486,10 +517,12 @@ export class ChatView extends ItemView {
   }
 
   private async run(sessionId: string, text: string, skipAppend = false): Promise<void> {
-    this.running = true
+    // 会话级执行状态：支持多会话并发（各会话独立中止控制器），并广播给所有面板
+    this.runningSessions.add(sessionId)
+    this.runControllers.set(sessionId, new AbortController())
+    const signal = this.runControllers.get(sessionId)!.signal
+    this.ctx.emit('dsh/run/start', sessionId)
     this.setSendingState()
-    this.abortController = new AbortController()
-    const signal = this.abortController.signal
     try {
       if (!skipAppend) {
         await this.ctx.sessionLog.append(sessionId, {
@@ -540,7 +573,7 @@ export class ChatView extends ItemView {
         tools: {
           list: () => this.ctx.toolsCompat.list().filter((t) => agentAllows(agent, t.name)),
         },
-        executeTool: (name, input) => this.executeTool(name, input),
+        executeTool: (name, input) => this.executeTool(name, input, sessionId),
         onEvent: sink,
         onStream: streaming ? (delta) => this.appendStream(delta) : undefined,
         onThinking: (delta) => this.appendThinking(delta),
@@ -566,8 +599,9 @@ export class ChatView extends ItemView {
       // 异常/中止也收尾当前轮次（挂复制按钮）
       this.closeTurn()
     } finally {
-      this.running = false
-      this.abortController = null
+      this.runningSessions.delete(sessionId)
+      this.runControllers.delete(sessionId)
+      this.ctx.emit('dsh/run/end', sessionId)
       this.setSendingState()
       this.streamingEl = null
       this.streamingText = ''
@@ -582,7 +616,7 @@ export class ChatView extends ItemView {
     }
   }
 
-  private async executeTool(name: string, input: Record<string, unknown>): Promise<ToolExecution> {
+  private async executeTool(name: string, input: Record<string, unknown>, sessionId: string): Promise<ToolExecution> {
     const agent = this.activeAgent()
     if (!agentAllows(agent, name)) {
       return { ok: false, error: t('chat.agent.toolDenied', { name: agentDisplayName(agent ?? { id: '', name: '' }), tool: name }) }
@@ -592,7 +626,7 @@ export class ChatView extends ItemView {
         callId: `call_${Math.random().toString(36).slice(2, 10)}` as never,
         name,
         arguments: input,
-        signal: this.abortController?.signal ?? new AbortController().signal,
+        signal: this.runControllers.get(sessionId)?.signal ?? new AbortController().signal,
       })
       if (result.isError) return { ok: false, error: result.error.message }
       return { ok: true, output: result.value }
@@ -627,6 +661,26 @@ export class ChatView extends ItemView {
     const parent = this.turnEl ?? this.messagesEl
     const details = parent.createEl('details', { cls: 'dsh-thinking is-active' })
     details.createEl('summary', { text: '🧠 思考中…' })
+    // 快捷操作（展开时可见）：回到思考顶部 / 收起思考（长推理内容时无需手动向上滚）
+    const actions = details.createDiv({ cls: 'dsh-thinking-actions' })
+    const toTop = actions.createEl('button', {
+      cls: 'dsh-thinking-action',
+      text: '⤒',
+      attr: { title: t('chat.thinking.top') },
+    })
+    toTop.onclick = () => {
+      const el = this.thinkingEl
+      if (!el) return
+      const mrect = this.messagesEl.getBoundingClientRect()
+      const rect = el.getBoundingClientRect()
+      this.messagesEl.scrollTop += rect.top - mrect.top
+    }
+    const collapse = actions.createEl('button', {
+      cls: 'dsh-thinking-action',
+      text: '−',
+      attr: { title: t('chat.thinking.collapse') },
+    })
+    collapse.onclick = () => this.thinkingEl?.removeAttribute('open')
     details.createDiv({ cls: 'dsh-thinking-body' })
     this.thinkingEl = details
     this.thinkingText = ''
@@ -668,9 +722,10 @@ export class ChatView extends ItemView {
   }
 
   private setSendingState(): void {
-    this.sendBtn.setText(this.running ? t('chat.stop') : t('chat.send'))
-    this.sendBtn.classList.toggle('dsh-btn-stop', this.running)
-    this.inputEl.disabled = this.running
+    const running = this.isCurrentRunning()
+    this.sendBtn.setText(running ? t('chat.stop') : t('chat.send'))
+    this.sendBtn.classList.toggle('dsh-btn-stop', running)
+    this.inputEl.disabled = running
   }
 
   // ---------- 会话列表 / 绑定 / 输入 ----------
@@ -898,6 +953,10 @@ export class ChatView extends ItemView {
         cls: 'dsh-session-sub',
         text: `${s.notePath ?? t('chat.list.global')} · ${t('chat.list.count', { count: s.count })}`,
       })
+      // 执行中标记（本面板或其他面板正在运行该会话）
+      if (this.runningSessions.has(s.id)) {
+        row.createSpan({ cls: 'dsh-session-running', text: `⟳ ${t('chat.list.running')}` })
+      }
       btn.onclick = () => this.openSession(s.id)
       // 悬浮操作：导出 / 删除
       const actions = row.createDiv({ cls: 'dsh-session-actions' })
@@ -1045,7 +1104,15 @@ export class ChatView extends ItemView {
   }
 
 
-  private scrollToBottom(): void {
+  /**
+   * 滚动到底部。默认仅在用户已贴近底部时跟随（避免用户向上阅读时被反复拽回）；
+   * force=true 用于新轮次/会话切换等必须展示最新内容的场景。
+   */
+  private scrollToBottom(force = false): void {
+    if (!force) {
+      const el = this.messagesEl
+      if (el.scrollHeight - el.scrollTop - el.clientHeight > 120) return
+    }
     this.messagesEl.scrollTop = this.messagesEl.scrollHeight
   }
 }

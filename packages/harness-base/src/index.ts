@@ -119,5 +119,9 @@ declare module '@deepseek-ai/cordis' {
     'dsh/waiting-approval': (targetPath: string) => void
     /** 设置保存后广播（对话面板据此刷新模型/智能体选择） */
     'dsh/settings-updated': (key: string) => void
+    /** 会话开始执行（广播：多面板会话列表显示"执行中"标记） */
+    'dsh/run/start': (sessionId: string) => void
+    /** 会话结束执行（正常完成/停止/失败） */
+    'dsh/run/end': (sessionId: string) => void
   }
 }
