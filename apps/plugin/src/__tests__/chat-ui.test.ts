@@ -248,3 +248,72 @@ describe('模型切换闭环（修复无法切换模型）', () => {
     expect((view.sessionModelValue as () => string)()).toBe('openai/gpt-4o')
   })
 })
+
+describe('pendingModel 修复（0.28.36 回归）', () => {
+  /** 构造带 patchMeta 探针的视图（复用模型切换测试的 ctx 模式） */
+  function viewWithPatchSpy() {
+    const patched: Array<{ id: string; patch: Record<string, unknown> }> = []
+    const ctx = {
+      settings: {
+        get: (k: string, d: unknown) => (k === 'providers' ? PROVIDERS : k === 'defaultModelId' ? 'deepseek/deepseek-chat' : d),
+        set: () => {},
+      },
+      on: vi.fn(() => () => {}),
+      sessionLog: {
+        append: async () => {},
+        list: async () => [],
+        read: async () => [],
+        readMeta: async () => null,
+        remove: async () => {},
+        patchMeta: async (id: string, patch: Record<string, unknown>) => {
+          patched.push({ id, patch })
+        },
+      },
+      toolsCompat: { list: () => [] },
+      llmCaller: {},
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => undefined,
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    return { v, patched }
+  }
+
+  it('切换到已有会话时丢弃 pendingModel（不串台覆盖旧会话模型）', () => {
+    const { v } = viewWithPatchSpy()
+    // openSession 会触发 renderSession/refreshSessions，需要渲染区
+    v.messagesEl = document.createElement('div')
+    v.sessionRowsEl = document.createElement('div')
+    v.pendingModel = 'deepseek/deepseek-reasoner'
+    ;(v as { openSession(id: string): void }).openSession('session-old')
+    expect(v.pendingModel).toBeNull()
+    expect(v.currentSessionId).toBe('session-old')
+  })
+
+  it('applyPendingModel：有效 pending 落盘到会话并持久化', async () => {
+    const { v, patched } = viewWithPatchSpy()
+    ;(v.sessionModels as Map<string, string>).set('s1', 'deepseek/deepseek-chat')
+    v.currentSessionId = 's1'
+    v.pendingModel = 'deepseek/deepseek-reasoner'
+    ;(v as { applyPendingModel(id: string): void }).applyPendingModel('s1')
+    expect((v.sessionModels as Map<string, string>).get('s1')).toBe('deepseek/deepseek-reasoner')
+    expect(patched).toEqual([{ id: 's1', patch: { modelId: 'deepseek/deepseek-reasoner' } }])
+    expect(v.pendingModel).toBeNull()
+  })
+
+  it('applyPendingModel：失效 pending（模型已删）仅丢弃，不污染会话元信息', async () => {
+    const { v, patched } = viewWithPatchSpy()
+    ;(v.sessionModels as Map<string, string>).set('s1', 'deepseek/deepseek-chat')
+    v.currentSessionId = 's1'
+    v.pendingModel = 'deepseek/deleted-model'
+    ;(v as { applyPendingModel(id: string): void }).applyPendingModel('s1')
+    // 会话原模型保持不变，未写入 patchMeta
+    expect((v.sessionModels as Map<string, string>).get('s1')).toBe('deepseek/deepseek-chat')
+    expect(patched).toEqual([])
+    expect(v.pendingModel).toBeNull()
+  })
+})

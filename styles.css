@@ -760,6 +760,41 @@
   min-width: 0;
 }
 
+/* ===== 插件版本历史 / 已删除插件（弹窗内列表） ===== */
+
+.dsh-modal-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  padding: 12px 4px;
+}
+
+.dsh-pm-backup-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dsh-pm-backup-row:last-child {
+  border-bottom: none;
+}
+
+.dsh-pm-backup-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dsh-pm-backup-time {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.dsh-pm-backup-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
 /* ===== Chat 输入区工具栏（模式 + 模型） ===== */
 .dsh-chat-toolbar {
   display: flex;

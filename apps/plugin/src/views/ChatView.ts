@@ -442,11 +442,9 @@ export class ChatView extends ItemView {
         modelId,
       } satisfies SessionEvent)
       void this.refreshSessions()
-    } else if (this.pendingModel) {
-      // 已有会话、发消息前刚切换了模型：落盘并清空 pending
-      this.sessionModels.set(sessionId, this.pendingModel)
-      void this.ctx.sessionLog.patchMeta(sessionId, { modelId: this.pendingModel })
-      this.pendingModel = null
+    } else {
+      // 已有会话：应用发送前点选的模型（有效才落盘，失效仅丢弃）
+      this.applyPendingModel(sessionId)
     }
     this.startTurn(text)
     this.lastFailed = null
@@ -683,6 +681,25 @@ export class ChatView extends ItemView {
     return models.includes(mid.model)
   }
 
+  /** 切换到已有会话：丢弃为"新会话"准备的模型选择，避免串台覆盖旧会话模型 */
+  private openSession(id: string): void {
+    this.pendingModel = null
+    this.currentSessionId = id
+    void this.renderSession()
+    void this.refreshSessions()
+  }
+
+  /** 发送前应用 pendingModel：有效则落盘到该会话，无效（模型已被删除）则仅丢弃 */
+  private applyPendingModel(sessionId: string): void {
+    if (!this.pendingModel) return
+    const modelId = this.sessionModelValue()
+    if (this.pendingModel === modelId) {
+      this.sessionModels.set(sessionId, modelId)
+      void this.ctx.sessionLog.patchMeta(sessionId, { modelId })
+    }
+    this.pendingModel = null
+  }
+
   private refreshModelBtn(): void {
     const value = this.sessionModelValue()
     const items = this.buildModelItems()
@@ -842,11 +859,7 @@ export class ChatView extends ItemView {
         cls: 'dsh-session-sub',
         text: `${s.notePath ?? t('chat.list.global')} · ${t('chat.list.count', { count: s.count })}`,
       })
-      btn.onclick = () => {
-        this.currentSessionId = s.id
-        void this.renderSession()
-        void this.refreshSessions()
-      }
+      btn.onclick = () => this.openSession(s.id)
       // 悬浮操作：导出 / 删除
       const actions = row.createDiv({ cls: 'dsh-session-actions' })
       const exp = actions.createEl('button', { cls: 'dsh-session-action', text: '⤓', attr: { title: t('chat.list.exportTitle') } })
