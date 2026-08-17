@@ -72,7 +72,7 @@ function makeView(opts?: { defaultModelId?: string; providers?: unknown[] }): Ch
       set: () => {},
     },
     on: vi.fn(() => () => {}),
-    sessionLog: { append: async () => {}, list: async () => [], read: async () => [], readMeta: async () => null, remove: async () => {} },
+    sessionLog: { append: async () => {}, list: async () => [], read: async () => [], readMeta: async () => null, remove: async () => {}, patchMeta: async () => {} },
     toolsCompat: { list: () => [] },
     llmCaller: {},
     emit: vi.fn(),
@@ -173,5 +173,78 @@ describe('新会话按钮位置（0.28.32）', () => {
     expect(headerActions.querySelector('.dsh-btn-new-session')).toBeNull()
     // 头部操作区只剩插件管理器一个按钮
     expect(headerActions.querySelectorAll('button').length).toBe(1)
+  })
+})
+
+describe('模型切换闭环（修复无法切换模型）', () => {
+  it('新会话未发消息时切换模型 → 记入 pendingModel，发消息时采用', () => {
+    const view = makeView({ defaultModelId: 'deepseek/deepseek-chat' }) as unknown as Record<string, unknown>
+    // 复刻 openModelMenu 的 onClick：无 currentSessionId 时走 pendingModel 分支
+    const onClick = (value: string) => {
+      const id = view.currentSessionId as string | null
+      if (id) {
+        ;(view.sessionModels as Map<string, string>).set(id, value)
+      } else {
+        ;(view as Record<string, string | null>).pendingModel = value
+      }
+    }
+    view.currentSessionId = null
+    onClick('deepseek/deepseek-reasoner')
+    expect((view as Record<string, string | null>).pendingModel).toBe('deepseek/deepseek-reasoner')
+    // send() 建会话时会以 pendingModel 作为本会话模型（经 sessionModelValue 取最新）
+    expect((view.sessionModelValue as () => string)()).toBe('deepseek/deepseek-reasoner')
+  })
+
+  it('已有会话切换模型 → 写入 sessionModels 且走 patchMeta 持久化', async () => {
+    const patched: Array<{ id: string; patch: Record<string, unknown> }> = []
+    const ctx = {
+      settings: {
+        get: (k: string, d: unknown) => (k === 'providers' ? PROVIDERS : k === 'defaultModelId' ? 'deepseek/deepseek-chat' : d),
+        set: () => {},
+      },
+      on: vi.fn(() => () => {}),
+      sessionLog: {
+        append: async () => {},
+        list: async () => [],
+        read: async () => [],
+        readMeta: async () => null,
+        remove: async () => {},
+        patchMeta: async (id: string, patch: Record<string, unknown>) => {
+          patched.push({ id, patch })
+        },
+      },
+      toolsCompat: { list: () => [] },
+      llmCaller: {},
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => undefined,
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    v.currentSessionId = 'session-x'
+    // 复刻 openModelMenu 的 onClick 逻辑
+    const onClick = (value: string) => {
+      const id = v.currentSessionId as string | null
+      if (id) {
+        ;(v.sessionModels as Map<string, string>).set(id, value)
+        void (ctx.sessionLog as { patchMeta: (i: string, p: Record<string, unknown>) => Promise<void> }).patchMeta(id, { modelId: value })
+      }
+    }
+    onClick('deepseek/deepseek-reasoner')
+    expect((v.sessionModels as Map<string, string>).get('session-x')).toBe('deepseek/deepseek-reasoner')
+    expect(patched).toEqual([{ id: 'session-x', patch: { modelId: 'deepseek/deepseek-reasoner' } }])
+    expect((v.sessionModelValue as () => string)()).toBe('deepseek/deepseek-reasoner')
+  })
+
+  it('会话存储的模型在设置中被删除后 → 回退有效默认模型', () => {
+    const view = makeView({ defaultModelId: 'openai/gpt-4o' }) as unknown as Record<string, unknown>
+    // 假设某会话曾存了一个已被删除的模型
+    ;(view.sessionModels as Map<string, string>).set('session-orphan', 'deepseek/deleted-model')
+    view.currentSessionId = 'session-orphan'
+    // 该模型不再存在于 providers → 应回退到 openai/gpt-4o
+    expect((view.sessionModelValue as () => string)()).toBe('openai/gpt-4o')
   })
 })

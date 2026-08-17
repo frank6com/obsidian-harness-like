@@ -87,7 +87,12 @@ export class SessionLog {
     return events
   }
 
-  /** 读取会话元信息（首条 session/meta 事件）；无则 undefined */
+  /**
+   * 读取会话元信息（取最后一条 session/meta 事件，逐字段后写覆盖先写）。
+   * 支持「追加更新」——切换模型时无需原地改写首行，只需再 append 一条
+   * 只含变更字段（如 modelId）的 session/meta，readMeta 自然取最新值。
+   * 无 session/meta 则 undefined。
+   */
   async readMeta(sessionId: string): Promise<SessionMeta | undefined> {
     await this.chain
     let text: string
@@ -97,17 +102,39 @@ export class SessionLog {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') return undefined
       throw err
     }
-    const first = text.split('\n').find((l) => l.trim())
-    if (!first) return undefined
-    try {
-      const ev = JSON.parse(first) as SessionEvent
-      if (ev.type === 'session/meta') {
-        return { title: ev.title, notePath: ev.notePath, modelId: ev.modelId }
+    let meta: SessionMeta | undefined
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      try {
+        const ev = JSON.parse(trimmed) as SessionEvent
+        if (ev.type === 'session/meta') {
+          meta = {
+            // 后写事件优先覆盖（patchMeta 追加的字段会覆盖首条）
+            title: ev.title ?? meta?.title,
+            notePath: ev.notePath ?? meta?.notePath,
+            modelId: ev.modelId ?? meta?.modelId,
+          }
+        }
+      } catch {
+        // 损坏行：跳过
       }
-    } catch {
-      // 首行损坏：无元信息
     }
-    return undefined
+    return meta
+  }
+
+  /**
+   * 更新会话元信息中指定字段：追加一条只含变更字段的 session/meta，
+   * 供 readMeta（取最新）读回。用于会话内切换模型等「原地更新」场景，
+   * 避免依赖可被多个写入者竞争的 JSONL 首行改写。
+   */
+  async patchMeta(sessionId: string, patch: Partial<SessionMeta>): Promise<void> {
+    await this.append(sessionId, {
+      type: 'session/meta',
+      ts: Date.now(),
+      sessionId,
+      ...patch,
+    } as SessionEvent)
   }
 
   async list(): Promise<SessionSummary[]> {

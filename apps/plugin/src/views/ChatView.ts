@@ -40,6 +40,8 @@ export class ChatView extends ItemView {
   private currentSessionId: string | null = null
   private sessions = new Map<string, SessionMeta>()
   private sessionModels = new Map<string, string>()
+  /** 新会话尚未建 id 时，承接用户已点选但未落盘的模型 */
+  private pendingModel: string | null = null
   private modelBtn!: HTMLButtonElement
   private agentBtn!: HTMLButtonElement
   private root!: HTMLElement
@@ -426,16 +428,25 @@ export class ChatView extends ItemView {
       this.sessions.set(sessionId, { notePath: null })
       // 新会话从第一条消息开始：清掉欢迎界面
       this.messagesEl.empty()
-      // 会话元信息（标题 + 绑定笔记）落盘，重启后仍可恢复
+      // 采用当前应生效的模型（pendingModel → 默认；已含失效回退）
+      const modelId = this.sessionModelValue()
+      this.sessionModels.set(sessionId, modelId)
+      this.pendingModel = null
+      // 会话元信息（标题 + 绑定笔记 + 模型）落盘，重启后仍可恢复
       void this.ctx.sessionLog.append(sessionId, {
         type: 'session/meta',
         ts: Date.now(),
         sessionId,
         title: text.length > 24 ? text.slice(0, 24) + '…' : text,
         notePath: null,
-        modelId: this.sessionModelValue(),
+        modelId,
       } satisfies SessionEvent)
       void this.refreshSessions()
+    } else if (this.pendingModel) {
+      // 已有会话、发消息前刚切换了模型：落盘并清空 pending
+      this.sessionModels.set(sessionId, this.pendingModel)
+      void this.ctx.sessionLog.patchMeta(sessionId, { modelId: this.pendingModel })
+      this.pendingModel = null
     }
     this.startTurn(text)
     this.lastFailed = null
@@ -647,10 +658,29 @@ export class ChatView extends ItemView {
 
   /** 当前会话使用的模型（"providerId/model"） */
   private sessionModelValue(): string {
-    if (this.currentSessionId && this.sessionModels.has(this.currentSessionId)) {
-      return this.sessionModels.get(this.currentSessionId)!
+    let value: string | undefined
+    if (this.pendingModel) value = this.pendingModel
+    else if (this.currentSessionId && this.sessionModels.has(this.currentSessionId)) {
+      value = this.sessionModels.get(this.currentSessionId)
     }
+    // 设置变更可能导致已存的模型 id 失效（模型被删除/改名），此时回退默认
+    if (value && this.isValidModel(value)) return value
     return this.defaultModelId()
+  }
+
+  /** 校验 "providerId/model" 是否仍存在于当前提供方配置中 */
+  private isValidModel(id: string): boolean {
+    const mid = parseModelId(id)
+    if (!mid) return false
+    const providers = this.ctx.settings.get('providers', [] as Array<{
+      id: string
+      model?: string
+      models?: string[]
+    }>)
+    const p = providers.find((x) => x.id === mid.provider)
+    if (!p) return false
+    const models = p.models?.length ? p.models : p.model ? [p.model] : []
+    return models.includes(mid.model)
   }
 
   private refreshModelBtn(): void {
@@ -671,7 +701,15 @@ export class ChatView extends ItemView {
           .setTitle(item.label)
           .setChecked(item.value === current)
           .onClick(() => {
-            if (this.currentSessionId) this.sessionModels.set(this.currentSessionId, item.value)
+            const id = this.currentSessionId
+            if (id) {
+              this.sessionModels.set(id, item.value)
+              // 会话内切换模型 → 持久化到该会话元信息（追加更新，取最新）
+              void this.ctx.sessionLog.patchMeta(id, { modelId: item.value })
+            } else {
+              // 新会话尚未建 id：先记在 pendingModel，send() 建会话时采用
+              this.pendingModel = item.value
+            }
             this.refreshModelBtn()
           }),
       )

@@ -98,4 +98,28 @@ describe('SessionLog', () => {
     await log.append('s2', { type: 'user/message', ts: 3, sessionId: 's2', content: 'x' })
     expect(await log.readMeta('s2')).toBeUndefined()
   })
+
+  it('patchMeta 追加更新：readMeta 取最新，逐字段覆盖', async () => {
+    const dir = await tmpDir()
+    const log = new SessionLog(dir)
+    await log.append('s1', {
+      type: 'session/meta',
+      ts: 1,
+      sessionId: 's1',
+      title: '统计笔记',
+      notePath: 'Inbox/示例.md',
+      modelId: 'deepseek/deepseek-chat',
+    })
+    // 仅携带变更字段（modelId）的追加更新
+    await log.patchMeta('s1', { modelId: 'openai/gpt-4o' })
+    const meta = await log.readMeta('s1')
+    // 标题/笔记保留首条，modelId 取最新
+    expect(meta).toEqual({
+      title: '统计笔记',
+      notePath: 'Inbox/示例.md',
+      modelId: 'openai/gpt-4o',
+    })
+    const list = await log.list()
+    expect(list[0]).toMatchObject({ id: 's1', modelId: 'openai/gpt-4o' })
+  })
 })
