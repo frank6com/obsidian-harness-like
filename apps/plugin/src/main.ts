@@ -29,7 +29,7 @@ import {
 import { HarnessLikeSettingsTab, type TabId } from './settings-tab'
 import { PluginBackups } from './plugin-backups'
 import { getLanguage, registerLocale, resolveLanguage, setLanguage, t } from './i18n'
-import { WriteApprovalModal, GrantModal, ConfirmModal } from './modals'
+import { WriteApprovalModal, GrantModal, ConfirmModal, CommandApprovalModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
 import { pluginDevToolsPlugin } from './tools/plugin-dev'
 import { ChatView, CHAT_VIEW_TYPE } from './views/ChatView'
@@ -188,7 +188,13 @@ export default class HarnessLikePlugin extends Plugin {
     })
 
     this.fibers.push(
-      ctx.plugin(builtinToolsPlugin({ openTarget: (t) => apiLike.openTarget(t) })),
+      ctx.plugin(
+        builtinToolsPlugin({
+          openTarget: (t) => apiLike.openTarget(t),
+          confirmCommand: (command, cwd, fullAccess) =>
+            new CommandApprovalModal(this.app, command, cwd, fullAccess).ask(),
+        }),
+      ),
     )
 
     // 插件创造模式：agent 创建/修改/重载用户插件（未授权先弹授权窗；覆盖文件需确认）

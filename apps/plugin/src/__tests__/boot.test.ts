@@ -83,8 +83,8 @@ async function bootHarness() {
     ctx.plugin(runtimePlugin({ pluginsDir: path.join(root, '.obsidian', 'harness-like-plugins'), require: () => undefined })),
     ctx.plugin(
       builtinToolsPlugin({
-        
         openTarget: async () => {},
+        confirmCommand: async () => true,
       }),
     ),
   ]

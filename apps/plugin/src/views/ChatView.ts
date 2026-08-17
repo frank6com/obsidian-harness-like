@@ -571,7 +571,15 @@ export class ChatView extends ItemView {
         sessionId,
         llm: this.ctx.llmCaller,
         tools: {
-          list: () => this.ctx.toolsCompat.list().filter((t) => agentAllows(agent, t.name)),
+          list: () =>
+            this.ctx.toolsCompat
+              .list()
+              .filter(
+                (t) =>
+                  agentAllows(agent, t.name) &&
+                  // run_command 默认不启用：未开启时不暴露给模型（避免模型误调用）
+                  (t.name !== 'run_command' || Boolean(this.ctx.settings.get('enableCommandTool', false))),
+              ),
         },
         executeTool: (name, input) => this.executeTool(name, input, sessionId),
         onEvent: sink,

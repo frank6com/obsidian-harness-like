@@ -79,6 +79,10 @@ export interface HarnessLikeSettings {
   logLevel: LogLevel
   /** 仅当前笔记：注入当前活动笔记上下文，写操作限于该笔记 */
   confineToCurrentNote: boolean
+  /** 命令行工具主开关（默认关闭；开启后每次调用仍需审批） */
+  enableCommandTool: boolean
+  /** 命令行完全放行：允许指定任意工作目录（默认仅 vault 根目录） */
+  commandFullAccess: boolean
   /** 流式输出（关闭时等完整消息再显示） */
   streamingEnabled: boolean
   /** Markdown 渲染（关闭时消息显示纯文本） */
@@ -131,6 +135,8 @@ export function defaultSettings(): HarnessLikeSettings {
     exportDir: 'sessions',
     logLevel: 'info',
     confineToCurrentNote: false,
+    enableCommandTool: false,
+    commandFullAccess: false,
     streamingEnabled: true,
     renderMarkdown: true,
     uiLanguage: 'auto',
@@ -247,6 +253,8 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
     ? (r.logLevel as LogLevel)
     : 'info'
   base.confineToCurrentNote = r.confineToCurrentNote === true
+  base.enableCommandTool = r.enableCommandTool === true
+  base.commandFullAccess = r.commandFullAccess === true
   base.streamingEnabled = r.streamingEnabled !== false
   base.renderMarkdown = r.renderMarkdown !== false
   base.uiLanguage =

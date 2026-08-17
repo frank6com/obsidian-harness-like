@@ -15,6 +15,11 @@ import { builtinToolsPlugin } from '../tools/builtin'
 
 async function setup(
   approve?: (r: { name: string; arguments: unknown }) => Promise<'allow' | 'deny'>,
+  opts: {
+    confirmCommand?: (c: string, wd: string, fa: boolean) => Promise<boolean>
+    enableCommandTool?: boolean
+    commandFullAccess?: boolean
+  } = {},
 ) {
   const vaultRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-tools-'))
   const dataDir = path.join(vaultRoot, '.obsidian', 'dsh')
@@ -35,9 +40,25 @@ async function setup(
   })
   ctx.reflect.provide('sandbox', sandbox)
   ctx.reflect.provide('editor', new EditorService())
+  ctx.reflect.provide('settings', {
+    get: (k: string, d: unknown) =>
+      k === 'enableCommandTool'
+        ? (opts.enableCommandTool ?? true)
+        : k === 'commandFullAccess'
+          ? (opts.commandFullAccess ?? false)
+          : d,
+    set: () => {},
+  })
 
   await ctx.plugin(toolsCompatPlugin({ approve }))
-  await ctx.plugin(builtinToolsPlugin({ openTarget: async (t): Promise<void> => { opened.push(t) } }))
+  await ctx.plugin(
+    builtinToolsPlugin({
+      openTarget: async (t): Promise<void> => {
+        opened.push(t)
+      },
+      confirmCommand: opts.confirmCommand ?? (async () => true),
+    }),
+  )
 
   return { ctx, sandbox, writes, opened, vaultRoot }
 }
@@ -168,5 +189,57 @@ describe('insert_to_editor', () => {
     const out = await ctx.toolsCompat.get('insert_to_editor')!.execute({ content: 'hello' })
     expect(out).toEqual({ ok: true, inserted: 5 })
     expect(target).toBe('hello')
+  })
+})
+
+describe('run_command（命令行工具，0.32.0）', () => {
+  it('默认不启用：未开启时拒绝执行并给出指引', async () => {
+    const { ctx } = await setup(undefined, { enableCommandTool: false })
+    const out = await ctx.toolsCompat.get('run_command')!.execute({ command: 'echo hi' })
+    expect((out as { ok: boolean }).ok).toBe(false)
+    expect((out as { error: string }).error).toContain('未启用')
+  })
+
+  it('开启但用户拒绝 → 不执行', async () => {
+    const { ctx } = await setup(undefined, { confirmCommand: async () => false })
+    const out = await ctx.toolsCompat.get('run_command')!.execute({ command: 'echo hi' })
+    expect(out).toMatchObject({ ok: false, reason: '用户拒绝执行命令' })
+  })
+
+  it('开启并批准 → 在 vault 根目录执行并回传输出', async () => {
+    const { ctx, vaultRoot } = await setup()
+    const out = await ctx.toolsCompat.get('run_command')!.execute({
+      command: 'node -e "process.stdout.write(\'hello\')"',
+    })
+    expect(out).toMatchObject({ ok: true, cwd: vaultRoot, exit_code: 0, stdout: 'hello' })
+  })
+
+  it('未开「完全放行」时指定 cwd 被拒绝', async () => {
+    const { ctx } = await setup()
+    const out = await ctx.toolsCompat.get('run_command')!.execute({ command: 'echo hi', cwd: '/tmp' })
+    expect((out as { ok: boolean }).ok).toBe(false)
+    expect((out as { error: string }).error).toContain('完全放行')
+  })
+
+  it('开启「完全放行」后 cwd 生效', async () => {
+    const { ctx } = await setup(undefined, { commandFullAccess: true })
+    const target = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-cwd-'))
+    const out = await ctx.toolsCompat.get('run_command')!.execute({
+      command: 'node -e "process.stdout.write(process.cwd())"',
+      cwd: target,
+    })
+    expect((out as { ok: boolean }).ok).toBe(true)
+    // macOS 下 /var → /private/var 符号链接：用 realpath 比较
+    expect((out as { stdout: string }).stdout).toBe(fs.realpathSync(target))
+  })
+
+  it('超长输出被截断（防刷屏）', async () => {
+    const { ctx } = await setup()
+    const out = await ctx.toolsCompat.get('run_command')!.execute({
+      command: 'node -e "process.stdout.write(\'x\'.repeat(10000))"',
+    })
+    const stdout = (out as { stdout: string }).stdout
+    expect(stdout.length).toBeLessThan(10000)
+    expect(stdout).toContain('已截断')
   })
 })

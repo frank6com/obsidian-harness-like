@@ -601,3 +601,48 @@ export class SessionRenameModal extends Modal {
     this.close()
   }
 }
+
+/** 命令执行审批弹窗：展示命令与工作目录，用户逐次确认（命令行能力的安全底线） */
+export class CommandApprovalModal extends Modal {
+  private resolveFn: (v: boolean) => void = () => {}
+  private settled = false
+
+  constructor(app: App, private command: string, private cwd: string, private fullAccess: boolean) {
+    super(app)
+  }
+
+  override onOpen(): void {
+    const { contentEl, titleEl } = this
+    titleEl.setText(t('modal.command.title'))
+    contentEl.createEl('p', { text: t('modal.command.ask') })
+    contentEl.createEl('pre', { cls: 'dsh-command-preview', text: this.command })
+    contentEl.createDiv({ cls: 'dsh-modal-scope', text: `${t('modal.command.cwd')} ${this.cwd}` })
+    if (this.fullAccess) {
+      contentEl.createDiv({ cls: 'dsh-modal-warning', text: t('modal.command.fullAccessNote') })
+    }
+    new Setting(contentEl).addButton((b) =>
+      b.setButtonText(t('modal.command.deny')).onClick(() => this.finish(false)),
+    )
+    new Setting(contentEl).addButton((b) =>
+      b.setButtonText(t('modal.command.allow')).setWarning().onClick(() => this.finish(true)),
+    )
+  }
+
+  override onClose(): void {
+    this.finish(false)
+  }
+
+  ask(): Promise<boolean> {
+    this.open()
+    return new Promise((resolve) => {
+      this.resolveFn = resolve
+    })
+  }
+
+  private finish(v: boolean): void {
+    if (this.settled) return
+    this.settled = true
+    this.resolveFn(v)
+    this.close()
+  }
+}

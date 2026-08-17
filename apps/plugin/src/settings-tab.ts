@@ -431,6 +431,28 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
           await this.plugin.saveSettings()
         }),
       )
+    // 命令行工具（默认关闭；开启后每次调用仍需审批）
+    new Setting(c)
+      .setName(t('settings.command.enable'))
+      .setDesc(t('settings.command.enableDesc'))
+      .addToggle((t) =>
+        t.setValue(settings.enableCommandTool).onChange(async (v) => {
+          settings.enableCommandTool = v
+          await this.plugin.saveSettings()
+        }),
+      )
+    new Setting(c)
+      .setName(t('settings.command.fullAccess'))
+      .setDesc(t('settings.command.fullAccessDesc'))
+      .addToggle((t) =>
+        t
+          .setValue(settings.commandFullAccess)
+          .setDisabled(!settings.enableCommandTool)
+          .onChange(async (v) => {
+            settings.commandFullAccess = v
+            await this.plugin.saveSettings()
+          }),
+      )
   }
 
   // ---------- 会话 ----------
