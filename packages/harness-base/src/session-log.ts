@@ -112,7 +112,7 @@ export class SessionLog {
           meta = {
             // 后写事件优先覆盖（patchMeta 追加的字段会覆盖首条）
             title: ev.title ?? meta?.title,
-            notePath: ev.notePath ?? meta?.notePath,
+            notePath: ev.notePath ?? meta?.notePath ?? null,
             modelId: ev.modelId ?? meta?.modelId,
           }
         }
