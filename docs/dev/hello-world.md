@@ -1,6 +1,6 @@
-# 最小插件
+# Minimal Plugin
 
-用户插件 = `package.json` + `main.js`（纯 JS，免构建）。放在 `.obsidian/harness-like-plugins/my-plugin/`。
+A user plugin = `package.json` + `main.js` (plain JS, no build step). Put it in `.obsidian/harness-like-plugins/my-plugin/`.
 
 ## package.json
 
@@ -8,12 +8,12 @@
 {
   "name": "my-plugin",
   "version": "0.0.1",
-  "description": "一句话描述",
+  "description": "One-line description",
   "dsh": { "id": "my-plugin", "version": "0.0.1", "entry": "main.js" }
 }
 ```
 
-## main.js（注册一个工具 + 一个命令）
+## main.js (one tool + one command)
 
 ```js
 module.exports = {
@@ -23,30 +23,30 @@ module.exports = {
     ctx.effect(() => [
       ctx.toolsCompat.register({
         name: 'my_tool',
-        description: '工具做什么',
+        description: 'What the tool does',
         input: { type: 'object', properties: { x: { type: 'string' } }, required: ['x'] },
         execute(input) { return { ok: true, x: input.x } },
       }),
       ctx.commands.addCommand({
         id: 'hello',
-        name: '示例命令',
-        callback: () => ctx.notice.notice('你好'),
+        name: 'Example command',
+        callback: () => ctx.notice.notice('Hello'),
       }),
     ])
   },
 }
 ```
 
-命令 id/名称会自动带前缀（`Harness Like: 示例命令（my-plugin）`），无需手写。
+Command ids/names get prefixed automatically (`Harness Like: Example command (my-plugin)`).
 
-## 加载
+## Loading
 
-插件管理器 →「授权并加载」（单勾=仅此版本 / 双勾=信任后续）→ 状态变为 running。
+Plugin Manager → "Authorize & Load" (single = this version / double = trust future) → status becomes running.
 
-## 铁律
+## Rules
 
-1. `inject` 必须声明 apply 里用到的**每一个**服务；
-2. 禁止直接操作 Obsidian DOM，一律通过 `ctx.*` 服务；
-3. 所有注册必须包进 `ctx.effect(() => [disposer...])`，停止时自动撤销。
+1. `inject` must declare every service used in `apply`.
+2. Never touch Obsidian DOM directly — use `ctx.*` services.
+3. Wrap all registrations in `ctx.effect(() => [disposer...])` so stopping the plugin cleans up.
 
-完整服务签名见[服务速查](/dev/services)。
+Full signatures: [ctx.* services](/dev/services).

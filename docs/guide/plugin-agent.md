@@ -1,39 +1,39 @@
-# 通过对话创建插件
+# Creating Plugins in Conversation
 
-Harness Like 的最佳体验：**不用写代码，直接在对话里让 agent 完成插件的创建、加载与使用**。
+The best Harness Like experience: **no coding — let the agent create, load and use your plugin right in the chat**.
 
-## 前提
+## Prerequisites
 
-1. 已安装启用 Harness Like（见[快速开始](/guide/quickstart)）；
-2. 对话面板工具栏把智能体切换为 **创造模式**（完整能力，可创建插件）。
+1. Harness Like installed and enabled (see [Quick Start](/guide/quickstart));
+2. Switch the agent in the chat toolbar to **Create Mode** (full capabilities, can create plugins).
 
-## 三步完成
+## Three steps
 
-**① 描述需求** —— 一句话说清你想要什么：
+**① Describe what you want** — one sentence is enough:
 
-> 帮我创建一个插件，提供一个面板显示当前笔记库内的文件夹列表及相应目录下的所有文件数量
+> Create a plugin with a panel showing the folders in this vault and the file count under each folder.
 
-**② agent 自动完成** —— 它会依次：查开发指南 → 创建插件骨架 → 写入代码 → 加载插件（首次在弹窗授权）→ 打开面板。
+**② The agent does the rest** — it reads the dev guide, scaffolds the plugin, writes the code, loads it (authorize in the prompt on first load) and opens the panel.
 
-**③ 使用与迭代** —— 面板出现即完成；不满意直接在对话里提修改：
+**③ Use and iterate** — done when the panel appears; ask for changes right in the chat:
 
-> 把统计改成按文件类型分组显示
+> Change the stats to group by file type instead.
 
-agent 会修改并重新加载，改动即时生效。
+The agent modifies the code and reloads it — changes apply immediately.
 
-## 你能让 agent 创建什么
+## What you can ask for
 
-- **工具**：agent 可调用的自定义能力；
-- **命令**：命令面板里的新命令（自动以 `Harness Like: 命令（插件id）` 归组）；
-- **面板**：自定义视图（统计、监控、工具台……）；
-- **侧边栏图标 / 状态栏 / 设置页**；
-- **界面翻译**：覆盖 Harness Like 的界面文案。
+- **Tools**: custom capabilities the agent can call;
+- **Commands**: new command palette entries (auto-grouped as `Harness Like: command (plugin-id)`);
+- **Panels**: custom views (stats, dashboards, toolkits…);
+- **Ribbon icons / status bar / settings tabs**;
+- **UI translations**: override Harness Like's interface strings.
 
-## 管理插件
+## Managing plugins
 
-对话面板头部右侧「插件管理器」：授权（单勾=仅此版本 / 双勾=信任后续）、重新加载、停止、删除；授权记录可在 设置 → 插件授权 查看/撤销。
+Plugin Manager (top-right "Plugin Manager" button in the chat header): authorize (single = this version / double = trust future versions), reload, stop, delete; grants can be reviewed/revoked in Settings → Plugin Grants.
 
-## 提示
+## Tips
 
-- 需求说得越具体，结果越接近预期（功能、展示形式、数据来源）；
-- 想手写插件？进阶文档见[开发文档 → 用户插件开发](/development/index)。
+- The more specific your request, the closer the result (features, layout, data source);
+- Want to hand-write plugins? See [Development → User Plugin Development](/development/index).

@@ -1,44 +1,44 @@
-# 快速开始
+# Quick Start
 
-## 安装（主插件）
+## Install (the host plugin)
 
-从 **Obsidian 官方插件目录**安装：[Harness Like](https://community.obsidian.md/plugins/harness-like)（仅限桌面端）。
+From the **official Obsidian plugin directory**: [Harness Like](https://community.obsidian.md/plugins/harness-like) (desktop only).
 
-Obsidian 内操作：设置 → 第三方插件 → 浏览 → 搜索 **Harness Like** → 安装 → 启用。
+In Obsidian: Settings → Community plugins → Browse → search **Harness Like** → Install → Enable.
 
-手动安装（备选）：从 GitHub 仓库根目录复制 `main.js`、`manifest.json`、`styles.css` 到 vault 的 `.obsidian/plugins/harness-like/`。
+Manual install (alternative): copy `main.js`, `manifest.json`, `styles.css` from the GitHub repository root to `.obsidian/plugins/harness-like/` in your vault.
 
-## 配置模型
+## Configure a model
 
-1. 点击左侧边栏的机器人图标，或运行主插件命令「打开 Harness Like 面板」；
-2. 打开主插件设置（设置 → 第三方插件 → Harness Like）→「模型」tab：
-   - 已有预置 DeepSeek 通道，填入 **API Key**；
-   - 点「从端点获取」拉取模型列表，或手动输入添加；
-   - 把常用模型「设为默认」。
+1. Click the bot icon in the left ribbon, or run the host command "Open Harness Like Panel";
+2. Open host settings (Settings → Community plugins → Harness Like) → Models tab:
+   - The DeepSeek channel is pre-configured — enter your **API Key**;
+   - "Fetch from endpoint" to pull the model list, or add models manually;
+   - Set your usual model as the default.
 
-## 第一次对话
+## First chat
 
-输入示例问题：
+Try an example:
 
-- "统计 vault 里有多少笔记"
-- "搜索包含'读书'的笔记"
-- "总结当前笔记的要点"（可先勾选工具栏「仅当前笔记」）
+- "Count the notes in this vault"
+- "Find notes containing 'reading'"
+- "Summarize the current note" (tick "Current note only" in the toolbar first)
 
-agent 会调用工具并展示卡片；写操作会弹出审批，按需允许。
+The agent calls tools with visible cards; write operations ask for approval.
 
-## 主插件命令（命令面板中可用）
+## Host commands (in the command palette)
 
-| 命令 | 作用 |
+| Command | Purpose |
 | --- | --- |
-| 打开 Harness Like 面板 | 打开对话面板（等同点击机器人图标） |
-| 打开 Harness Like 插件管理器 | 打开子插件管理界面 |
-| 重载已授权的用户插件 | 重新加载已授权的子插件 |
+| Open Harness Like Panel | Opens the chat panel (same as the ribbon bot icon) |
+| Open Harness Like Plugin Manager | Opens the sub-plugin management view |
+| Reload authorized user plugins | Reloads all authorized sub-plugins |
 
-> 子插件注册的命令会显示为 `Harness Like: 命令（子插件id）`，同样在命令面板使用，见[用户插件体系](/guide/plugins)。
+> Sub-plugin commands appear as `Harness Like: command (sub-plugin-id)` and are used the same way — see [User Plugins](/guide/plugins).
 
-## 下一步
+## Next steps
 
-- [对话面板详解](/guide/chat)（含会话导出）
-- [智能体与模型](/guide/agents-models)（三种模式的用途）
-- [在对话中描述需求](/guide/speak-to-agent)（Obsidian 区域术语与对话表述）
-- [通过对话创建插件](/guide/plugin-agent)
+- [Chat Panel](/guide/chat) (including session export)
+- [Agents & Models](/guide/agents-models) (what the three modes are for)
+- [Describing what you want](/guide/speak-to-agent) (Obsidian areas & how to phrase requests)
+- [Creating Plugins in Conversation](/guide/plugin-agent)

@@ -1,36 +1,36 @@
-# 用户插件体系
+# User Plugins
 
-用户插件是运行在 Obsidian 内的 **Cordis 插件**（由 Harness Like 加载），用于扩展命令、工具、面板等能力。
+User plugins are **Cordis plugins** running inside Obsidian (loaded by Harness Like) that extend commands, tools, panels and more.
 
-## 两种获得方式
+## Two ways to get one
 
-- **对话创建（推荐，零代码）**：创造模式下让 agent 直接创建、加载并打开——见[通过对话创建插件](/guide/plugin-agent)；
-- **手动放置**：把插件目录复制到 vault 的 `.obsidian/harness-like-plugins/<id>/`（含 `package.json` 与编译好的 `main.js`）。
+- **Create in conversation (recommended, zero-code)**: in Create Mode, let the agent build, load and open it — see [Creating Plugins in Conversation](/guide/plugin-agent);
+- **Manually**: copy a plugin folder to `.obsidian/harness-like-plugins/<id>/` in your vault (a `package.json` + a compiled `main.js`).
 
-## 授权与加载
+## Authorization & loading
 
-对话面板头部右侧「插件管理器」：
+Plugin Manager (top-right "Plugin Manager" button in the chat header):
 
-- **授权并加载**：单勾 = 仅信任当前版本；双勾 = 信任后续所有版本；
-- 运行中可：**打开面板 / 重新加载 / 停止 / 删除**；
-- 授权记录可在 设置 → 插件授权 查看/撤销。
+- **Authorize & Load**: single-check = this version only; double-check = trust future versions;
+- While running: **Open Panel / Reload / Stop / Delete**;
+- Grants can be reviewed/revoked in Settings → Plugin Grants.
 
-## 使用子插件注册的命令
+## Using sub-plugin commands
 
-子插件注册的命令会在命令面板中显示为 `Harness Like: 命令（子插件id）`（如 `Harness Like: 打开面板（folder-stats）`）——打开命令面板（Ctrl/Cmd+P）搜索 "Harness Like" 即可找到；也可以直接问 agent 帮你执行。
+Commands registered by sub-plugins appear in the palette as `Harness Like: command (sub-plugin-id)` (e.g. `Harness Like: Open panel (folder-stats)`) — press Ctrl/Cmd+P and search "Harness Like", or just ask the agent to run it.
 
-## 备份与迁移
+## Backup & migration
 
-子插件 = `.obsidian/harness-like-plugins/<id>/` 下的文件（package.json + main.js）。**备份/迁移 = 复制该目录**：
+A sub-plugin is just the files under `.obsidian/harness-like-plugins/<id>/` (package.json + main.js). **Backup/migrate = copy the folder**:
 
-1. 把整个 `.obsidian/harness-like-plugins/`（或单个子插件目录）复制到新 vault 的相同位置；
-2. 在新 vault 中打开插件管理器 →「授权并加载」（重新授权一次即可）。
+1. Copy `.obsidian/harness-like-plugins/` (or a single sub-plugin folder) to the same location in the new vault;
+2. Open the Plugin Manager there → "Authorize & Load" (one-time re-authorization).
 
-## 安全
+## Security
 
-- 插件只执行本地文件（`.obsidian/harness-like-plugins/`），不会下载或远程执行代码；
-- 插件的写操作仍走审批链，不会绕过安全模型。
+- Plugins only execute local files under `.obsidian/harness-like-plugins/`; nothing is downloaded or executed remotely;
+- Plugin writes still go through the approval chain — the security model cannot be bypassed.
 
-## 进阶
+## Going further
 
-想手写插件？见[开发文档 → 用户插件开发](/development/index)。
+Want to hand-write plugins? See [Development → User Plugin Development](/development/index).

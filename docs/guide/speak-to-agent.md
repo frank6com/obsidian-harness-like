@@ -1,39 +1,39 @@
-# 在对话中描述需求
+# Describing What You Want
 
-告诉 agent 你想做什么时，用 Obsidian 的**区域名称**描述，agent 就能准确地调用对应能力。
+Use Obsidian's **area names** when telling the agent what to do — it maps them to the right capabilities.
 
-## Obsidian 区域术语对照
+## Obsidian area glossary
 
-| 你看到的区域 | 官方叫法 | 对话中怎么说 |
+| What you see | Official name | How to phrase it |
 | --- | --- | --- |
-| 左侧最窄的图标栏 | 侧边栏（ribbon） | "在左侧边栏加一个图标，点击打开……" |
-| 底部细长条 | 状态栏（status bar） | "在底部状态栏显示……" |
-| 按 Ctrl/Cmd+P 弹出的搜索框 | 命令面板（command palette） | "注册一个命令，名字叫……" |
-| 右侧/左侧可拖出的面板 | 面板（panel / view） | "打开一个右侧面板，显示……" |
-| 正在编辑的笔记 | 当前笔记（active note） | "总结当前笔记……" / "把内容插入到当前笔记光标处" |
-| 设置里的分类页 | 设置 tab | "在主插件设置里加一个……选项" |
-| 笔记库文件树 | vault | "统计整个笔记库……" |
+| Narrow icon bar on the far left | Ribbon | "Add an icon to the left ribbon that opens…" |
+| Thin bar at the bottom | Status bar | "Show … in the status bar" |
+| The palette opened with Ctrl/Cmd+P | Command palette | "Register a command named…" |
+| A draggable side panel | Panel / view | "Open a right-side panel showing…" |
+| The note you're editing | Active note | "Summarize the current note…" / "Insert at the cursor" |
+| Categorized settings pages | Settings tab | "Add an option in the host settings…" |
+| The vault file tree | Vault | "Count the whole vault…" |
 
-## 对话表述示例
+## Example requests
 
-**创建子插件（创造模式）**：
+**Create a sub-plugin (Create Mode)**:
 
-> 帮我创建一个插件，提供一个面板显示当前笔记库内的文件夹列表及相应目录下的所有文件数量
+> Create a plugin with a panel showing the folders in this vault and the file count under each folder.
 
-**修改已有子插件**：
+**Modify an existing sub-plugin**:
 
-> 把 folder-stats 面板的统计改成按文件类型分组显示
+> Change folder-stats to group the stats by file type instead.
 
-**只读提问（对话模式）**：
+**Read-only question (Chat Mode)**:
 
-> 搜索包含"读书"的笔记，并统计有多少篇
+> Find notes containing "reading" and count them.
 
-**读写笔记（修编模式）**：
+**Read/write notes (Edit Mode)**:
 
-> 把上面的清单整理成一篇笔记写到 Inbox 目录下
+> Turn the list above into a note under the Inbox folder.
 
-## 技巧
+## Tips
 
-- 先想清楚**目标**（要什么结果），再描述**形式**（面板/命令/图标/状态栏）；
-- 不确定区域叫什么？直接描述位置（"左下角那个图标"），agent 能理解；
-- 涉及写操作时 agent 会请求审批，属正常流程。
+- Think about the **goal** first (the result you want), then the **form** (panel / command / icon / status bar);
+- Not sure of the name? Describe the position ("that icon at the bottom left") — the agent understands;
+- Writes always go through approval — that's normal.

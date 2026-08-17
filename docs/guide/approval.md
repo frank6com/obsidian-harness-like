@@ -1,23 +1,23 @@
-# 审批与安全
+# Approval & Security
 
-## 写操作审批链
+## Write approval chain
 
-agent 的写操作按以下顺序判定：
+Agent writes are decided in this order:
 
-1. **工具级策略**（设置 → 审批 → 工具级策略覆盖，如 `write_note=deny`）；
-2. **仅当前笔记**：勾选后写操作只允许当前打开的笔记；
-3. **目录白名单**：命中白名单目录免审批；
-4. **审批弹窗**：默认每次询问，弹窗内可选「允许一次」或「本会话允许写」（不持久化）。
+1. **Per-tool policy** (Settings → Approval → overrides, e.g. `write_note=deny`);
+2. **Current-note mode**: only the currently open note is writable;
+3. **Directory whitelist**: whitelisted directories skip the prompt;
+4. **Approval dialog**: ask by default; choose "Allow once" or "Allow for this chat" (not persisted).
 
-## 用户插件安全模型
+## User plugin security model
 
-- 插件只执行你放在 `.obsidian/harness-like-plugins/` 的**本地文件**，不会下载或远程执行代码。
-- 首次加载需授权：**单勾** = 只信任当前版本；**双勾** = 信任后续所有版本。
-- 授权记录可在 设置 → 插件授权 查看/撤销；撤销后插件不再自动加载，重新加载需再次授权。
-- 插件可申请：读写笔记（写需审批）、注册命令/工具/面板、读取当前笔记、通知。
+- Plugins only execute local files under `.obsidian/harness-like-plugins/`; nothing is downloaded or executed remotely.
+- First load requires authorization: **single-check** = this version only; **double-check** = trust future versions.
+- Grants can be viewed/revoked in Settings → Plugin Grants; revoking stops auto-loading, not the running plugin.
+- Plugins can request: note read/write (writes need approval), commands/tools/panels, current note access, notifications.
 
-## 数据存放
+## Data locations
 
-- API Key 等设置：明文保存在 `.obsidian/plugins/harness-like/data.json`，注意保管。
-- 会话日志：`.obsidian/harness-like/sessions/*.jsonl`。
-- 隐私：零遥测；模型请求只发往你配置的端点。
+- API keys: plain text in `.obsidian/plugins/harness-like/data.json` — keep it safe.
+- Session logs: `.obsidian/harness-like/sessions/*.jsonl`.
+- Privacy: zero telemetry; requests go only to configured endpoints.

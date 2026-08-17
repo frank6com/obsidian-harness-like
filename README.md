@@ -139,6 +139,6 @@ MIT
 
 ## 面向贡献者
 
-- 使用者可直接跳过本节。完整开发文档见文档站[开发文档](https://frank6com.github.io/obsidian-harness-like/development/index.html)栏目。
+- 使用者可直接跳过本节。完整开发文档见文档站[开发文档](https://frank6com.github.io/obsidian-harness-like/zh/development/index.html)栏目（中文文档位于 /zh/，站点默认英文）。
 
 - 有问题请在 GitHub Discussions 提问，或在 Issues 里提交功能请求。

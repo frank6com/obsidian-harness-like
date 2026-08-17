@@ -1,30 +1,30 @@
-# 项目概览
+# Overview
 
-![对话创建游戏插件](/screenshots/zh/CreateAGame.gif)
+![Create a game plugin in conversation](/screenshots/zh/CreateAGame.gif)
 
-## 这是什么？
+## What is this?
 
-Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插件进程内嵌入 Cordis 运行时，把 Obsidian 的 API 暴露为 Cordis 服务，让 agent 可以通过工具读写你的笔记，同时为了保障数据安全全程带人工审批；而在**创造模式**下，甚至能按照你的想法完全通过对话创建、迭代并重载你自己的 **Cordis 插件**，让您的想法言出法随。
+Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embeds a Cordis runtime inside the Obsidian plugin process, exposes Obsidian's APIs as Cordis services, and lets an AI agent read and write your notes through tools — with human approval at every step to keep your data safe. In **Create Mode**, you can build, iterate and reload your own **Cordis plugins** entirely through conversation — whatever you can imagine, you can create.
 
-（注意此并非 Obsidian 原生插件，而是通过本插件针对 Obsidian 提供的扩展点适配的 Cordis 插件）
+(Note: these are not Obsidian-native plugins — they are Cordis plugins adapted to Obsidian's extension points provided by Harness Like.)
 
-## 一个直观的例子
+## A concrete example
 
-上面的动画演示了完整流程：在对话里说一句"帮我创建一个能玩的小游戏插件"，agent 就自动完成了插件创建、代码编写、加载与面板打开——**零代码，纯对话**。
+The animation above shows the whole flow: say "create a small game plugin I can play" in the chat, and the agent scaffolds, writes, loads and opens the plugin by itself — **zero code, pure conversation**.
 
-## 核心概念
+## Core concepts
 
-- **主插件**：Harness Like 本身——负责对话、agent、审批、设置与子插件管理；
-- **子插件**：你（或 agent）创建的 Cordis 插件，可注册工具、命令、面板、侧边栏图标、状态栏与设置页。
+- **Host plugin**: Harness Like itself — chat, agent, approvals, settings and sub-plugin management;
+- **Sub-plugins**: Cordis plugins you (or the agent) create — they can register tools, commands, panels, ribbon icons, status bar items and settings tabs.
 
-## 界面一览
+## Interface preview
 
-![对话面板](/screenshots/zh/chat.png)
-![设置 — 模型](/screenshots/zh/Settings.gif)
-![插件管理器](/screenshots/zh/Plugins.png)
+![Chat panel](/screenshots/zh/chat.png)
+![Settings — Models](/screenshots/zh/Settings.gif)
+![Plugin Manager](/screenshots/zh/Plugins.png)
 
-## 下一步
+## Next steps
 
-- [快速开始](/guide/quickstart)
-- [通过对话创建插件](/guide/plugin-agent)
-- [已实现的能力清单](/development/capabilities)
+- [Quick Start](/guide/quickstart)
+- [Creating Plugins in Conversation](/guide/plugin-agent)
+- [Implemented Capabilities](/development/capabilities)
