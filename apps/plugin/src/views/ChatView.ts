@@ -20,6 +20,8 @@ import { agentAllows } from '../mode'
 import { listVisibleAgents, parseModelId, type AgentPreset } from '../settings'
 import { safeFileName, sessionToMarkdown } from '../export'
 import { agentDisplayDesc, agentDisplayName, getLanguage, resolveLanguage, setLanguage, t, type LanguagePreference } from '../i18n'
+import zhDict from '../i18n/zh'
+import enDict from '../i18n/en'
 import { ConfirmModal } from '../modals'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
@@ -34,6 +36,32 @@ type UiPhase = AgentPhase | { kind: 'idle' } | { kind: 'waiting' } | { kind: 'st
 function summarize(value: unknown): string {
   const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
   return text.length > 300 ? text.slice(0, 300) + ' …' : text
+}
+
+/** "已停止"状态标记（zh/en 默认文案；防语言切换后匹配失效） */
+const STOP_MARKERS = new Set<string>()
+for (const dict of [zhDict, enDict]) {
+  const v = dict['common.stopped']
+  if (v) STOP_MARKERS.add(v)
+}
+
+/**
+ * 构建模型上下文历史：
+ * - 剔除轮次标记（turn/start、turn/end）
+ * - 被更新的用户消息覆盖的"已停止"标记不再进入上下文——否则模型会认为
+ *   任务已取消，用户说"继续"时只回一句就停止（0.28.37 回归修复）
+ *   （重载场景：标记后没有新用户消息时保留，避免"上一问悬空被顺带回答"）
+ */
+export function filterModelHistory(events: SessionEvent[], markers: Set<string>): SessionEvent[] {
+  let lastUserIdx = -1
+  events.forEach((e, i) => {
+    if (e.type === 'user/message') lastUserIdx = i
+  })
+  return events.filter((e, i) => {
+    if (e.type === 'turn/start' || e.type === 'turn/end') return false
+    if (e.type === 'system/message' && markers.has(e.content) && i < lastUserIdx) return false
+    return true
+  })
 }
 
 export class ChatView extends ItemView {
@@ -446,6 +474,12 @@ export class ChatView extends ItemView {
       // 已有会话：应用发送前点选的模型（有效才落盘，失效仅丢弃）
       this.applyPendingModel(sessionId)
     }
+    // 新一轮运行前重置去重/流式状态：停止后发送新消息时，旧状态会导致
+    // 首条回复被去重丢弃（lastAssistantRaw 比对）或流式残留串到新对话
+    this.lastAssistantRaw = null
+    this.lastEventKey = ''
+    this.streamingEl = null
+    this.streamingText = ''
     this.startTurn(text)
     this.lastFailed = null
     await this.run(sessionId, text)
@@ -465,9 +499,11 @@ export class ChatView extends ItemView {
           content: text,
         } satisfies SessionEvent)
       }
-      const history = (await this.ctx.sessionLog.read(sessionId)).filter(
-        (e) => e.type !== 'turn/start' && e.type !== 'turn/end',
-      )
+      const events = await this.ctx.sessionLog.read(sessionId)
+      // 停止标记：匹配 zh/en 默认 + 当前语言（含自定义字典覆盖），防匹配失效
+      const markers = new Set(STOP_MARKERS)
+      markers.add(t('common.stopped'))
+      const history = filterModelHistory(events, markers)
       let noteCtx = ''
       const confine = this.ctx.settings.get('confineToCurrentNote', false) as boolean
       const note = confine ? this.ctx.workspace.getActiveFile() : null
@@ -535,6 +571,9 @@ export class ChatView extends ItemView {
       this.setSendingState()
       this.streamingEl = null
       this.streamingText = ''
+      // 收尾思考框：停止/失败后必须关闭并清引用，否则下一轮 openThinking
+      // 会命中残留引用，把新推理并进旧卡片（"沿用之前的思考框"）
+      this.closeThinking()
       this.setPhase({ kind: 'idle' })
       if (this.pendingRebuild) {
         this.pendingRebuild = false

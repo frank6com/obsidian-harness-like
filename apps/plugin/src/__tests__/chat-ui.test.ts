@@ -42,7 +42,7 @@ function polyfillObsidianDom(): void {
   }
 }
 
-import { ChatView } from '../views/ChatView'
+import { ChatView, filterModelHistory } from '../views/ChatView'
 
 const PROVIDERS = [
   { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-chat', 'deepseek-reasoner'] },
@@ -315,5 +315,74 @@ describe('pendingModel 修复（0.28.36 回归）', () => {
     expect((v.sessionModels as Map<string, string>).get('s1')).toBe('deepseek/deepseek-chat')
     expect(patched).toEqual([])
     expect(v.pendingModel).toBeNull()
+  })
+})
+
+describe('停止后新一轮的状态修复（0.28.37）', () => {
+  it('filterModelHistory：被新用户消息覆盖的"已停止"标记被剔除（模型不再认为任务已取消）', () => {
+    const events = [
+      { type: 'user/message', ts: 1, sessionId: 's1', content: '帮我改进插件' },
+      { type: 'system/message', ts: 2, sessionId: 's1', content: '已停止' },
+      { type: 'user/message', ts: 3, sessionId: 's1', content: '继续' },
+    ] as never
+    const out = filterModelHistory(events, new Set(['已停止', 'Stopped']))
+    expect(out.map((e) => (e as { content: string }).content)).toEqual(['帮我改进插件', '继续'])
+  })
+
+  it('filterModelHistory：标记后无新用户消息时保留（重载场景防悬空回答）', () => {
+    const events = [
+      { type: 'user/message', ts: 1, sessionId: 's1', content: '帮我改进插件' },
+      { type: 'system/message', ts: 2, sessionId: 's1', content: '已停止' },
+    ] as never
+    const out = filterModelHistory(events, new Set(['已停止']))
+    expect(out.map((e) => (e as { content: string }).content)).toEqual(['帮我改进插件', '已停止'])
+  })
+
+  it('filterModelHistory：剔除轮次标记', () => {
+    const events = [
+      { type: 'turn/start', ts: 1, sessionId: 's1' },
+      { type: 'user/message', ts: 2, sessionId: 's1', content: 'hi' },
+      { type: 'turn/end', ts: 3, sessionId: 's1' },
+    ] as never
+    expect(filterModelHistory(events, new Set()).length).toBe(1)
+  })
+
+  it('run 中止（用户停止）时 finally 关闭思考框：下一轮不再沿用旧框', async () => {
+    const ctx = {
+      settings: {
+        get: (k: string, d: unknown) => (k === 'streamingEnabled' ? false : k === 'providers' ? PROVIDERS : d),
+        set: () => {},
+      },
+      on: vi.fn(() => () => {}),
+      sessionLog: { append: async () => {}, list: async () => [], read: async () => [], readMeta: async () => null, remove: async () => {} },
+      toolsCompat: { list: () => [] },
+      llmCaller: {
+        call: async () => {
+          const err = new Error('aborted')
+          err.name = 'AbortError'
+          throw err
+        },
+      },
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => undefined,
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    v.messagesEl = document.createElement('div')
+    v.turnEl = null
+    v.phaseEl = document.createElement('div')
+    v.sendBtn = document.createElement('button')
+    v.inputEl = document.createElement('textarea')
+    v.currentSessionId = 's1'
+    // 模拟"思考中被停止"：思考框已存在
+    ;(v as { appendThinking(d: string): void }).appendThinking('正在推理')
+    expect(v.thinkingEl).toBeTruthy()
+    // 停止后发送新消息（run 抛 AbortError → finally 应关闭思考框）
+    await (v as { run(s: string, t: string): Promise<void> }).run('s1', '继续')
+    expect(v.thinkingEl).toBeNull()
   })
 })
