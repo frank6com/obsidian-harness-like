@@ -27,6 +27,7 @@ import {
   type ProviderConfig,
 } from './settings'
 import { HarnessLikeSettingsTab, type TabId } from './settings-tab'
+import { PluginBackups } from './plugin-backups'
 import { getLanguage, registerLocale, resolveLanguage, setLanguage, t } from './i18n'
 import { WriteApprovalModal, GrantModal, ConfirmModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
@@ -168,6 +169,9 @@ export default class HarnessLikePlugin extends Plugin {
       registerLocale,
     })
 
+    // 用户插件版本备份（覆盖写入前 / 删除前自动快照，可回退、可恢复误删）
+    ctx.reflect.provide('pluginBackups', new PluginBackups(path.join(dataDir, 'plugin-backups')))
+
     // 编辑器桥：把 Obsidian 的 activeEditor 暴露为 ctx.editor
     ctx.editor.setProvider(() => {
       const active = (this.app.workspace as unknown as {
@@ -206,7 +210,14 @@ export default class HarnessLikePlugin extends Plugin {
         t('approval.allowOverwrite'),
       ).ask()
     }
-    this.fibers.push(ctx.plugin(pluginDevToolsPlugin({ ensureGranted, confirmOverwrite })))
+    const confirmRestore = async (pluginId: string, backupTime: string): Promise<boolean> => {
+      return new ConfirmModal(
+        this.app,
+        t('approval.rollbackAsk', { id: pluginId, time: backupTime }),
+        t('pm.history.restore'),
+      ).ask()
+    }
+    this.fibers.push(ctx.plugin(pluginDevToolsPlugin({ ensureGranted, confirmOverwrite, confirmRestore })))
 
     // 视图与命令
     this.registerView(CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, ctx))

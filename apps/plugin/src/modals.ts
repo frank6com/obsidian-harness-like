@@ -3,6 +3,8 @@
  */
 
 import { App, Modal, Setting } from 'obsidian'
+import * as path from 'path'
+import type { Context } from '@deepseek-ai/cordis'
 import type { AgentMode, AgentPreset } from './settings'
 import type { GrantMode } from '@harness-like/harness-base'
 import { t } from './i18n'
@@ -424,5 +426,127 @@ export class AgentEditModal extends Modal {
     this.settled = true
     this.resolveFn()
     this.close()
+  }
+}
+
+/** 插件版本历史弹窗：列出备份，可恢复（恢复前自动备份当前状态，可撤销） */
+export class PluginHistoryModal extends Modal {
+  constructor(
+    app: App,
+    private ctx: Context,
+    private pluginId: string,
+    private onChanged?: () => void,
+  ) {
+    super(app)
+  }
+
+  override onOpen(): void {
+    void this.render()
+  }
+
+  override onClose(): void {
+    this.contentEl.empty()
+  }
+
+  private async render(): Promise<void> {
+    const { contentEl } = this
+    contentEl.empty()
+    contentEl.createEl('h3', { text: t('pm.history.title', { id: this.pluginId }) })
+    const backups = await this.ctx.pluginBackups.list(this.pluginId)
+    if (!backups.length) {
+      contentEl.createDiv({ cls: 'dsh-modal-empty', text: t('pm.history.empty') })
+      return
+    }
+    const list = contentEl.createDiv({ cls: 'dsh-modal-list dsh-modal-list-tall' })
+    for (const b of backups) {
+      const row = list.createDiv({ cls: 'dsh-pm-backup-row' })
+      const info = row.createDiv({ cls: 'dsh-pm-backup-info' })
+      info.createDiv({ cls: 'dsh-pm-backup-time', text: new Date(b.time).toLocaleString() })
+      info.createDiv({
+        cls: 'dsh-pm-backup-sub',
+        text: `${t('pm.history.reason.' + b.reason)} · ${b.fileCount} ${t('pm.history.files')} · ${(b.bytes / 1024).toFixed(1)} KB`,
+      })
+      const btn = row.createEl('button', { cls: 'dsh-btn', text: t('pm.history.restore') })
+      btn.onclick = () => void this.restore(b.id, b.time)
+    }
+  }
+
+  private async restore(backupId: string, time: number): Promise<void> {
+    const timeText = new Date(time).toLocaleString()
+    const ok = await new ConfirmModal(
+      this.app,
+      t('pm.history.restoreConfirm', { time: timeText }),
+      t('pm.history.restore'),
+    ).ask()
+    if (!ok) return
+    const dir = path.join(this.ctx.sandbox.scope.pluginsDir, this.pluginId)
+    // 回退前先备份当前状态（回退可撤销）
+    await this.ctx.pluginBackups.snapshot(dir, this.pluginId, 'rollback')
+    await this.ctx.pluginBackups.restore(dir, this.pluginId, backupId)
+    // 重新加载生效（授权仍在则直接加载；目录被删的插件仅还原文件）
+    const rec = this.ctx.pluginRuntime.inspect(this.pluginId)
+    const manifest = rec.manifest
+    if (manifest && this.ctx.approval.isGranted(this.pluginId, manifest.version)) {
+      await this.ctx.pluginRuntime.stop(this.pluginId)
+      const r = await this.ctx.pluginRuntime.load(this.pluginId)
+      this.ctx.notice.notice(
+        r.status === 'running'
+          ? t('pm.history.restored', { time: timeText })
+          : t('pm.reload.failed', { msg: r.error ?? 'unknown' }),
+      )
+    } else {
+      this.ctx.notice.notice(
+        manifest ? t('pm.history.restoreNoGrant') : t('pm.history.restored', { time: timeText }),
+      )
+    }
+    this.onChanged?.()
+    void this.render()
+  }
+}
+
+/** 已删除插件恢复弹窗：列出有备份但目录已不存在的插件，可恢复最新备份 */
+export class DeletedPluginsModal extends Modal {
+  constructor(app: App, private ctx: Context, private onChanged?: () => void) {
+    super(app)
+  }
+
+  override onOpen(): void {
+    void this.render()
+  }
+
+  override onClose(): void {
+    this.contentEl.empty()
+  }
+
+  private async render(): Promise<void> {
+    const { contentEl } = this
+    contentEl.empty()
+    contentEl.createEl('h3', { text: t('pm.deleted') })
+    const live = await this.ctx.pluginRuntime.discover()
+    const deleted = await this.ctx.pluginBackups.deletedPlugins(live)
+    if (!deleted.length) {
+      contentEl.createDiv({ cls: 'dsh-modal-empty', text: t('pm.deleted.empty') })
+      return
+    }
+    const list = contentEl.createDiv({ cls: 'dsh-modal-list' })
+    for (const id of deleted) {
+      const row = list.createDiv({ cls: 'dsh-pm-backup-row' })
+      const info = row.createDiv({ cls: 'dsh-pm-backup-info' })
+      const backups = await this.ctx.pluginBackups.list(id)
+      info.createDiv({ cls: 'dsh-pm-backup-time', text: id })
+      info.createDiv({ cls: 'dsh-pm-backup-sub', text: t('pm.deleted.backupCount', { count: backups.length }) })
+      const btn = row.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: t('pm.deleted.restore') })
+      btn.onclick = () => void this.restoreLatest(id)
+    }
+  }
+
+  private async restoreLatest(id: string): Promise<void> {
+    const latest = await this.ctx.pluginBackups.latest(id)
+    if (!latest) return
+    const dir = path.join(this.ctx.sandbox.scope.pluginsDir, id)
+    await this.ctx.pluginBackups.restore(dir, id, latest.id)
+    this.ctx.notice.notice(t('pm.deleted.restored', { id }))
+    this.onChanged?.()
+    void this.render()
   }
 }

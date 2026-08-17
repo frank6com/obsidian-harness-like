@@ -4,8 +4,9 @@
  */
 
 import { ItemView, WorkspaceLeaf } from 'obsidian'
+import * as path from 'path'
 import type { Context } from '@deepseek-ai/cordis'
-import { ConfirmModal, GrantModal } from '../modals'
+import { ConfirmModal, DeletedPluginsModal, GrantModal, PluginHistoryModal } from '../modals'
 import { grantDisplay } from '../settings'
 import { getLanguage, resolveLanguage, setLanguage, t, type LanguagePreference } from '../i18n'
 
@@ -74,6 +75,8 @@ export class PluginManagerView extends ItemView {
     reload.onclick = () => void this.refresh()
     const openDir = bar.createEl('button', { cls: 'dsh-btn', text: t('pm.openDir') })
     openDir.onclick = () => this.options.openFolder(this.ctx.sandbox.scope.pluginsDir)
+    const deleted = bar.createEl('button', { cls: 'dsh-btn', text: t('pm.deleted') })
+    deleted.onclick = () => new DeletedPluginsModal(this.app, this.ctx, () => void this.refresh()).open()
 
     const ids = await this.ctx.pluginRuntime.discover()
     if (!ids.length) {
@@ -146,6 +149,8 @@ export class PluginManagerView extends ItemView {
         const run = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: t('pm.grantAndLoad') })
         run.onclick = () => void this.ensureAndLoad(id)
       }
+      const history = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.history') })
+      history.onclick = () => new PluginHistoryModal(this.app, this.ctx, id, () => void this.refresh()).open()
       const remove = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.delete') })
       remove.onclick = () => void this.removePlugin(id)
     }
@@ -163,7 +168,7 @@ export class PluginManagerView extends ItemView {
     await this.refresh()
   }
 
-  /** 删除插件目录（破坏性操作，需确认） */
+  /** 删除插件目录（破坏性操作，需确认；删除前自动备份，可恢复误删） */
   private async removePlugin(id: string): Promise<void> {
     const ok = await new ConfirmModal(
       this.app,
@@ -171,6 +176,7 @@ export class PluginManagerView extends ItemView {
       t('common.delete'),
     ).ask()
     if (!ok) return
+    await this.ctx.pluginBackups.snapshot(path.join(this.ctx.sandbox.scope.pluginsDir, id), id, 'delete')
     await this.ctx.pluginRuntime.removeDir(id)
     this.ctx.approval.revoke(id)
     this.ctx.notice.notice(t('pm.delete.done', { id }))

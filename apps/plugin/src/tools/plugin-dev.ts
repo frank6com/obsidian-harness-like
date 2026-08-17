@@ -2,9 +2,11 @@
  * 插件创造模式工具集（第一批）：
  * - plugin_guide：插件开发指南（模板/API/流程，agent 需要时调用）
  * - create_plugin：创建插件骨架（目录 + package.json）
- * - write_plugin_file：写插件内文件（限制在插件目录内，防穿越）
+ * - write_plugin_file：写插件内文件（限制在插件目录内，防穿越；覆盖前自动备份）
  * - plugin_status：读取插件状态与加载错误（迭代诊断）
  * - reload_plugin：停止 + 重新加载（未授权时先走授权弹窗）
+ * - plugin_history：查看插件历史版本备份（每次 AI 覆盖写入前自动留存）
+ * - plugin_rollback：回退插件到历史版本（执行前自动备份当前状态，可撤销）
  *
  * 纯 JS 插件免编译即时生效（D7 附注路径）——agent 写 main.js 即可被加载。
  */
@@ -18,6 +20,8 @@ export interface PluginDevToolsOptions {
   ensureGranted(pluginId: string, version: string, description?: string): Promise<boolean>
   /** 覆盖已有插件文件的确认（高风险操作拦截）；返回是否允许覆盖 */
   confirmOverwrite(pluginId: string, file: string): Promise<boolean>
+  /** 回退插件版本的确认（用户拍板，agent 不可自行回退）；返回是否允许 */
+  confirmRestore(pluginId: string, backupTime: string): Promise<boolean>
 }
 
 const PLUGIN_ID_RE = /^[a-z0-9][a-z0-9-_]{0,63}$/
@@ -225,6 +229,8 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
           if (exists) {
             const allow = await options.confirmOverwrite(pluginId, rel)
             if (!allow) return { ok: false, reason: '用户拒绝覆盖，文件未修改' }
+            // 覆盖前自动备份整个插件目录（AI 迭代的安全网，可回退）
+            await ctx.pluginBackups.snapshot(path.join(ctx.sandbox.scope.pluginsDir, pluginId), pluginId, 'overwrite')
           }
           // 子目录先建（write 要求父目录存在）
           const parent = path.posix.dirname(rel)
@@ -307,6 +313,83 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
               error: result.error,
             }),
           )
+        },
+      })
+
+      ctx.toolsCompat.register({
+        name: 'plugin_history',
+        description: '列出插件的历史版本备份（每次 AI 覆盖写入前自动留存；含时间/原因/文件数；配合 plugin_rollback 回退）',
+        input: {
+          type: 'object',
+          properties: { plugin_id: { type: 'string', description: '插件 id' } },
+          required: ['plugin_id'],
+        },
+        async execute(input) {
+          const id = String(input.plugin_id ?? '')
+          const backups = await ctx.pluginBackups.list(id)
+          return {
+            plugin_id: id,
+            count: backups.length,
+            backups: backups.map((b) => ({
+              backup_id: b.id,
+              time: new Date(b.time).toLocaleString(),
+              reason: b.reason,
+              file_count: b.fileCount,
+              bytes: b.bytes,
+            })),
+          }
+        },
+      })
+
+      ctx.toolsCompat.register({
+        name: 'plugin_rollback',
+        description: '把插件文件回退到某个历史备份（默认最新一份；执行前自动备份当前状态，因此回退本身也可撤销；回退后重新加载生效）。高风险操作，会请求用户确认',
+        input: {
+          type: 'object',
+          properties: {
+            plugin_id: { type: 'string', description: '插件 id' },
+            backup_id: { type: 'string', description: '可选：plugin_history 返回的 backup_id；缺省用最新一份' },
+          },
+          required: ['plugin_id'],
+        },
+        async execute(input) {
+          const id = String(input.plugin_id ?? '')
+          let backupId = input.backup_id ? String(input.backup_id) : undefined
+          if (!backupId) {
+            const latest = await ctx.pluginBackups.latest(id)
+            if (!latest) throw new Error(`插件 ${id} 没有任何历史备份`)
+            backupId = latest.id
+          }
+          const meta = (await ctx.pluginBackups.list(id)).find((b) => b.id === backupId)
+          if (!meta) throw new Error(`备份不存在: ${backupId}`)
+          // 用户拍板：回退不可由 AI 自行决定
+          const allow = await options.confirmRestore(id, new Date(meta.time).toLocaleString())
+          if (!allow) return { ok: false, reason: '用户拒绝回退' }
+          const pluginDir = path.join(ctx.sandbox.scope.pluginsDir, id)
+          // 回退前先备份当前状态（可撤销回退）
+          await ctx.pluginBackups.snapshot(pluginDir, id, 'rollback')
+          await ctx.pluginBackups.restore(pluginDir, id, backupId)
+          // 重新加载生效（沿用 reload_plugin 的授权流程）
+          const inspected = ctx.pluginRuntime.inspect(id)
+          const manifest = inspected.manifest
+          if (inspected.status !== 'error' && manifest) {
+            const granted = await options.ensureGranted(id, manifest.version, manifest.description)
+            if (granted) {
+              await ctx.pluginRuntime.stop(id)
+              const result = await ctx.pluginRuntime.load(id)
+              return JSON.parse(
+                JSON.stringify({
+                  ok: result.status === 'running',
+                  plugin_id: id,
+                  backup_id: backupId,
+                  status: result.status,
+                  error: result.error,
+                }),
+              )
+            }
+            return { ok: true, plugin_id: id, backup_id: backupId, note: '文件已回退，未重新加载（未授权）' }
+          }
+          return { ok: true, plugin_id: id, backup_id: backupId, note: '文件已回退，插件目录状态异常或已删除，未重新加载' }
         },
       })
     },
