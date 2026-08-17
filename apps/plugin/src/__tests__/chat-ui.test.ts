@@ -497,3 +497,35 @@ describe('会话列表前置 / 执行状态 / 思考快捷操作（0.30.0）', (
     expect(details.hasAttribute('open')).toBe(false)
   })
 })
+
+describe('会话重命名（0.31.0）', () => {
+  it('会话行悬浮操作包含重命名按钮（✎ / 导出 / 删除）', async () => {
+    const ctx = {
+      settings: { get: (k: string, d: unknown) => (k === 'providers' ? PROVIDERS : d), set: () => {} },
+      on: vi.fn(() => () => {}),
+      sessionLog: {
+        append: async () => {},
+        list: async () => [
+          { id: 's1', updatedAt: 1, count: 1, title: 't1', notePath: null, modelId: undefined },
+        ],
+        read: async () => [],
+        readMeta: async () => null,
+        remove: async () => {},
+      },
+      toolsCompat: { list: () => [] },
+      llmCaller: {},
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => undefined,
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { sessionRowsEl: HTMLElement }).sessionRowsEl = document.createElement('div')
+    await (v as { refreshSessions(): Promise<void> }).refreshSessions()
+    const actions = (v as { sessionRowsEl: HTMLElement }).sessionRowsEl.querySelector('.dsh-session-actions')!
+    expect(actions.querySelectorAll('button').length).toBe(3)
+  })
+})

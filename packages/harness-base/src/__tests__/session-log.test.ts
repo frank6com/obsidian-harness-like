@@ -123,3 +123,21 @@ describe('SessionLog', () => {
     expect(list[0]).toMatchObject({ id: 's1', modelId: 'openai/gpt-4o' })
   })
 })
+
+  it('重命名：patchMeta({title}) 覆盖标题，其余字段保留', async () => {
+    const dir = await tmpDir()
+    const log = new SessionLog(dir)
+    await log.append('s1', {
+      type: 'session/meta',
+      ts: 1,
+      sessionId: 's1',
+      title: '旧标题',
+      notePath: 'Inbox/a.md',
+      modelId: 'deepseek/deepseek-chat',
+    })
+    await log.patchMeta('s1', { title: '新标题' })
+    const meta = await log.readMeta('s1')
+    expect(meta).toEqual({ title: '新标题', notePath: 'Inbox/a.md', modelId: 'deepseek/deepseek-chat' })
+    const list = await log.list()
+    expect(list[0]!.title).toBe('新标题')
+  })

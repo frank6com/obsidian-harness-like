@@ -2,7 +2,7 @@
  * 原生审批弹窗：插件运行授权（单勾/双勾）与写操作审批。
  */
 
-import { App, Modal, Setting } from 'obsidian'
+import { App, Modal, Setting, TextComponent } from 'obsidian'
 import * as path from 'path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { AgentMode, AgentPreset } from './settings'
@@ -548,5 +548,56 @@ export class DeletedPluginsModal extends Modal {
     this.ctx.notice.notice(t('pm.deleted.restored', { id }))
     this.onChanged?.()
     void this.render()
+  }
+}
+
+/** 会话重命名弹窗：预填当前标题，确认返回新标题（取消 / 空标题返回 null） */
+export class SessionRenameModal extends Modal {
+  private resolveFn: (v: string | null) => void = () => {}
+  private settled = false
+  private input!: TextComponent
+
+  constructor(app: App, private currentTitle: string) {
+    super(app)
+  }
+
+  override onOpen(): void {
+    const { contentEl, titleEl } = this
+    titleEl.setText(t('chat.rename.title'))
+    new Setting(contentEl).addText((text) => {
+      this.input = text
+      text.setValue(this.currentTitle)
+      text.inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          this.finish(this.input.getValue())
+        }
+      })
+    })
+    new Setting(contentEl).addButton((b) =>
+      b.setButtonText(t('common.cancel')).onClick(() => this.finish(null)),
+    )
+    new Setting(contentEl).addButton((b) =>
+      b.setButtonText(t('common.save')).setCta().onClick(() => this.finish(this.input.getValue())),
+    )
+  }
+
+  override onClose(): void {
+    this.finish(null)
+  }
+
+  ask(): Promise<string | null> {
+    this.open()
+    return new Promise((resolve) => {
+      this.resolveFn = resolve
+    })
+  }
+
+  private finish(v: string | null): void {
+    if (this.settled) return
+    this.settled = true
+    const trimmed = typeof v === 'string' ? v.trim() : ''
+    this.resolveFn(trimmed ? trimmed : null)
+    this.close()
   }
 }

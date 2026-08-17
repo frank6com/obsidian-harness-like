@@ -22,7 +22,7 @@ import { safeFileName, sessionToMarkdown } from '../export'
 import { agentDisplayDesc, agentDisplayName, getLanguage, resolveLanguage, setLanguage, t, type LanguagePreference } from '../i18n'
 import zhDict from '../i18n/zh'
 import enDict from '../i18n/en'
-import { ConfirmModal } from '../modals'
+import { ConfirmModal, SessionRenameModal } from '../modals'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
 
@@ -958,8 +958,13 @@ export class ChatView extends ItemView {
         row.createSpan({ cls: 'dsh-session-running', text: `⟳ ${t('chat.list.running')}` })
       }
       btn.onclick = () => this.openSession(s.id)
-      // 悬浮操作：导出 / 删除
+      // 悬浮操作：重命名 / 导出 / 删除
       const actions = row.createDiv({ cls: 'dsh-session-actions' })
+      const ren = actions.createEl('button', { cls: 'dsh-session-action', text: '✎', attr: { title: t('chat.list.rename') } })
+      ren.onclick = (ev) => {
+        ev.stopPropagation()
+        void this.renameSession(s.id, s.title ?? s.id)
+      }
       const exp = actions.createEl('button', { cls: 'dsh-session-action', text: '⤓', attr: { title: t('chat.list.exportTitle') } })
       exp.onclick = (ev) => {
         ev.stopPropagation()
@@ -971,6 +976,15 @@ export class ChatView extends ItemView {
         void this.deleteSession(s.id)
       }
     }
+  }
+
+  /** 重命名会话：追加一条只含 title 的 session/meta（readMeta 取最新） */
+  private async renameSession(id: string, currentTitle: string): Promise<void> {
+    const title = await new SessionRenameModal(this.app, currentTitle).ask()
+    if (!title || title === currentTitle) return
+    await this.ctx.sessionLog.patchMeta(id, { title })
+    this.ctx.notice.notice(t('chat.rename.done', { title }))
+    await this.refreshSessions()
   }
 
   private async exportSession(id: string, title?: string): Promise<void> {
