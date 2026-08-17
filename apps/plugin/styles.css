@@ -572,7 +572,6 @@
   display: flex;
   gap: 8px;
   padding: 8px;
-  border-top: 1px solid var(--background-modifier-border);
 }
 
 .dsh-chat-input {
@@ -767,6 +766,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 8px 0;
+  border-top: 1px solid var(--background-modifier-border);
 }
 
 .dsh-mode-group {
