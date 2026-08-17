@@ -28,6 +28,7 @@ import {
 } from './settings'
 import { HarnessLikeSettingsTab, type TabId } from './settings-tab'
 import { PluginBackups } from './plugin-backups'
+import { userSettingsTabPlugin } from './user-settings-tab'
 import { getLanguage, registerLocale, resolveLanguage, setLanguage, t } from './i18n'
 import { WriteApprovalModal, GrantModal, ConfirmModal, CommandApprovalModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
@@ -171,6 +172,9 @@ export default class HarnessLikePlugin extends Plugin {
 
     // 用户插件版本备份（覆盖写入前 / 删除前自动快照，可回退、可恢复误删）
     ctx.reflect.provide('pluginBackups', new PluginBackups(path.join(dataDir, 'plugin-backups')))
+
+    // 用户插件设置页注册（ctx.settingsTab）：宿主创建真实 PluginSettingTab
+    this.fibers.push(ctx.plugin(userSettingsTabPlugin(this.app, this)))
 
     // 编辑器桥：把 Obsidian 的 activeEditor 暴露为 ctx.editor
     ctx.editor.setProvider(() => {

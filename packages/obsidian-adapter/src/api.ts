@@ -42,6 +42,8 @@ export interface CommandLike {
 export interface CommandsLike {
   addCommand(cmd: CommandLike): CommandLike
   removeCommand(id: string): void
+  /** 执行任意已注册命令（含 Obsidian 核心插件命令，如 templates:insert-template） */
+  executeCommandById(id: string): void
 }
 
 export interface ViewRegistryLike {

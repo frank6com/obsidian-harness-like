@@ -6,9 +6,10 @@ Call these exact signatures — do not guess method names.
 
 - **vault**: `getMarkdownPaths()` → string[] (vault-relative paths; alias `listMarkdown`); `read(path)` → string; `write(path, content)`; `create(path, content)`; `createFolder(path)` (creates nested); `delete(path)`; `rename(old, new)`; `on(ev, cb)` (`vault/modify|create|delete|rename`)
 - **views**: `registerView(type, (leaf) => view)`; `open(type)`
-- **commands**: `addCommand({ id, name, callback })`
+- **commands**: `addCommand({ id, name, callback })`; `execute(id)` (run any registered command, including Obsidian core plugin commands like `templates:insert-template`)
 - **ribbon**: `addRibbonIcon(icon, title, callback)` → `{ remove }`
 - **statusbar**: `addStatusBarItem()` → `{ el, remove }`
+- **settingsTab**: `register({ id, name, render(containerEl) })` — register your own settings tab (render with Obsidian `Setting` components); auto-removed on unload
 - **notice**: `notice(message, timeoutMs?)`
 - **workspace**: `getActiveFile()` → string | null; `onFileOpen(cb)`
 - **editor**: `getSelection()` / `insertText(text)` / `replaceSelection(text)` (null when no active editor)

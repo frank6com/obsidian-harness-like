@@ -105,6 +105,9 @@ export function toApiLike(app: App, plugin?: Plugin): ObsidianApiLike {
       removeCommand(id) {
         cmdApi.removeCommand(id)
       },
+      executeCommandById(id) {
+        cmdApi.executeCommandById?.(id)
+      },
     },
     viewRegistry: {
       registerView(type, creator) {

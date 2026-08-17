@@ -33,7 +33,7 @@ function stubApi(records: { commands: Array<{ id: string; name?: string }> }): O
         records.commands.push({ id: cmd.id, name: cmd.name })
         return cmd
       },
-      removeCommand: () => {},
+      removeCommand: () => {}, executeCommandById: () => {},
     },
     viewRegistry: {
       registerView: () => {},

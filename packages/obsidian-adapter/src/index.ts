@@ -120,9 +120,14 @@ export class CommandsService {
       try {
         this.api.commands.removeCommand(id)
       } catch (err) {
-        console.warn('[dsh] 命令卸载失败（忽略）:', err)
+        console.warn('[harness-like] 命令卸载失败（忽略）:', err)
       }
     }
+  }
+
+  /** 执行任意已注册命令（含 Obsidian 核心插件命令，如 templates:insert-template） */
+  execute(id: string): void {
+    this.api.commands.executeCommandById(id)
   }
 }
 

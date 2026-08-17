@@ -32,7 +32,7 @@ function stubApi(): ObsidianApiLike {
     },
     commands: {
       addCommand: (cmd) => cmd,
-      removeCommand: () => {},
+      removeCommand: () => {}, executeCommandById: () => {},
     },
     viewRegistry: {
       registerView: () => {},

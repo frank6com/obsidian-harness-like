@@ -35,7 +35,7 @@ function stubApi(records: {
         records.commands.push(cmd.id)
         return cmd
       },
-      removeCommand: () => {},
+      removeCommand: () => {}, executeCommandById: () => {},
     },
     viewRegistry: {
       registerView: (type) => {

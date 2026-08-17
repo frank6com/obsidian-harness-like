@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 /**
  * UI 服务测试（第三批）：ribbon / statusbar / 设置页注册。
  */
@@ -5,6 +7,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { obsidianAdapterPlugin } from '@harness-like/obsidian-adapter'
+import { userSettingsTabPlugin } from '../user-settings-tab'
 
 function stubApi(overrides: Record<string, unknown> = {}) {
   return {
@@ -19,7 +22,7 @@ function stubApi(overrides: Record<string, unknown> = {}) {
       on: () => ({ unref: () => {} }),
     },
     workspace: { getActiveFile: () => null, onFileOpen: () => ({ unref: () => {} }), getLeavesOfType: () => [] },
-    commands: { addCommand: (c: { id: string; name: string }) => c, removeCommand: () => {} },
+    commands: { addCommand: (c: { id: string; name: string }) => c, removeCommand: () => {}, executeCommandById: () => {} },
     viewRegistry: { registerView: () => {}, unregisterView: () => {}, openView: () => {} },
     ribbon: { addRibbonIcon: () => ({ remove: () => {} }) },
     statusbar: { addStatusBarItem: () => ({ el: {} as HTMLElement, remove: () => {} }) },
@@ -121,5 +124,51 @@ describe('视图卸载容错（dispose 链不中断）', () => {
     expect(() => dispose()).not.toThrow()
     expect(detach).toHaveBeenCalled()
     expect(unregisterView).toHaveBeenCalled()
+  })
+})
+
+describe('commands.execute + 用户插件设置页（0.33.0）', () => {
+  it('ctx.commands.execute(id) 调用 executeCommandById（可执行核心插件命令）', async () => {
+    const exec = vi.fn()
+    const ctx = new Context()
+    await ctx.plugin(obsidianAdapterPlugin(stubApi({ commands: { addCommand: (c: unknown) => c, removeCommand: () => {}, executeCommandById: exec } })))
+    ctx.commands.execute('templates:insert-template')
+    expect(exec).toHaveBeenCalledWith('templates:insert-template')
+  })
+
+  it('ctx.settingsTab.register 创建真实设置页并随卸载移除', async () => {
+    const added: unknown[] = []
+    const removed: unknown[] = []
+    const plugin = {
+      manifest: { id: 'harness-like' },
+      addSettingTab: (t: unknown) => added.push(t),
+      removeSettingTab: (t: unknown) => removed.push(t),
+    }
+    const ctx = new Context()
+    await ctx.plugin(userSettingsTabPlugin({} as never, plugin as never))
+
+    const render = vi.fn()
+    const dispose = ctx.settingsTab.register({ id: 'demo-settings', name: 'Demo', render })
+    expect(added.length).toBe(1)
+    // 触发 display()：渲染回调应收到容器
+    const tab = added[0] as { display(): void; containerEl: HTMLElement }
+    tab.containerEl = document.createElement('div')
+    ;(tab.containerEl as unknown as { empty(): void }).empty = () => {}
+    tab.display()
+    expect(render).toHaveBeenCalledWith(tab.containerEl)
+
+    dispose()
+    expect(removed.length).toBe(1)
+    // 重复 dispose 幂等
+    dispose()
+    expect(removed.length).toBe(1)
+  })
+
+  it('ctx.settingsTab.register 重复 id 抛错', async () => {
+    const plugin = { addSettingTab: () => {}, removeSettingTab: () => {} }
+    const ctx = new Context()
+    await ctx.plugin(userSettingsTabPlugin({} as never, plugin as never))
+    ctx.settingsTab.register({ id: 'dup', name: 'A', render: () => {} })
+    expect(() => ctx.settingsTab.register({ id: 'dup', name: 'B', render: () => {} })).toThrow()
   })
 })

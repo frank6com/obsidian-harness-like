@@ -33,9 +33,12 @@ For **developers**: how Harness Like (the host plugin) maps Obsidian's extension
 | `plugin_status` | — | — | ✅ |
 | `reload_plugin` | — | — | ✅ |
 | `open_view` | — | — | ✅ |
+| `run_command` | — | ✅¹ | ✅¹ |
+
+> ¹ `run_command`（shell 命令执行）需先在设置 → 审批 中开启「允许执行命令」，且每次调用弹审批确认；默认工作目录 = vault 根，指定任意目录需另开「完全放行」。
 
 > Custom agents override these via capability whitelists (checked tools).
 
 ## What sub-plugins can register
 
-Tools (`ctx.toolsCompat.register`), commands, ItemView panels, ribbon icons, status bar items, settings tabs, UI translations (`ctx.dshI18n`) — signatures in the [Services Reference](/dev/services). Full walkthrough: [Your First Plugin](/dev/hello-world).
+Tools (`ctx.toolsCompat.register`), commands (+ `ctx.commands.execute(id)` to run any registered command, incl. Obsidian core plugin commands), ItemView panels (`ctx.views`), ribbon icons, status bar items, **settings tabs (`ctx.settingsTab.register`)** — signatures in the [Services Reference](/dev/services). Full walkthrough: [Your First Plugin](/dev/hello-world).

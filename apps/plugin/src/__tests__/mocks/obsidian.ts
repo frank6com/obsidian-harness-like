@@ -57,3 +57,10 @@ export class Setting {
 
 export class WorkspaceLeaf {}
 export class App {}
+
+/** PluginSettingTab 最小替身（真实 1.13 类型面已移除 display，运行时仍调用） */
+export class PluginSettingTab {
+  app = {} as never
+  containerEl = document.createElement('div')
+  display(): void {}
+}

@@ -78,9 +78,10 @@ dshI18n（覆盖主插件界面文案，翻译插件用）。
   create(path, content)；createFolder(path)（逐层创建）；delete(path)；rename(oldPath, newPath)；
   on(ev, cb)（ev: vault/modify|create|delete|rename，cb(path, oldPath?)）
 - ctx.views：registerView(type, (leaf) => view)；open(type)
-- ctx.commands：addCommand({ id, name, callback })（id/名称自动带主插件前缀，无需手写）
+- ctx.commands：addCommand({ id, name, callback })（id/名称自动带主插件前缀，无需手写）；execute(id)（执行任意已注册命令，含 Obsidian 核心插件命令如 templates:insert-template）
 - ctx.ribbon：addRibbonIcon(icon, title, callback) -> { remove }
 - ctx.statusbar：addStatusBarItem() -> { el, remove }
+- ctx.settingsTab：register({ id, name, render(containerEl) })（注册自己的设置页；render 里可用 Obsidian 的 Setting 组件）
 - ctx.notice：notice(message, timeoutMs?)
 - ctx.workspace：getActiveFile() -> string | null；onFileOpen(cb)
 - ctx.editor：getSelection()、insertText(text)、replaceSelection(text)；无活动编辑器时方法返回 null
