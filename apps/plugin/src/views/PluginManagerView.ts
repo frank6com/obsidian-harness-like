@@ -133,15 +133,12 @@ export class PluginManagerView extends ItemView {
               `· ${grantDisplay(grant, true, rec.manifest?.version).badge}`,
             ].join(' '),
       })
+      // 操作区：固定顺序 + 图标按钮 + 颜色区分（详情 → 运行控制 → 重载 → 打开面板 → 删除）
       const actions = row.createDiv({ cls: 'dsh-pm-actions' })
+      const detail = actions.createEl('button', { cls: 'dsh-pm-action', text: 'ⓘ', attr: { title: t('pm.detail') } })
+      detail.onclick = () => new PluginDetailModal(this.app, this.ctx, id, () => void this.refresh()).open()
       if (rec.status === 'running') {
-        if (rec.viewType) {
-          const open = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: t('pm.openPanel') })
-          open.onclick = () => this.ctx.views.open(rec.viewType!)
-        }
-        const reload = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.reload') })
-        reload.onclick = () => void this.reload(id)
-        const stop = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.stop') })
+        const stop = actions.createEl('button', { cls: 'dsh-pm-action is-stop', text: '⏹', attr: { title: t('pm.stop') } })
         stop.onclick = () => {
           void this.ctx.pluginRuntime.stop(id)
           // 停用状态持久化：重启后不再自动加载
@@ -150,17 +147,22 @@ export class PluginManagerView extends ItemView {
           this.ctx.settings.set('pluginEnabled', enabled)
           void this.refresh()
         }
+        const reload = actions.createEl('button', { cls: 'dsh-pm-action', text: '⟳', attr: { title: t('pm.reload') } })
+        reload.onclick = () => void this.reload(id)
+        if (rec.viewType) {
+          const open = actions.createEl('button', { cls: 'dsh-pm-action is-primary', text: '▤', attr: { title: t('pm.openPanel') } })
+          open.onclick = () => this.ctx.views.open(rec.viewType!)
+        }
       } else {
-        // 已授权但被停用 → 按钮语义为「启用」；未授权 → 「授权并加载」
+        // 已授权但被停用 → 「启用」；未授权 → 「授权并加载」
         const run = actions.createEl('button', {
-          cls: 'dsh-btn dsh-btn-primary',
-          text: grant ? t('pm.enable') : t('pm.grantAndLoad'),
+          cls: 'dsh-pm-action is-primary',
+          text: '▶',
+          attr: { title: grant ? t('pm.enable') : t('pm.grantAndLoad') },
         })
         run.onclick = () => void this.ensureAndLoad(id)
       }
-      const detail = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.detail') })
-      detail.onclick = () => new PluginDetailModal(this.app, this.ctx, id, () => void this.refresh()).open()
-      const remove = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.delete') })
+      const remove = actions.createEl('button', { cls: 'dsh-pm-action is-danger', text: '✕', attr: { title: t('pm.delete') } })
       remove.onclick = () => void this.removePlugin(id)
     }
   }

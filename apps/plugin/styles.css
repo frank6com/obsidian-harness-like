@@ -736,6 +736,21 @@
   color: var(--text-faint);
 }
 
+/* 插件详情弹窗：分区标题 + 操作按钮区 */
+.dsh-pm-section {
+  margin: 16px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.dsh-pm-detail-invoke {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .dsh-pm-actions {
   display: flex;
   flex-wrap: wrap;

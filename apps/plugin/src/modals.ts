@@ -712,11 +712,21 @@ export class PluginDetailModal extends Modal {
     const rec = this.ctx.pluginRuntime.get(this.pluginId) ?? this.ctx.pluginRuntime.inspect(this.pluginId)
     const manifest = rec.manifest
     if (manifest) {
-      const info = contentEl.createDiv({ cls: 'dsh-pm-detail-info' })
-      info.createDiv({ text: `${manifest.name ?? this.pluginId} · v${manifest.version}` })
-      if (manifest.description) info.createDiv({ cls: 'dsh-pm-desc', text: manifest.description })
+      new Setting(contentEl)
+        .setName(`${manifest.name ?? this.pluginId} · v${manifest.version}`)
+        .setDesc(manifest.description ?? '')
+      const statusLabel =
+        rec.status === 'running'
+          ? t('pm.status.running')
+          : rec.status === 'stopped'
+            ? t('pm.status.stopped')
+            : rec.status === 'error'
+              ? t('pm.status.error')
+              : rec.status
+      new Setting(contentEl).setName(t('pm.detail.status')).setDesc(statusLabel)
     }
-    // 能力徽章
+    // 扩展能力
+    contentEl.createEl('h4', { cls: 'dsh-pm-section', text: t('pm.detail.capsTitle') })
     const caps = rec.capabilities ?? []
     const LABELS: Record<string, string> = {
       panel: t('pm.cap.panel'),
@@ -732,28 +742,25 @@ export class PluginDetailModal extends Modal {
     } else {
       capRow.createSpan({ cls: 'dsh-pm-cap', text: t('pm.detail.noCaps') })
     }
-    // 可调用能力（仅运行中）
+    // 操作（可调用能力，仅运行中）
+    contentEl.createEl('h4', { cls: 'dsh-pm-section', text: t('pm.detail.actions') })
     if (rec.status === 'running') {
       const invoke = contentEl.createDiv({ cls: 'dsh-pm-detail-invoke' })
       if (rec.viewType) {
-        const btn = invoke.createEl('button', { cls: 'dsh-btn', text: t('pm.detail.openPanel') })
+        const btn = invoke.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: t('pm.detail.openPanel') })
         btn.onclick = () => this.ctx.views.open(rec.viewType!)
       }
       if (caps.includes('commands')) {
-        const cmds = this.listPluginCommands()
-        if (cmds.length) {
-          invoke.createDiv({ cls: 'dsh-pm-detail-sub', text: t('pm.detail.commandsTitle') })
-          for (const c of cmds) {
-            const b = invoke.createEl('button', { cls: 'dsh-btn', text: c.name })
-            b.onclick = () => this.ctx.commands.execute(c.id)
-          }
+        for (const c of this.listPluginCommands()) {
+          const b = invoke.createEl('button', { cls: 'dsh-btn', text: c.name })
+          b.onclick = () => this.ctx.commands.execute(c.id)
         }
       }
     } else {
       contentEl.createDiv({ cls: 'dsh-modal-warning', text: t('pm.detail.notRunning') })
     }
     // 历史版本（恢复/删除）
-    contentEl.createEl('h4', { text: t('pm.detail.history') })
+    contentEl.createEl('h4', { cls: 'dsh-pm-section', text: t('pm.detail.history') })
     await renderBackupList(contentEl, this.app, this.ctx, this.pluginId, () => {
       this.onChanged?.()
       void this.render()
