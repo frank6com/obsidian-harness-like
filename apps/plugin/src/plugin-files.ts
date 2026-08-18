@@ -54,10 +54,18 @@ export function looksLikeStylesheet(text: string): boolean {
 }
 
 export class PluginFilesSelfHeal {
+  /** 插件目录（vault 相对） */
+  readonly pluginDir: string
+  /** 对应版本的 GitHub release 页面（失败提示的下载入口） */
+  readonly releaseUrl: string
+
   private status: PluginFilesStatus = { stylesMissing: false, phase: 'ok' }
   private running: Promise<void> | null = null
 
-  constructor(private opts: PluginFilesOptions, private ctx: Context) {}
+  constructor(private opts: PluginFilesOptions, private ctx: Context) {
+    this.pluginDir = opts.pluginDir
+    this.releaseUrl = `https://github.com/${opts.repo}/releases/tag/${opts.version}`
+  }
 
   statusOf(): PluginFilesStatus {
     return this.status
@@ -111,9 +119,34 @@ declare module '@deepseek-ai/cordis' {
   interface Context {
     /** 插件文件自愈（styles.css 缺失检测 + 自动下载） */
     pluginFiles: PluginFilesSelfHeal
+    /** 打开外部目标（http(s) 走系统浏览器 / 本地路径走系统文件管理器） */
+    openExternal(target: string): void
   }
   interface Events {
     /** 插件文件状态变化（下载中 / 已恢复 / 失败），设置页与对话面板订阅 */
     'dsh/plugin-files': (status: PluginFilesStatus) => void
   }
+}
+
+/** 自愈状态条的基础样式（内联，不依赖 styles.css——自愈 UI 在样式缺失时也必须可读） */
+export const FILES_BANNER_STYLE: Partial<CSSStyleDeclaration> = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  padding: '6px 12px',
+  fontSize: '12px',
+  borderBottom: '1px solid var(--background-modifier-border)',
+  background: 'var(--background-secondary)',
+  color: 'var(--text-muted)',
+}
+
+export const FILES_BANNER_BTN_STYLE: Partial<CSSStyleDeclaration> = {
+  padding: '2px 10px',
+  borderRadius: '6px',
+  border: '1px solid var(--background-modifier-border)',
+  background: 'var(--background-primary)',
+  color: 'var(--text-normal)',
+  fontSize: '12px',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
 }

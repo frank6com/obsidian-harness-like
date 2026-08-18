@@ -195,6 +195,9 @@ export default class HarnessLikePlugin extends Plugin {
     ctx.reflect.provide('pluginFiles', pluginFiles)
     void pluginFiles.ensure()
 
+    // 外部目标打开（自愈状态条失败提示的 release 链接 / 插件目录跳转用）
+    ctx.reflect.provide('openExternal', (target: string) => void apiLike.openTarget(target))
+
     // 用户插件设置页注册（ctx.settingsTab）：宿主创建真实 PluginSettingTab
     this.fibers.push(ctx.plugin(userSettingsTabPlugin(this.app, this)))
 

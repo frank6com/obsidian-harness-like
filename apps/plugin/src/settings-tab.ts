@@ -7,6 +7,7 @@ import { App, PluginSettingTab, Setting } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import type HarnessLikePlugin from './main'
 import { AgentEditModal, ConfirmModal, ModelPickModal } from './modals'
+import { FILES_BANNER_BTN_STYLE, FILES_BANNER_STYLE } from './plugin-files'
 import { BUILTIN_AGENTS, type AgentPreset } from './settings'
 import { agentDisplayDesc, agentDisplayName, resolveLanguage, setLanguage, t, type LanguagePreference } from './i18n'
 
@@ -97,11 +98,18 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
   /** 插件文件自愈状态条：styles.css 缺失时置顶提示（下载中/已恢复/失败） */
   private renderFilesBanner(c: HTMLElement): void {
     const files = this.ctx.get('pluginFiles') as
-      | { statusOf(): { stylesMissing: boolean; phase: string }; ensure(): Promise<void> }
+      | {
+          statusOf(): { stylesMissing: boolean; phase: string }
+          ensure(): Promise<void>
+          releaseUrl: string
+          pluginDir: string
+        }
       | undefined
     const status = files?.statusOf()
-    if (!status || status.phase === 'ok') return
+    if (!files || !status || status.phase === 'ok') return
     const banner = c.createDiv({ cls: 'dsh-files-banner' })
+    // 内联样式：自愈 UI 不依赖 styles.css（样式缺失时也必须可读）
+    Object.assign(banner.style, FILES_BANNER_STYLE)
     const text =
       status.phase === 'downloading'
         ? t('files.downloading')
@@ -110,7 +118,8 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
           : t('files.failed')
     banner.createSpan({ cls: 'dsh-files-banner-text', text })
     if (status.phase === 'restored') {
-      const btn = banner.createEl('button', { cls: 'dsh-btn', text: t('files.reload') })
+      const btn = banner.createEl('button', { text: t('files.reload') })
+      Object.assign(btn.style, FILES_BANNER_BTN_STYLE)
       btn.onclick = () => {
         try {
           const plugins = (this.app as unknown as { plugins?: { disablePlugin(id: string): void; enablePlugin(id: string): void } }).plugins
@@ -121,8 +130,21 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }
       }
     } else if (status.phase === 'failed') {
-      const btn = banner.createEl('button', { cls: 'dsh-btn', text: t('files.retry') })
-      btn.onclick = () => void files?.ensure()
+      // 手动恢复指引：release 下载页 + 插件目录（可点击打开）
+      const link = banner.createEl('button', { text: t('files.openRelease') })
+      Object.assign(link.style, FILES_BANNER_BTN_STYLE, { color: 'var(--text-accent)' })
+      link.onclick = () => this.ctx.openExternal(files.releaseUrl)
+      const dir = banner.createSpan({ cls: 'dsh-files-banner-text', text: `${t('files.dir')} ${files.pluginDir}` })
+      dir.style.flex = '0 1 auto'
+      const openDir = banner.createEl('button', { text: t('files.openDir') })
+      Object.assign(openDir.style, FILES_BANNER_BTN_STYLE)
+      openDir.onclick = () => {
+        const root = (this.ctx.sandbox.scope as { vaultRoot?: string }).vaultRoot ?? ''
+        this.ctx.openExternal(root ? `${root}/${files.pluginDir}` : files.pluginDir)
+      }
+      const retry = banner.createEl('button', { text: t('files.retry') })
+      Object.assign(retry.style, FILES_BANNER_BTN_STYLE)
+      retry.onclick = () => void files.ensure()
     }
   }
 

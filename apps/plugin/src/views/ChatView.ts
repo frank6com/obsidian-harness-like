@@ -23,6 +23,7 @@ import { agentDisplayDesc, agentDisplayName, getLanguage, resolveLanguage, setLa
 import zhDict from '../i18n/zh'
 import enDict from '../i18n/en'
 import { ConfirmModal, SessionRenameModal } from '../modals'
+import { FILES_BANNER_BTN_STYLE, FILES_BANNER_STYLE } from '../plugin-files'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
 
@@ -743,28 +744,35 @@ export class ChatView extends ItemView {
     this.inputEl.disabled = running
   }
 
-  /** 插件文件自愈状态条：缺失/下载中/已恢复/失败 四种状态 */
+  /** 插件文件自愈状态条：缺失/下载中/已恢复/失败（内联样式，不依赖 styles.css） */
   private refreshFilesBanner(): void {
     const files = this.ctx.get('pluginFiles') as
-      | { statusOf(): { stylesMissing: boolean; phase: string }; ensure(): Promise<void> }
+      | {
+          statusOf(): { stylesMissing: boolean; phase: string }
+          ensure(): Promise<void>
+          releaseUrl: string
+          pluginDir: string
+        }
       | undefined
     const status = files?.statusOf()
-    if (!status || status.phase === 'ok') {
+    if (!files || !status || status.phase === 'ok') {
       this.filesBannerEl.empty()
       this.filesBannerEl.style.display = 'none'
       return
     }
-    this.filesBannerEl.empty()
-    this.filesBannerEl.style.display = 'flex'
+    const banner = this.filesBannerEl
+    banner.empty()
+    Object.assign(banner.style, FILES_BANNER_STYLE)
     const text =
       status.phase === 'downloading'
         ? t('files.downloading')
         : status.phase === 'restored'
           ? t('files.restored')
           : t('files.failed')
-    this.filesBannerEl.createSpan({ cls: 'dsh-files-banner-text', text })
+    banner.createSpan({ cls: 'dsh-files-banner-text', text })
     if (status.phase === 'restored') {
-      const btn = this.filesBannerEl.createEl('button', { cls: 'dsh-btn', text: t('files.reload') })
+      const btn = banner.createEl('button', { text: t('files.reload') })
+      Object.assign(btn.style, FILES_BANNER_BTN_STYLE)
       btn.onclick = () => {
         try {
           const plugins = (this.app as unknown as { plugins?: { disablePlugin(id: string): void; enablePlugin(id: string): void } }).plugins
@@ -775,8 +783,21 @@ export class ChatView extends ItemView {
         }
       }
     } else if (status.phase === 'failed') {
-      const btn = this.filesBannerEl.createEl('button', { cls: 'dsh-btn', text: t('files.retry') })
-      btn.onclick = () => void files?.ensure()
+      // 手动恢复指引：release 下载页 + 插件目录（可点击打开）
+      const link = banner.createEl('button', { text: t('files.openRelease') })
+      Object.assign(link.style, FILES_BANNER_BTN_STYLE, { color: 'var(--text-accent)' })
+      link.onclick = () => this.ctx.openExternal(files.releaseUrl)
+      const dir = banner.createSpan({ cls: 'dsh-files-banner-text', text: `${t('files.dir')} ${files.pluginDir}` })
+      dir.style.flex = '0 1 auto'
+      const openDir = banner.createEl('button', { text: t('files.openDir') })
+      Object.assign(openDir.style, FILES_BANNER_BTN_STYLE)
+      openDir.onclick = () => {
+        const root = (this.ctx.sandbox.scope as { vaultRoot?: string }).vaultRoot ?? ''
+        this.ctx.openExternal(root ? `${root}/${files.pluginDir}` : files.pluginDir)
+      }
+      const retry = banner.createEl('button', { text: t('files.retry') })
+      Object.assign(retry.style, FILES_BANNER_BTN_STYLE)
+      retry.onclick = () => void files.ensure()
     }
   }
 

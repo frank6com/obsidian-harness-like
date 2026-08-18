@@ -548,16 +548,19 @@ describe('插件文件自愈状态条（0.34.0）', () => {
         statusOf: () => ({ stylesMissing: true, phase: 'failed' }),
         ensure,
       }),
+      openExternal: vi.fn(),
     }
     polyfillObsidianDom()
     const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
     ;(v as { buildUi(): void }).buildUi()
     const banner = (v as { contentEl: HTMLElement }).contentEl.querySelector('.dsh-files-banner') as HTMLElement
     expect(banner).toBeTruthy()
-    expect(banner.style.display).not.toBe('none')
-    const btn = banner.querySelector('button')
-    expect(btn).toBeTruthy()
-    btn!.click()
+    // 内联样式（不依赖 styles.css）
+    expect(banner.style.display).toBe('flex')
+    // 失败态：release 链接 / 打开目录 / 重试 三个按钮（目录为文本），点最后的重试
+    const buttons = banner.querySelectorAll('button')
+    expect(buttons.length).toBe(3)
+    buttons[buttons.length - 1]!.click()
     expect(ensure).toHaveBeenCalled()
   })
 
