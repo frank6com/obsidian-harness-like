@@ -149,10 +149,6 @@ export class PluginManagerView extends ItemView {
         }
         const reload = actions.createEl('button', { cls: 'dsh-pm-action', text: '⟳', attr: { title: t('pm.reload') } })
         reload.onclick = () => void this.reload(id)
-        if (rec.viewType) {
-          const open = actions.createEl('button', { cls: 'dsh-pm-action is-primary', text: '▤', attr: { title: t('pm.openPanel') } })
-          open.onclick = () => this.ctx.views.open(rec.viewType!)
-        }
       } else {
         // 已授权但被停用 → 「启用」；未授权 → 「授权并加载」
         const run = actions.createEl('button', {
@@ -164,6 +160,16 @@ export class PluginManagerView extends ItemView {
       }
       const remove = actions.createEl('button', { cls: 'dsh-pm-action is-danger', text: '✕', attr: { title: t('pm.delete') } })
       remove.onclick = () => void this.removePlugin(id)
+      // 高频操作「打开面板」独立于辅助按钮组（分隔线右侧，主题色突出）
+      if (rec.status === 'running' && rec.viewType) {
+        const openGroup = row.createDiv({ cls: 'dsh-pm-open' })
+        const open = openGroup.createEl('button', {
+          cls: 'dsh-pm-action dsh-pm-action-open',
+          text: '▤',
+          attr: { title: t('pm.openPanel') },
+        })
+        open.onclick = () => this.ctx.views.open(rec.viewType!)
+      }
     }
   }
 

@@ -753,10 +753,70 @@
 
 .dsh-pm-actions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
   gap: 6px;
-  max-width: 230px;
+  flex-shrink: 0;
+}
+
+/* 图标操作按钮：固定尺寸 + 颜色区分（运行=主题色 / 停止=警告 / 删除=危险） */
+.dsh-pm-action {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.dsh-pm-action:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.dsh-pm-action.is-primary {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-color: transparent;
+}
+
+.dsh-pm-action.is-primary:hover {
+  filter: brightness(1.1);
+  color: var(--text-on-accent);
+}
+
+.dsh-pm-action.is-stop {
+  color: var(--text-warning);
+}
+
+.dsh-pm-action.is-danger {
+  color: var(--text-error);
+}
+
+/* 高频操作「打开面板」独立分组（分隔线右侧，主题色突出） */
+.dsh-pm-open {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  padding-left: 10px;
+  border-left: 1px solid var(--background-modifier-border);
+}
+
+.dsh-pm-action-open {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-color: transparent;
+}
+
+.dsh-pm-action-open:hover {
+  filter: brightness(1.1);
+  color: var(--text-on-accent);
 }
 
 /* 审批弹窗 */
