@@ -156,6 +156,8 @@ export class ChatView extends ItemView {
     const draft = this.inputEl?.value ?? ''
     this.contentEl.empty()
     this.root = this.contentEl.createDiv({ cls: 'dsh-chat' })
+    // 自愈遮罩层需要相对定位的父容器
+    this.root.style.position = 'relative'
     this.root.classList.toggle('is-collapsed', this.listCollapsed)
 
     // 头部：折叠按钮 + 标题（左），插件管理器（右对齐）；新会话按钮移至会话列表顶部
@@ -744,7 +746,11 @@ export class ChatView extends ItemView {
     this.inputEl.disabled = running
   }
 
-  /** 插件文件自愈状态条：缺失/下载中/已恢复/失败（内联样式，不依赖 styles.css） */
+  /**
+   * 插件文件自愈遮罩层：styles.css 缺失时全屏蒙层（内联样式 + 注入 spinner 关键帧，
+   * 不依赖 styles.css——自愈 UI 在样式缺失时也必须完整可读）。
+   * 下载中：spinner + 提示；已恢复/失败：状态 + 操作按钮。
+   */
   private refreshFilesBanner(): void {
     const files = this.ctx.get('pluginFiles') as
       | {
@@ -760,45 +766,86 @@ export class ChatView extends ItemView {
       this.filesBannerEl.style.display = 'none'
       return
     }
-    const banner = this.filesBannerEl
-    banner.empty()
-    Object.assign(banner.style, FILES_BANNER_STYLE)
-    const text =
-      status.phase === 'downloading'
-        ? t('files.downloading')
-        : status.phase === 'restored'
-          ? t('files.restored')
-          : t('files.failed')
-    banner.createSpan({ cls: 'dsh-files-banner-text', text })
-    if (status.phase === 'restored') {
-      const btn = banner.createEl('button', { text: t('files.reload') })
-      Object.assign(btn.style, FILES_BANNER_BTN_STYLE)
-      btn.onclick = () => {
-        try {
-          const plugins = (this.app as unknown as { plugins?: { disablePlugin(id: string): void; enablePlugin(id: string): void } }).plugins
-          plugins?.disablePlugin('harness-like')
-          plugins?.enablePlugin('harness-like')
-        } catch (err) {
-          this.ctx.notice.notice(String(err))
+    this.ensureSpinnerKeyframes()
+    const overlay = this.filesBannerEl
+    overlay.empty()
+    Object.assign(overlay.style, {
+      position: 'absolute',
+      inset: '0',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'rgba(0, 0, 0, 0.45)',
+      zIndex: '100',
+    })
+    const card = overlay.createDiv()
+    Object.assign(card.style, {
+      background: 'var(--background-primary)',
+      border: '1px solid var(--background-modifier-border)',
+      borderRadius: '10px',
+      padding: '22px 30px',
+      maxWidth: '560px',
+      textAlign: 'center',
+      boxShadow: '0 4px 24px rgba(0, 0, 0, 0.35)',
+    })
+    if (status.phase === 'downloading') {
+      const spin = card.createSpan({ text: '⟳' })
+      Object.assign(spin.style, {
+        display: 'inline-block',
+        fontSize: '22px',
+        color: 'var(--text-accent)',
+        animation: 'dsh-files-spin 1s linear infinite',
+      })
+      card.createDiv({ text: t('files.downloading') }).style.marginTop = '10px'
+    } else {
+      card.createDiv({
+        text: status.phase === 'restored' ? t('files.restored') : t('files.failed'),
+      }).style.fontSize = '13px'
+      const actions = card.createDiv()
+      Object.assign(actions.style, {
+        display: 'flex',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        gap: '8px',
+        marginTop: '14px',
+      })
+      if (status.phase === 'restored') {
+        const btn = actions.createEl('button', { text: t('files.reload') })
+        Object.assign(btn.style, FILES_BANNER_BTN_STYLE)
+        btn.onclick = () => {
+          try {
+            const plugins = (this.app as unknown as { plugins?: { disablePlugin(id: string): void; enablePlugin(id: string): void } }).plugins
+            plugins?.disablePlugin('harness-like')
+            plugins?.enablePlugin('harness-like')
+          } catch (err) {
+            this.ctx.notice.notice(String(err))
+          }
         }
+      } else {
+        // 手动恢复指引：release 下载页 + 插件目录（可点击打开）
+        const link = actions.createEl('button', { text: t('files.openRelease') })
+        Object.assign(link.style, FILES_BANNER_BTN_STYLE, { color: 'var(--text-accent)' })
+        link.onclick = () => this.ctx.openExternal(files.releaseUrl)
+        const openDir = actions.createEl('button', { text: `${t('files.dir')} ${files.pluginDir}` })
+        Object.assign(openDir.style, FILES_BANNER_BTN_STYLE)
+        openDir.onclick = () => {
+          const root = (this.ctx.sandbox.scope as { vaultRoot?: string }).vaultRoot ?? ''
+          this.ctx.openExternal(root ? `${root}/${files.pluginDir}` : files.pluginDir)
+        }
+        const retry = actions.createEl('button', { text: t('files.retry') })
+        Object.assign(retry.style, FILES_BANNER_BTN_STYLE)
+        retry.onclick = () => void files.ensure()
       }
-    } else if (status.phase === 'failed') {
-      // 手动恢复指引：release 下载页 + 插件目录（可点击打开）
-      const link = banner.createEl('button', { text: t('files.openRelease') })
-      Object.assign(link.style, FILES_BANNER_BTN_STYLE, { color: 'var(--text-accent)' })
-      link.onclick = () => this.ctx.openExternal(files.releaseUrl)
-      const dir = banner.createSpan({ cls: 'dsh-files-banner-text', text: `${t('files.dir')} ${files.pluginDir}` })
-      dir.style.flex = '0 1 auto'
-      const openDir = banner.createEl('button', { text: t('files.openDir') })
-      Object.assign(openDir.style, FILES_BANNER_BTN_STYLE)
-      openDir.onclick = () => {
-        const root = (this.ctx.sandbox.scope as { vaultRoot?: string }).vaultRoot ?? ''
-        this.ctx.openExternal(root ? `${root}/${files.pluginDir}` : files.pluginDir)
-      }
-      const retry = banner.createEl('button', { text: t('files.retry') })
-      Object.assign(retry.style, FILES_BANNER_BTN_STYLE)
-      retry.onclick = () => void files.ensure()
     }
+  }
+
+  /** 注入 spinner 关键帧（幂等；不依赖 styles.css） */
+  private ensureSpinnerKeyframes(): void {
+    if (document.getElementById('dsh-files-spin')) return
+    const style = document.createElement('style')
+    style.id = 'dsh-files-spin'
+    style.textContent = '@keyframes dsh-files-spin { to { transform: rotate(360deg); } }'
+    document.head.appendChild(style)
   }
 
   // ---------- 会话列表 / 绑定 / 输入 ----------
