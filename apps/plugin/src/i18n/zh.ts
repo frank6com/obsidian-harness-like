@@ -108,6 +108,7 @@ const dict: Record<string, string> = {
   'pm.reload': '重新加载',
   'pm.stop': '停止',
   'pm.grantAndLoad': '授权并加载',
+  'pm.enable': '启用',
   'pm.delete': '删除',
   'pm.status.running': '运行中',
   'pm.status.stopped': '已停止',

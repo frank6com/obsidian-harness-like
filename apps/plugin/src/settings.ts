@@ -91,6 +91,8 @@ export interface HarnessLikeSettings {
   uiLanguage: LanguagePreference
   /** 插件 grant（单勾/双勾），key = 插件 id */
   grants: Record<string, GrantRecord>
+  /** 插件开关状态（用户显式停用 = false；缺省视为启用），key = 插件 id */
+  pluginEnabled: Record<string, boolean>
 }
 
 /** 授权记录的展示状态（管理器与设置页共用）：
@@ -141,6 +143,7 @@ export function defaultSettings(): HarnessLikeSettings {
     renderMarkdown: true,
     uiLanguage: 'auto',
     grants: {},
+    pluginEnabled: {},
   }
 }
 
@@ -260,6 +263,10 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
   base.uiLanguage =
     r.uiLanguage === 'en' ? 'en' : r.uiLanguage === 'zh' ? 'zh' : 'auto'
   base.grants = (r.grants as Record<string, GrantRecord>) ?? {}
+  base.pluginEnabled =
+    r.pluginEnabled && typeof r.pluginEnabled === 'object'
+      ? { ...(r.pluginEnabled as Record<string, boolean>) }
+      : {}
   return base
 }
 

@@ -103,6 +103,7 @@ const dict: Record<string, string> = {
   'pm.reload': 'Reload',
   'pm.stop': 'Stop',
   'pm.grantAndLoad': 'Authorize & Load',
+  'pm.enable': 'Enable',
   'pm.delete': 'Delete',
   'pm.status.running': 'running',
   'pm.status.stopped': 'stopped',

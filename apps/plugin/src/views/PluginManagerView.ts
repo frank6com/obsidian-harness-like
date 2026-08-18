@@ -143,10 +143,18 @@ export class PluginManagerView extends ItemView {
         const stop = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.stop') })
         stop.onclick = () => {
           void this.ctx.pluginRuntime.stop(id)
+          // 停用状态持久化：重启后不再自动加载
+          const enabled = { ...(this.ctx.settings.get('pluginEnabled', {}) as Record<string, boolean>) }
+          enabled[id] = false
+          this.ctx.settings.set('pluginEnabled', enabled)
           void this.refresh()
         }
       } else {
-        const run = actions.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: t('pm.grantAndLoad') })
+        // 已授权但被停用 → 按钮语义为「启用」；未授权 → 「授权并加载」
+        const run = actions.createEl('button', {
+          cls: 'dsh-btn dsh-btn-primary',
+          text: grant ? t('pm.enable') : t('pm.grantAndLoad'),
+        })
         run.onclick = () => void this.ensureAndLoad(id)
       }
       const history = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.history') })
@@ -179,6 +187,9 @@ export class PluginManagerView extends ItemView {
     await this.ctx.pluginBackups.snapshot(path.join(this.ctx.sandbox.scope.pluginsDir, id), id, 'delete')
     await this.ctx.pluginRuntime.removeDir(id)
     this.ctx.approval.revoke(id)
+    const enabled = { ...(this.ctx.settings.get('pluginEnabled', {}) as Record<string, boolean>) }
+    delete enabled[id]
+    this.ctx.settings.set('pluginEnabled', enabled)
     this.ctx.notice.notice(t('pm.delete.done', { id }))
     await this.refresh()
   }
@@ -200,6 +211,12 @@ export class PluginManagerView extends ItemView {
       this.ctx.approval.grant(id, choice.mode, manifest.version)
     }
     const result = await this.ctx.pluginRuntime.load(id)
+    if (result.status === 'running') {
+      // 启用状态持久化：重启后继续自动加载
+      const enabled = { ...(this.ctx.settings.get('pluginEnabled', {}) as Record<string, boolean>) }
+      enabled[id] = true
+      this.ctx.settings.set('pluginEnabled', enabled)
+    }
     this.ctx.notice.notice(
       result.status === 'running'
         ? t('pm.load.done', { id })

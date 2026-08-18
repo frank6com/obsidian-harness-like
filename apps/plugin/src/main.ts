@@ -373,6 +373,8 @@ export default class HarnessLikePlugin extends Plugin {
       const manifest = rec.manifest
       if (!manifest) continue
       if (!this.ctx.approval.isGranted(id, manifest.version)) continue
+      // 用户显式停用的插件不自动加载（开关状态持久化）
+      if (this.settings.pluginEnabled[id] === false) continue
       const result = await this.ctx.pluginRuntime.load(id)
       if (result.status === 'error') {
         console.warn(`[harness-like] 插件加载失败 ${id}: ${result.error}`)

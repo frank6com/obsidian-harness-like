@@ -219,3 +219,20 @@ describe('grantDisplay（授权记录展示状态）', () => {
     expect(grantDisplay(grant, false).badge).toContain('插件目录不存在（残留授权）')
   })
 })
+
+describe('pluginEnabled 开关状态持久化（0.34.6）', () => {
+  it('缺省为空对象（全部视为启用，兼容旧数据）', () => {
+    const migrated = migrateSettings({} as never)
+    expect(migrated.pluginEnabled).toEqual({})
+  })
+
+  it('迁移保留用户停用记录', () => {
+    const migrated = migrateSettings({ pluginEnabled: { 'a-plugin': false } } as never)
+    expect(migrated.pluginEnabled).toEqual({ 'a-plugin': false })
+  })
+
+  it('非法值（非对象）回退为空对象', () => {
+    const migrated = migrateSettings({ pluginEnabled: 'bad' } as never)
+    expect(migrated.pluginEnabled).toEqual({})
+  })
+})
