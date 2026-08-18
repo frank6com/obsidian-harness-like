@@ -15,6 +15,8 @@ export type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' |
 export class HarnessLikeSettingsTab extends PluginSettingTab {
   private activeTab: TabId = 'model'
   private activeProviderId = ''
+  /** 插件文件自愈状态条监听只绑一次 */
+  private filesListenerBound = false
 
   constructor(
     app: App,
@@ -44,6 +46,14 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
   override display(): void {
     const { containerEl } = this
     containerEl.empty()
+
+    // 插件文件自愈状态条（styles.css 缺失/恢复中/失败）
+    this.renderFilesBanner(containerEl)
+    // 下载进度实时刷新设置页（只绑定一次，避免 display 重复叠加监听）
+    if (!this.filesListenerBound) {
+      this.filesListenerBound = true
+      this.ctx.on('dsh/plugin-files', () => this.display())
+    }
 
     const tabs: Array<{ id: TabId; label: string }> = [
       { id: 'model', label: t('settings.tab.model') },
@@ -83,6 +93,38 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
   }
 
   // ---------- 模型（提供方侧向列表 + 参数） ----------
+
+  /** 插件文件自愈状态条：styles.css 缺失时置顶提示（下载中/已恢复/失败） */
+  private renderFilesBanner(c: HTMLElement): void {
+    const files = this.ctx.get('pluginFiles') as
+      | { statusOf(): { stylesMissing: boolean; phase: string }; ensure(): Promise<void> }
+      | undefined
+    const status = files?.statusOf()
+    if (!status || status.phase === 'ok') return
+    const banner = c.createDiv({ cls: 'dsh-files-banner' })
+    const text =
+      status.phase === 'downloading'
+        ? t('files.downloading')
+        : status.phase === 'restored'
+          ? t('files.restored')
+          : t('files.failed')
+    banner.createSpan({ cls: 'dsh-files-banner-text', text })
+    if (status.phase === 'restored') {
+      const btn = banner.createEl('button', { cls: 'dsh-btn', text: t('files.reload') })
+      btn.onclick = () => {
+        try {
+          const plugins = (this.app as unknown as { plugins?: { disablePlugin(id: string): void; enablePlugin(id: string): void } }).plugins
+          plugins?.disablePlugin('harness-like')
+          plugins?.enablePlugin('harness-like')
+        } catch (err) {
+          this.ctx.notice.notice(String(err))
+        }
+      }
+    } else if (status.phase === 'failed') {
+      const btn = banner.createEl('button', { cls: 'dsh-btn', text: t('files.retry') })
+      btn.onclick = () => void files?.ensure()
+    }
+  }
 
   private renderModelTab(c: HTMLElement): void {
     const { settings } = this.plugin

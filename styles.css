@@ -772,6 +772,22 @@
   color: var(--text-muted);
 }
 
+/* 插件文件自愈状态条（styles.css 缺失自动下载） */
+.dsh-files-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+}
+
+.dsh-files-banner-text {
+  flex: 1;
+}
+
 /* ===== 设置页 tabs ===== */
 .dsh-settings-nav {
   display: flex;

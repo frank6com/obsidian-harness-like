@@ -74,6 +74,7 @@ export class ChatView extends ItemView {
   private agentBtn!: HTMLButtonElement
   private root!: HTMLElement
   private listEl!: HTMLElement
+  private filesBannerEl!: HTMLElement
   private messagesEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
   private sendBtn!: HTMLButtonElement
@@ -164,6 +165,12 @@ export class ChatView extends ItemView {
     const actions = header.createDiv({ cls: 'dsh-chat-actions' })
     const pluginBtn = actions.createEl('button', { cls: 'dsh-btn', text: t('chat.header.pluginManager') })
     pluginBtn.onclick = () => this.openPluginManager()
+
+    // 插件文件自愈状态条（styles.css 缺失时显示，位于头部下方）
+    this.filesBannerEl = this.root.createDiv({ cls: 'dsh-files-banner' })
+    this.filesBannerEl.style.display = 'none'
+    this.refreshFilesBanner()
+    this.disposers.push(this.ctx.on('dsh/plugin-files', () => this.refreshFilesBanner()))
 
     // 主体：会话列表（顶部固定新会话按钮）+ 消息
     const body = this.root.createDiv({ cls: 'dsh-chat-body' })
@@ -734,6 +741,43 @@ export class ChatView extends ItemView {
     this.sendBtn.setText(running ? t('chat.stop') : t('chat.send'))
     this.sendBtn.classList.toggle('dsh-btn-stop', running)
     this.inputEl.disabled = running
+  }
+
+  /** 插件文件自愈状态条：缺失/下载中/已恢复/失败 四种状态 */
+  private refreshFilesBanner(): void {
+    const files = this.ctx.get('pluginFiles') as
+      | { statusOf(): { stylesMissing: boolean; phase: string }; ensure(): Promise<void> }
+      | undefined
+    const status = files?.statusOf()
+    if (!status || status.phase === 'ok') {
+      this.filesBannerEl.empty()
+      this.filesBannerEl.style.display = 'none'
+      return
+    }
+    this.filesBannerEl.empty()
+    this.filesBannerEl.style.display = 'flex'
+    const text =
+      status.phase === 'downloading'
+        ? t('files.downloading')
+        : status.phase === 'restored'
+          ? t('files.restored')
+          : t('files.failed')
+    this.filesBannerEl.createSpan({ cls: 'dsh-files-banner-text', text })
+    if (status.phase === 'restored') {
+      const btn = this.filesBannerEl.createEl('button', { cls: 'dsh-btn', text: t('files.reload') })
+      btn.onclick = () => {
+        try {
+          const plugins = (this.app as unknown as { plugins?: { disablePlugin(id: string): void; enablePlugin(id: string): void } }).plugins
+          plugins?.disablePlugin('harness-like')
+          plugins?.enablePlugin('harness-like')
+        } catch (err) {
+          this.ctx.notice.notice(String(err))
+        }
+      }
+    } else if (status.phase === 'failed') {
+      const btn = this.filesBannerEl.createEl('button', { cls: 'dsh-btn', text: t('files.retry') })
+      btn.onclick = () => void files?.ensure()
+    }
   }
 
   // ---------- 会话列表 / 绑定 / 输入 ----------

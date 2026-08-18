@@ -529,3 +529,56 @@ describe('会话重命名（0.31.0）', () => {
     expect(actions.querySelectorAll('button').length).toBe(3)
   })
 })
+
+describe('插件文件自愈状态条（0.34.0）', () => {
+  it('styles.css 缺失（failed 态）：对话面板显示状态条与重试按钮', () => {
+    const ensure = vi.fn(async () => {})
+    const ctx = {
+      settings: { get: (k: string, d: unknown) => d, set: () => {} },
+      on: vi.fn(() => () => {}),
+      sessionLog: { append: async () => {}, list: async () => [], read: async () => [], readMeta: async () => null, remove: async () => {} },
+      toolsCompat: { list: () => [] },
+      llmCaller: {},
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => ({
+        statusOf: () => ({ stylesMissing: true, phase: 'failed' }),
+        ensure,
+      }),
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { buildUi(): void }).buildUi()
+    const banner = (v as { contentEl: HTMLElement }).contentEl.querySelector('.dsh-files-banner') as HTMLElement
+    expect(banner).toBeTruthy()
+    expect(banner.style.display).not.toBe('none')
+    const btn = banner.querySelector('button')
+    expect(btn).toBeTruthy()
+    btn!.click()
+    expect(ensure).toHaveBeenCalled()
+  })
+
+  it('styles.css 完整（ok 态）：状态条隐藏', () => {
+    const ctx = {
+      settings: { get: (k: string, d: unknown) => d, set: () => {} },
+      on: vi.fn(() => () => {}),
+      sessionLog: { append: async () => {}, list: async () => [], read: async () => [], readMeta: async () => null, remove: async () => {} },
+      toolsCompat: { list: () => [] },
+      llmCaller: {},
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => ({ statusOf: () => ({ stylesMissing: false, phase: 'ok' }), ensure: async () => {} }),
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { buildUi(): void }).buildUi()
+    const banner = (v as { contentEl: HTMLElement }).contentEl.querySelector('.dsh-files-banner') as HTMLElement
+    expect(banner.style.display).toBe('none')
+  })
+})

@@ -28,6 +28,7 @@ import {
 } from './settings'
 import { HarnessLikeSettingsTab, type TabId } from './settings-tab'
 import { PluginBackups } from './plugin-backups'
+import { PluginFilesSelfHeal, fetchTextWithTimeout } from './plugin-files'
 import { userSettingsTabPlugin } from './user-settings-tab'
 import { getLanguage, registerLocale, resolveLanguage, setLanguage, t } from './i18n'
 import { WriteApprovalModal, GrantModal, ConfirmModal, CommandApprovalModal } from './modals'
@@ -172,6 +173,27 @@ export default class HarnessLikePlugin extends Plugin {
 
     // 用户插件版本备份（覆盖写入前 / 删除前自动快照，可回退、可恢复误删）
     ctx.reflect.provide('pluginBackups', new PluginBackups(path.join(dataDir, 'plugin-backups')))
+
+    // 插件文件自愈：styles.css 缺失（Obsidian 视其为 optional 资产，安装网络不佳会静默跳过）
+    // 时自动下载并写回；设置页与对话面板展示状态条
+    const pluginDir = path.posix.join(configDir, 'plugins', this.manifest.id)
+    const vaultAdapter = this.app.vault.adapter as {
+      exists(p: string): Promise<boolean>
+      write(p: string, c: string): Promise<void>
+    }
+    const pluginFiles = new PluginFilesSelfHeal(
+      {
+        pluginDir,
+        repo: 'frank6com/obsidian-harness-like',
+        version: this.manifest.version,
+        exists: (p) => vaultAdapter.exists(p),
+        write: (p, c) => vaultAdapter.write(p, c),
+        fetchText: (url) => fetchTextWithTimeout(url),
+      },
+      ctx,
+    )
+    ctx.reflect.provide('pluginFiles', pluginFiles)
+    void pluginFiles.ensure()
 
     // 用户插件设置页注册（ctx.settingsTab）：宿主创建真实 PluginSettingTab
     this.fibers.push(ctx.plugin(userSettingsTabPlugin(this.app, this)))
