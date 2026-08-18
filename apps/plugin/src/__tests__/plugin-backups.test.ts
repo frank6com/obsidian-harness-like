@@ -4,7 +4,7 @@ import { describe, expect, it, beforeEach } from 'vitest'
 import { promises as fs } from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { PluginBackups } from '../plugin-backups'
+import { PluginBackups, autoRecoverLastGood } from '../plugin-backups'
 
 async function tmpRoot(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), 'dsh-backups-'))
@@ -93,5 +93,49 @@ describe('PluginBackups', () => {
     await fs.mkdir(dir, { recursive: true })
     await expect(backups.restore(dir, 'demo', '../evil')).rejects.toThrow()
     await expect(backups.restore(dir, 'demo', '12345-overwrite')).rejects.toThrow()
+  })
+})
+
+describe('autoRecoverLastGood（0.35.1）', () => {
+  it('最新备份加载失败时逐级回退到最近可用版本', async () => {
+    const root = await tmpRoot()
+    const plugins = path.join(root, 'plugins')
+    await fs.mkdir(plugins, { recursive: true })
+    const backups = new PluginBackups(path.join(root, 'plugin-backups'))
+    const dir = path.join(plugins, 'demo')
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(path.join(dir, 'main.js'), 'v1-good')
+    const b1 = await backups.snapshot(dir, 'demo', 'overwrite')
+    await sleep(5)
+    await fs.writeFile(path.join(dir, 'main.js'), 'v2-broken')
+    await backups.snapshot(dir, 'demo', 'overwrite')
+
+    // 最新备份（v2-broken）加载失败，v1-good 成功
+    let loads = 0
+    const runtime = {
+      load: async () => {
+        loads++
+        return { status: loads === 1 ? ('error' as const) : ('running' as const) }
+      },
+    }
+    const r = await autoRecoverLastGood(backups, runtime, plugins, 'demo')
+    expect(r.restored).toBe(true)
+    expect(r.backupId).toBe(b1!.id)
+    // 磁盘上恢复为 v1-good 的内容
+    expect(await fs.readFile(path.join(dir, 'main.js'), 'utf8')).toBe('v1-good')
+  })
+
+  it('全部备份不可用时返回 restored=false', async () => {
+    const root = await tmpRoot()
+    const plugins = path.join(root, 'plugins')
+    await fs.mkdir(plugins, { recursive: true })
+    const backups = new PluginBackups(path.join(root, 'plugin-backups'))
+    const dir = path.join(plugins, 'demo')
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(path.join(dir, 'main.js'), 'x')
+    await backups.snapshot(dir, 'demo', 'overwrite')
+    const runtime = { load: async () => ({ status: 'error' as const }) }
+    const r = await autoRecoverLastGood(backups, runtime, plugins, 'demo')
+    expect(r.restored).toBe(false)
   })
 })

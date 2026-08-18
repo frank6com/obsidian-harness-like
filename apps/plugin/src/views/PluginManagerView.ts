@@ -7,6 +7,7 @@ import { ItemView, WorkspaceLeaf } from 'obsidian'
 import * as path from 'path'
 import type { Context } from '@deepseek-ai/cordis'
 import { ConfirmModal, DeletedPluginsModal, GrantModal, PluginHistoryModal } from '../modals'
+import { autoRecoverLastGood } from '../plugin-backups'
 import { grantDisplay } from '../settings'
 import { getLanguage, resolveLanguage, setLanguage, t, type LanguagePreference } from '../i18n'
 
@@ -168,6 +169,20 @@ export class PluginManagerView extends ItemView {
   private async reload(id: string): Promise<void> {
     await this.ctx.pluginRuntime.stop(id)
     const result = await this.ctx.pluginRuntime.load(id)
+    if (result.status === 'error') {
+      // 加载失败自动回退到最近可用版本（备份阶梯）
+      const rec = await autoRecoverLastGood(
+        this.ctx.pluginBackups,
+        this.ctx.pluginRuntime,
+        this.ctx.sandbox.scope.pluginsDir,
+        id,
+      )
+      if (rec.restored) {
+        this.ctx.notice.notice(t('pm.reload.autoRecovered', { id }))
+        await this.refresh()
+        return
+      }
+    }
     this.ctx.notice.notice(
       result.status === 'running'
         ? t('pm.reload.done', { id })

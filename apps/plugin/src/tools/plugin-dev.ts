@@ -14,6 +14,7 @@
 import * as path from 'path'
 import type { Plugin } from '@deepseek-ai/cordis'
 import type { PluginRecord } from '@harness-like/plugin-runtime'
+import { autoRecoverLastGood } from '../plugin-backups'
 
 export interface PluginDevToolsOptions {
   /** 授权确认（宿主弹窗）；返回是否已授权 */
@@ -94,6 +95,11 @@ dshI18n（覆盖主插件界面文案，翻译插件用）。
 
 可用事件（ctx.on）：dsh/session/event（会话事件）、vault/modify|create|delete|rename、
 workspace/file-open、dsh/waiting-approval（审批弹窗打开）。
+
+常见错误（务必避免，否则插件加载失败）：
+- ctx.vault 只有 getMarkdownPaths()/read/write/create/createFolder/delete/rename/on —— 没有 getFiles/getMarkdownFiles/list 等方法
+- 禁止使用 this.app 或 obsidian API 直接操作 Obsidian（一律走 ctx.* 服务）；面板类需 extends ItemView 并实现 getViewType/getDisplayText/onOpen
+- ctx.toolsCompat.register 返回的 disposer 必须接入 ctx.effect（否则插件重载会报"工具已注册"）
 
 铁律（违反会导致报错或错误实现）：
 1. inject 必须声明 apply 里用到的【每一个】服务——漏一个访问就报
@@ -313,6 +319,23 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
           if (!granted) return { ok: false, reason: '用户未授权，插件未加载' }
           await ctx.pluginRuntime.stop(id)
           const result = await ctx.pluginRuntime.load(id)
+          if (result.status === 'error') {
+            // 加载失败自动回退到最近可用版本（备份阶梯，0.35.1）
+            const rec = await autoRecoverLastGood(
+              ctx.pluginBackups,
+              ctx.pluginRuntime,
+              ctx.sandbox.scope.pluginsDir,
+              id,
+            )
+            if (rec.restored) {
+              return {
+                ok: true,
+                plugin_id: id,
+                backup_id: rec.backupId,
+                note: '加载失败，已自动回退到最近可用版本并重新加载',
+              }
+            }
+          }
           return JSON.parse(
             JSON.stringify({
               ok: result.status === 'running',

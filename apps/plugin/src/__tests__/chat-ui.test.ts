@@ -624,3 +624,61 @@ describe('轮次结束工具栏（0.35.0）', () => {
     expect(estimateTokens(1)).toBe(1)
   })
 })
+
+describe('并发刷新与工具栏重做（0.35.1）', () => {
+  it('并发 refreshSessions 不重复渲染行（串行化）', async () => {
+    let calls = 0
+    const ctx = {
+      settings: { get: (k: string, d: unknown) => d, set: () => {} },
+      on: vi.fn(() => () => {}),
+      sessionLog: {
+        append: async () => {},
+        list: async () => {
+          calls++
+          await new Promise((r) => setTimeout(r, 10))
+          return [{ id: 's1', updatedAt: 1, count: 1, title: 't', notePath: null, modelId: undefined }]
+        },
+        read: async () => [],
+        readMeta: async () => null,
+        remove: async () => {},
+      },
+      toolsCompat: { list: () => [] },
+      llmCaller: {},
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => undefined,
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { sessionRowsEl: HTMLElement }).sessionRowsEl = document.createElement('div')
+    await Promise.all([
+      (v as { refreshSessions(): Promise<void> }).refreshSessions(),
+      (v as { refreshSessions(): Promise<void> }).refreshSessions(),
+    ])
+    const rows = (v as { sessionRowsEl: HTMLElement }).sessionRowsEl.querySelectorAll('.dsh-session-row')
+    expect(rows.length).toBe(1)
+    expect(calls).toBe(2)
+  })
+
+  it('结束工具栏：复制图标 + 重做按钮', () => {
+    const v = makeView() as unknown as Record<string, unknown>
+    ;(v as { messagesEl: HTMLElement }).messagesEl = document.createElement('div')
+    v.currentSessionId = 's1'
+    ;(v as { startTurn(text: string): void }).startTurn('重新生成测试')
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/start', ts: Date.now() })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({
+      sessionId: 's1',
+      type: 'assistant/message',
+      ts: Date.now(),
+      content: '回答内容',
+    })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/end', ts: Date.now() })
+    const el = (v as { messagesEl: HTMLElement }).messagesEl
+    const btns = el.querySelector('.dsh-turn-btns')
+    expect(btns).toBeTruthy()
+    expect(btns!.querySelectorAll('button').length).toBe(2) // 复制 + 重做
+  })
+})

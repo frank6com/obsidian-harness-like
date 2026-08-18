@@ -140,6 +140,37 @@ export class PluginBackups {
   }
 }
 
+export interface AutoRecoverResult {
+  restored: boolean
+  backupId?: string
+}
+
+/**
+ * 加载失败后的自动回退阶梯：从最新备份依次恢复并尝试加载，
+ * 直到成功（最多尝试 maxAttempts 份）。备份全是"写坏的状态"时也能逐级回退到
+ * 最近一个可用版本（0.35.1：让备份真正有意义）。
+ */
+export async function autoRecoverLastGood(
+  backups: PluginBackups,
+  runtime: { load(id: string): Promise<{ status: string; error?: string }> },
+  pluginsDir: string,
+  pluginId: string,
+  maxAttempts = 5,
+): Promise<AutoRecoverResult> {
+  const list = await backups.list(pluginId)
+  const dir = path.join(pluginsDir, pluginId)
+  for (const b of list.slice(0, maxAttempts)) {
+    try {
+      await backups.restore(dir, pluginId, b.id)
+      const r = await runtime.load(pluginId)
+      if (r.status === 'running') return { restored: true, backupId: b.id }
+    } catch {
+      // 该备份损坏/加载失败：继续尝试更早的
+    }
+  }
+  return { restored: false }
+}
+
 declare module '@deepseek-ai/cordis' {
   interface Context {
     /** 用户插件版本备份（覆盖写入前 / 删除前自动快照，可回退） */

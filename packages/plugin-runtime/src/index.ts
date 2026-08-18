@@ -221,6 +221,9 @@ export class PluginRuntime {
       this.records.set(id, base)
       return base
     }
+    // 快照现有工具注册：插件 apply 中途抛错会泄漏新增的工具注册（下次加载报"工具已注册"）
+    const tools = this.ctx.get('toolsCompat') as { list(): Array<{ name: string }>; unregister(name: string): boolean } | undefined
+    const before = tools ? new Set(tools.list().map((t) => t.name)) : null
     try {
       const loaded = await loadUserPlugin(this.ctx, dir, {
         require: this.opts.require,
@@ -231,6 +234,18 @@ export class PluginRuntime {
       this.records.set(id, rec)
       return rec
     } catch (err) {
+      // 回滚本次加载新增的工具注册（apply 抛错时 Cordis 只能清理 effect 登记的副作用）
+      if (tools && before) {
+        for (const t of tools.list()) {
+          if (!before.has(t.name)) {
+            try {
+              tools.unregister(t.name)
+            } catch {
+              // 忽略回滚异常
+            }
+          }
+        }
+      }
       base.error = err instanceof Error ? err.message : String(err)
       this.records.set(id, base)
       return base

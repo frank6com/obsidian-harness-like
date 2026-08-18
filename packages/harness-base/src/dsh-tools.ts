@@ -36,6 +36,8 @@ export interface ToolRunner {
 export interface ToolCompatFacade extends ToolRunner {
   register(def: ToolDef): () => void
   get(name: string): ToolDef | undefined
+  /** 按名注销（加载失败回滚用）：调用注册时返回的 disposer */
+  unregister(name: string): boolean
 }
 
 /** 兼容层输出声明：内置/示例工具均返回对象；render 投影为文本块 */
@@ -72,6 +74,7 @@ export function toolsCompatPlugin(options: ToolsCompatOptions = {}): Plugin.Obje
       })
 
       const defs = new Map<string, ToolDef>()
+      const disposers = new Map<string, () => void>()
       const facade: ToolCompatFacade = {
         register(def: ToolDef): () => void {
           if (defs.has(def.name)) throw new Error(`工具已注册: ${def.name}`)
@@ -92,16 +95,25 @@ export function toolsCompatPlugin(options: ToolsCompatOptions = {}): Plugin.Obje
           }
           const disposer = runtime.register(definition)
           defs.set(def.name, def)
-          return () => {
+          const unregister = (): void => {
+            disposers.delete(def.name)
             try {
               disposer()
             } catch (err) {
-              console.warn(`[dsh] 工具注销失败（忽略）: ${def.name}`, err)
+              console.warn(`[harness-like] 工具注销失败（忽略）: ${def.name}`, err)
             } finally {
               // 无论官方注销是否抛错，本地映射必须清理，否则重载报"工具已注册"
               defs.delete(def.name)
             }
           }
+          disposers.set(def.name, unregister)
+          return unregister
+        },
+        unregister(name: string): boolean {
+          const d = disposers.get(name)
+          if (!d) return false
+          d()
+          return true
         },
         get(name: string): ToolDef | undefined {
           return defs.get(name)

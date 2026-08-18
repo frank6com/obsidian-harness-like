@@ -111,8 +111,16 @@ export class ChatView extends ItemView {
   private turnCopied = false
   /** 最近一次渲染的 assistant 原始内容（防重比较用，textContent 不可靠） */
   private lastAssistantRaw: string | null = null
-  /** 当前轮次统计（时间/字符数/token 用量；用于结束工具栏） */
-  private turnStats: { start: number; chars: number; usage: { prompt: number; completion: number } | null } | null = null
+  /** 当前轮次统计（时间/字符数/token 用量/用户文本；用于结束工具栏与重做） */
+  private turnStats: {
+    start: number
+    chars: number
+    usage: { prompt: number; completion: number } | null
+    userText: string
+    sessionId: string
+  } | null = null
+  /** refreshSessions 串行链（并发调用会竞态导致列表行重复） */
+  private refreshChain: Promise<void> = Promise.resolve()
   /** 最近处理的事件指纹（监听器叠加兜底：同一事件只处理一次） */
   private lastEventKey = ''
   /** 对话内思考折叠卡片（推理过程/阶段状态，可展开查看） */
@@ -364,13 +372,17 @@ export class ChatView extends ItemView {
     this.turnEl = this.messagesEl.createDiv({ cls: 'dsh-turn' })
     this.turnText = []
     this.turnCopied = false
-    this.turnStats = { start: Date.now(), chars: 0, usage: null }
+    this.turnStats = { start: Date.now(), chars: 0, usage: null, userText: '', sessionId: '' }
   }
 
   /** 新一轮次：容器 + 用户消息 + 累积文本 */
   private startTurn(userText: string): void {
     this.closeTurn()
     this.openTurnContainer()
+    if (this.turnStats) {
+      this.turnStats.userText = userText
+      this.turnStats.sessionId = this.currentSessionId ?? ''
+    }
     this.turnText.push(`${t('chat.msg.user')}：\n${userText}`)
     this.appendMessage('user', userText)
     // 新轮次强制滚到底（用户自己的消息必须可见）
@@ -385,7 +397,7 @@ export class ChatView extends ItemView {
     }
     this.turnCopied = true
     const actions = this.turnEl.createDiv({ cls: 'dsh-turn-actions' })
-    // 元信息：完成时间 / 耗时 / token 计数（真实 usage 或估算） / 生成效率
+    // 左：元信息（完成时间 / 耗时 / token 计数 / 效率）；右：复制（图标）+ 重做
     const stats = this.turnStats
     const meta = actions.createDiv({ cls: 'dsh-turn-meta' })
     meta.createSpan({ text: t('chat.turn.time', { time: new Date(Date.now()).toLocaleTimeString() }) })
@@ -399,12 +411,22 @@ export class ChatView extends ItemView {
         if (rate > 0) meta.createSpan({ text: t('chat.turn.rate', { n: rate }) })
       }
     }
-    const btn = actions.createEl('button', { cls: 'dsh-turn-copy', text: t('chat.copyTurn') })
-    btn.onclick = () => {
+    const btns = actions.createDiv({ cls: 'dsh-turn-btns' })
+    const copy = btns.createEl('button', { cls: 'dsh-turn-copy', text: '⧉', attr: { title: t('chat.copyTurn') } })
+    copy.onclick = () => {
       void navigator.clipboard.writeText(this.turnText.join('\n\n')).then(() => {
-        btn.setText(t('common.copied'))
-        window.setTimeout(() => btn.setText(t('chat.copyTurn')), 1200)
+        copy.setText('✓')
+        window.setTimeout(() => copy.setText('⧉'), 1200)
       })
+    }
+    // 重做：重新生成本轮回复（跳过重新写入用户消息）
+    const redo = btns.createEl('button', { cls: 'dsh-turn-copy', text: '↻', attr: { title: t('chat.redo') } })
+    redo.onclick = () => {
+      const sid = stats?.sessionId
+      const text = stats?.userText
+      if (!sid || !text || this.runningSessions.has(sid)) return
+      this.openSession(sid)
+      void this.run(sid, text, true)
     }
     this.turnEl = null
   }
@@ -639,6 +661,8 @@ export class ChatView extends ItemView {
     } catch (err) {
       const failed = err instanceof Error && err.name === 'AbortError'
       const content = failed ? t('common.stopped') : t('chat.run.failed', { msg: err instanceof Error ? err.message : String(err) })
+      // 错误/中止消息渲染在当前轮次内（agent-loop 的 finally 已发 turn/end 并关闭轮次容器）
+      this.openTurnContainer()
       // 持久化系统消息（重载后仍在；并进入模型上下文，避免"上一问悬空被顺带回答"）
       const ev: SessionEvent = { type: 'system/message', ts: Date.now(), sessionId, content }
       void this.ctx.sessionLog.append(sessionId, ev)
@@ -1033,7 +1057,12 @@ export class ChatView extends ItemView {
     this.root.classList.toggle('is-collapsed', this.listCollapsed)
   }
 
-  private async refreshSessions(): Promise<void> {
+  private refreshSessions(): Promise<void> {
+    this.refreshChain = this.refreshChain.then(() => this.doRefreshSessions())
+    return this.refreshChain
+  }
+
+  private async doRefreshSessions(): Promise<void> {
     this.sessionRowsEl.empty()
     const list = await this.ctx.sessionLog.list()
     if (!list.length) {

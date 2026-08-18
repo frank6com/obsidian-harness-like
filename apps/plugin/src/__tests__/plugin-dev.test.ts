@@ -309,3 +309,36 @@ describe('plugin_status / reload_plugin', () => {
     })
     expect((await readPkg()).version).toBe('0.0.3')
   })
+
+  it('toolsCompat.unregister 按名注销后同名可重新注册（回滚用）', async () => {
+    const { ctx } = await setup()
+    ctx.toolsCompat.register({
+      name: 'tmp_tool',
+      description: 'x',
+      input: { type: 'object' },
+      execute: async () => ({ ok: 1 }),
+    })
+    expect(ctx.toolsCompat.get('tmp_tool')).toBeTruthy()
+    expect(ctx.toolsCompat.unregister('tmp_tool')).toBe(true)
+    expect(ctx.toolsCompat.get('tmp_tool')).toBeUndefined()
+    expect(ctx.toolsCompat.unregister('tmp_tool')).toBe(false)
+  })
+
+  it('加载失败自动回滚新增工具注册：修复后重载不再报"工具已注册"', async () => {
+    const { ctx } = await setup(undefined, async () => true)
+    await ctx.toolsCompat.get('create_plugin')!.execute({ id: 'leak-test' })
+    const broken = `module.exports = { name: 'leak-test', inject: ['toolsCompat'], apply(ctx) {
+      ctx.toolsCompat.register({ name: 'leaky_tool', description: 'x', input: { type: 'object' }, execute: async () => ({ ok: 1 }) })
+      throw new Error('boom')
+    } }`
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({ plugin_id: 'leak-test', file: 'main.js', content: broken })
+    const r1 = await ctx.toolsCompat.get('reload_plugin')!.execute({ plugin_id: 'leak-test' })
+    expect(r1).toMatchObject({ ok: false })
+    // 修复后同名工具可重新注册（不再泄漏）
+    const fixed = `module.exports = { name: 'leak-test', inject: ['toolsCompat'], apply(ctx) {
+      ctx.toolsCompat.register({ name: 'leaky_tool', description: 'x', input: { type: 'object' }, execute: async () => ({ ok: 2 }) })
+    } }`
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({ plugin_id: 'leak-test', file: 'main.js', content: fixed })
+    const r2 = await ctx.toolsCompat.get('reload_plugin')!.execute({ plugin_id: 'leak-test' })
+    expect(r2).toMatchObject({ ok: true, status: 'running' })
+  })
