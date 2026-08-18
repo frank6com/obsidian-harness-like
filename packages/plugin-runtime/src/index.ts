@@ -230,7 +230,26 @@ export class PluginRuntime {
         hostId: this.opts.hostId,
         hostName: this.opts.hostName,
       })
-      const rec: PluginRecord = { id, dir, manifest: loaded.manifest, status: 'running', loaded }
+      // 与 inspect() 一致：运行态记录也附带能力检测（否则 get() 优先时能力徽章消失）
+      let capabilities: string[] = []
+      let viewType: string | undefined
+      try {
+        const code = await fs.promises.readFile(path.join(dir, loaded.manifest.entry), 'utf8')
+        const detected = detectCapabilities(code)
+        capabilities = detected.capabilities
+        viewType = detected.viewType
+      } catch {
+        // 能力检测失败不阻断加载
+      }
+      const rec: PluginRecord = {
+        id,
+        dir,
+        manifest: loaded.manifest,
+        status: 'running',
+        loaded,
+        capabilities,
+        viewType,
+      }
       this.records.set(id, rec)
       return rec
     } catch (err) {

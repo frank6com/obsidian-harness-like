@@ -172,3 +172,39 @@ describe('commands.execute + 用户插件设置页（0.33.0）', () => {
     expect(() => ctx.settingsTab.register({ id: 'dup', name: 'B', render: () => {} })).toThrow()
   })
 })
+
+describe('备份列表渲染（0.35.3）', () => {
+  it('renderBackupList 渲染行 + 版本徽章 + 恢复/删除按钮', async () => {
+    // Obsidian DOM 扩展 polyfill（jsdom 无 createDiv 等）
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>
+    if (!proto.createDiv) {
+      const make = (tag: string) =>
+        function (this: HTMLElement, opts?: { cls?: string; text?: string }) {
+          const el = document.createElement(tag)
+          if (opts?.cls) el.className = opts.cls
+          if (opts?.text) el.textContent = opts.text
+          this.appendChild(el)
+          return el
+        }
+      proto.createDiv = make('div')
+      proto.createSpan = make('span')
+      proto.createEl = function (this: HTMLElement, tag: string, opts?: { cls?: string; text?: string }) {
+        return make(tag).call(this, opts)
+      }
+    }
+    const { renderBackupList } = await import('../modals')
+    const container = document.createElement('div')
+    const ctx = {
+      pluginBackups: {
+        list: async () => [
+          { id: '1-overwrite', time: 1700000000000, reason: 'overwrite', fileCount: 2, bytes: 1024, version: '0.0.2' },
+        ],
+      },
+    }
+    await renderBackupList(container, {} as never, ctx as never, 'demo')
+    const rows = container.querySelectorAll('.dsh-pm-backup-row')
+    expect(rows.length).toBe(1)
+    expect(container.querySelector('.dsh-pm-backup-version')?.textContent).toBe('v0.0.2')
+    expect(container.querySelectorAll('button').length).toBe(2) // 恢复 + 删除
+  })
+})

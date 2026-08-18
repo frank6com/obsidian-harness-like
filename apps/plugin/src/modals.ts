@@ -429,7 +429,91 @@ export class AgentEditModal extends Modal {
   }
 }
 
-/** 插件版本历史弹窗：列出备份，可恢复（恢复前自动备份当前状态，可撤销） */
+/** 恢复一份备份（回退前自动备份当前状态，可撤销）；历史弹窗与插件详情共用 */
+export async function restoreBackup(
+  app: App,
+  ctx: Context,
+  pluginId: string,
+  backupId: string,
+  time: number,
+  onChanged?: () => void,
+): Promise<void> {
+  const timeText = new Date(time).toLocaleString()
+  const ok = await new ConfirmModal(
+    app,
+    t('pm.history.restoreConfirm', { time: timeText }),
+    t('pm.history.restore'),
+  ).ask()
+  if (!ok) return
+  const dir = path.join(ctx.sandbox.scope.pluginsDir, pluginId)
+  await ctx.pluginBackups.snapshot(dir, pluginId, 'rollback')
+  await ctx.pluginBackups.restore(dir, pluginId, backupId)
+  const rec = ctx.pluginRuntime.inspect(pluginId)
+  const manifest = rec.manifest
+  if (manifest && ctx.approval.isGranted(pluginId, manifest.version)) {
+    await ctx.pluginRuntime.stop(pluginId)
+    const r = await ctx.pluginRuntime.load(pluginId)
+    ctx.notice.notice(
+      r.status === 'running'
+        ? t('pm.history.restored', { time: timeText })
+        : t('pm.reload.failed', { msg: r.error ?? 'unknown' }),
+    )
+  } else {
+    ctx.notice.notice(
+      manifest ? t('pm.history.restoreNoGrant') : t('pm.history.restored', { time: timeText }),
+    )
+  }
+  onChanged?.()
+}
+
+/** 删除一份备份（带确认） */
+export async function removeBackup(
+  app: App,
+  ctx: Context,
+  pluginId: string,
+  backupId: string,
+  onChanged?: () => void,
+): Promise<void> {
+  const ok = await new ConfirmModal(app, t('pm.history.deleteConfirm'), t('common.delete')).ask()
+  if (!ok) return
+  await ctx.pluginBackups.remove(pluginId, backupId)
+  onChanged?.()
+}
+
+/** 渲染备份列表（时间 + 版本徽章 + 恢复/删除）；历史弹窗与插件详情共用 */
+export async function renderBackupList(
+  container: HTMLElement,
+  app: App,
+  ctx: Context,
+  pluginId: string,
+  onChanged?: () => void,
+): Promise<void> {
+  const backups = await ctx.pluginBackups.list(pluginId)
+  if (!backups.length) {
+    container.createDiv({ cls: 'dsh-modal-empty', text: t('pm.history.empty') })
+    return
+  }
+  const list = container.createDiv({ cls: 'dsh-modal-list dsh-modal-list-tall' })
+  for (const b of backups) {
+    const row = list.createDiv({ cls: 'dsh-pm-backup-row' })
+    const info = row.createDiv({ cls: 'dsh-pm-backup-info' })
+    const timeLine = info.createDiv({ cls: 'dsh-pm-backup-time' })
+    timeLine.createSpan({ text: new Date(b.time).toLocaleString() })
+    if (b.version) {
+      timeLine.createSpan({ cls: 'dsh-pm-backup-version', text: t('pm.history.version', { v: b.version }) })
+    }
+    info.createDiv({
+      cls: 'dsh-pm-backup-sub',
+      text: `${t('pm.history.reason.' + b.reason)} · ${b.fileCount} ${t('pm.history.files')} · ${(b.bytes / 1024).toFixed(1)} KB`,
+    })
+    const btn = row.createEl('button', { cls: 'dsh-btn', text: t('pm.history.restore') })
+    btn.onclick = () => void restoreBackup(app, ctx, pluginId, b.id, b.time, onChanged)
+    const del = row.createEl('button', { cls: 'dsh-btn', text: '✕', attr: { title: t('pm.history.delete') } })
+    del.onclick = () => void removeBackup(app, ctx, pluginId, b.id, onChanged)
+  }
+}
+
+/** 插件版本历史弹窗：列出备份，可恢复/删除（薄壳，渲染逻辑在 renderBackupList） */
 export class PluginHistoryModal extends Modal {
   constructor(
     app: App,
@@ -452,70 +536,10 @@ export class PluginHistoryModal extends Modal {
     const { contentEl } = this
     contentEl.empty()
     contentEl.createEl('h3', { text: t('pm.history.title', { id: this.pluginId }) })
-    const backups = await this.ctx.pluginBackups.list(this.pluginId)
-    if (!backups.length) {
-      contentEl.createDiv({ cls: 'dsh-modal-empty', text: t('pm.history.empty') })
-      return
-    }
-    const list = contentEl.createDiv({ cls: 'dsh-modal-list dsh-modal-list-tall' })
-    for (const b of backups) {
-      const row = list.createDiv({ cls: 'dsh-pm-backup-row' })
-      const info = row.createDiv({ cls: 'dsh-pm-backup-info' })
-      // 时间行 + 版本号徽章
-      const timeLine = info.createDiv({ cls: 'dsh-pm-backup-time' })
-      timeLine.createSpan({ text: new Date(b.time).toLocaleString() })
-      if (b.version) {
-        timeLine.createSpan({ cls: 'dsh-pm-backup-version', text: t('pm.history.version', { v: b.version }) })
-      }
-      info.createDiv({
-        cls: 'dsh-pm-backup-sub',
-        text: `${t('pm.history.reason.' + b.reason)} · ${b.fileCount} ${t('pm.history.files')} · ${(b.bytes / 1024).toFixed(1)} KB`,
-      })
-      const btn = row.createEl('button', { cls: 'dsh-btn', text: t('pm.history.restore') })
-      btn.onclick = () => void this.restore(b.id, b.time)
-      const del = row.createEl('button', { cls: 'dsh-btn', text: '✕', attr: { title: t('pm.history.delete') } })
-      del.onclick = () => void this.removeBackup(b.id)
-    }
-  }
-
-  /** 删除一份备份（带确认） */
-  private async removeBackup(backupId: string): Promise<void> {
-    const ok = await new ConfirmModal(this.app, t('pm.history.deleteConfirm'), t('common.delete')).ask()
-    if (!ok) return
-    await this.ctx.pluginBackups.remove(this.pluginId, backupId)
-    void this.render()
-  }
-
-  private async restore(backupId: string, time: number): Promise<void> {
-    const timeText = new Date(time).toLocaleString()
-    const ok = await new ConfirmModal(
-      this.app,
-      t('pm.history.restoreConfirm', { time: timeText }),
-      t('pm.history.restore'),
-    ).ask()
-    if (!ok) return
-    const dir = path.join(this.ctx.sandbox.scope.pluginsDir, this.pluginId)
-    // 回退前先备份当前状态（回退可撤销）
-    await this.ctx.pluginBackups.snapshot(dir, this.pluginId, 'rollback')
-    await this.ctx.pluginBackups.restore(dir, this.pluginId, backupId)
-    // 重新加载生效（授权仍在则直接加载；目录被删的插件仅还原文件）
-    const rec = this.ctx.pluginRuntime.inspect(this.pluginId)
-    const manifest = rec.manifest
-    if (manifest && this.ctx.approval.isGranted(this.pluginId, manifest.version)) {
-      await this.ctx.pluginRuntime.stop(this.pluginId)
-      const r = await this.ctx.pluginRuntime.load(this.pluginId)
-      this.ctx.notice.notice(
-        r.status === 'running'
-          ? t('pm.history.restored', { time: timeText })
-          : t('pm.reload.failed', { msg: r.error ?? 'unknown' }),
-      )
-    } else {
-      this.ctx.notice.notice(
-        manifest ? t('pm.history.restoreNoGrant') : t('pm.history.restored', { time: timeText }),
-      )
-    }
-    this.onChanged?.()
-    void this.render()
+    await renderBackupList(contentEl, this.app, this.ctx, this.pluginId, () => {
+      this.onChanged?.()
+      void this.render()
+    })
   }
 }
 
@@ -659,5 +683,93 @@ export class CommandApprovalModal extends Modal {
     this.settled = true
     this.resolveFn(v)
     this.close()
+  }
+}
+
+/** 插件详情弹窗：基本信息 + 能力清单（可调用项带按钮）+ 历史版本 */
+export class PluginDetailModal extends Modal {
+  constructor(
+    app: App,
+    private ctx: Context,
+    private pluginId: string,
+    private onChanged?: () => void,
+  ) {
+    super(app)
+  }
+
+  override onOpen(): void {
+    void this.render()
+  }
+
+  override onClose(): void {
+    this.contentEl.empty()
+  }
+
+  private async render(): Promise<void> {
+    const { contentEl } = this
+    contentEl.empty()
+    contentEl.createEl('h3', { text: t('pm.detail.title', { id: this.pluginId }) })
+    const rec = this.ctx.pluginRuntime.get(this.pluginId) ?? this.ctx.pluginRuntime.inspect(this.pluginId)
+    const manifest = rec.manifest
+    if (manifest) {
+      const info = contentEl.createDiv({ cls: 'dsh-pm-detail-info' })
+      info.createDiv({ text: `${manifest.name ?? this.pluginId} · v${manifest.version}` })
+      if (manifest.description) info.createDiv({ cls: 'dsh-pm-desc', text: manifest.description })
+    }
+    // 能力徽章
+    const caps = rec.capabilities ?? []
+    const LABELS: Record<string, string> = {
+      panel: t('pm.cap.panel'),
+      ribbon: t('pm.cap.ribbon'),
+      commands: t('pm.cap.commands'),
+      tools: t('pm.cap.tools'),
+      statusbar: t('pm.cap.statusbar'),
+      settings: t('pm.cap.settings'),
+    }
+    const capRow = contentEl.createDiv({ cls: 'dsh-pm-caps' })
+    if (caps.length) {
+      for (const c of caps) capRow.createSpan({ cls: 'dsh-pm-cap', text: LABELS[c] ?? c })
+    } else {
+      capRow.createSpan({ cls: 'dsh-pm-cap', text: t('pm.detail.noCaps') })
+    }
+    // 可调用能力（仅运行中）
+    if (rec.status === 'running') {
+      const invoke = contentEl.createDiv({ cls: 'dsh-pm-detail-invoke' })
+      if (rec.viewType) {
+        const btn = invoke.createEl('button', { cls: 'dsh-btn', text: t('pm.detail.openPanel') })
+        btn.onclick = () => this.ctx.views.open(rec.viewType!)
+      }
+      if (caps.includes('commands')) {
+        const cmds = this.listPluginCommands()
+        if (cmds.length) {
+          invoke.createDiv({ cls: 'dsh-pm-detail-sub', text: t('pm.detail.commandsTitle') })
+          for (const c of cmds) {
+            const b = invoke.createEl('button', { cls: 'dsh-btn', text: c.name })
+            b.onclick = () => this.ctx.commands.execute(c.id)
+          }
+        }
+      }
+    } else {
+      contentEl.createDiv({ cls: 'dsh-modal-warning', text: t('pm.detail.notRunning') })
+    }
+    // 历史版本（恢复/删除）
+    contentEl.createEl('h4', { text: t('pm.detail.history') })
+    await renderBackupList(contentEl, this.app, this.ctx, this.pluginId, () => {
+      this.onChanged?.()
+      void this.render()
+    })
+  }
+
+  /** 该插件注册的命令（主插件前缀分组：harness-like:<pluginId>:） */
+  private listPluginCommands(): Array<{ id: string; name: string }> {
+    try {
+      const all =
+        (this.app as unknown as { commands?: { listCommands?(): Array<{ id: string; name: string }> } }).commands
+          ?.listCommands?.() ?? []
+      const prefix = `harness-like:${this.pluginId}:`
+      return all.filter((c) => c.id.startsWith(prefix))
+    } catch {
+      return []
+    }
   }
 }

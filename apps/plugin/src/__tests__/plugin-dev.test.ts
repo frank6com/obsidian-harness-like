@@ -342,3 +342,17 @@ describe('plugin_status / reload_plugin', () => {
     const r2 = await ctx.toolsCompat.get('reload_plugin')!.execute({ plugin_id: 'leak-test' })
     expect(r2).toMatchObject({ ok: true, status: 'running' })
   })
+
+  it('加载成功的记录附带能力检测（详情页徽章不再消失）', async () => {
+    const { ctx } = await setup(undefined, async () => true)
+    await ctx.toolsCompat.get('create_plugin')!.execute({ id: 'gen-plugin' })
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'gen-plugin',
+      file: 'main.js',
+      content: GEN_PLUGIN_JS,
+    })
+    await ctx.toolsCompat.get('reload_plugin')!.execute({ plugin_id: 'gen-plugin' })
+    const rec = ctx.pluginRuntime.get('gen-plugin')
+    expect(rec).toBeTruthy()
+    expect(rec!.capabilities).toContain('tools')
+  })

@@ -6,7 +6,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian'
 import * as path from 'path'
 import type { Context } from '@deepseek-ai/cordis'
-import { ConfirmModal, DeletedPluginsModal, GrantModal, PluginHistoryModal } from '../modals'
+import { ConfirmModal, DeletedPluginsModal, GrantModal, PluginDetailModal } from '../modals'
 import { autoRecoverLastGood } from '../plugin-backups'
 import { grantDisplay } from '../settings'
 import { getLanguage, resolveLanguage, setLanguage, t, type LanguagePreference } from '../i18n'
@@ -158,8 +158,8 @@ export class PluginManagerView extends ItemView {
         })
         run.onclick = () => void this.ensureAndLoad(id)
       }
-      const history = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.history') })
-      history.onclick = () => new PluginHistoryModal(this.app, this.ctx, id, () => void this.refresh()).open()
+      const detail = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.detail') })
+      detail.onclick = () => new PluginDetailModal(this.app, this.ctx, id, () => void this.refresh()).open()
       const remove = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.delete') })
       remove.onclick = () => void this.removePlugin(id)
     }
