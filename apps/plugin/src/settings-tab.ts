@@ -7,7 +7,7 @@ import { App, PluginSettingTab, Setting } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import type HarnessLikePlugin from './main'
 import { AgentEditModal, ConfirmModal, ModelPickModal } from './modals'
-import { FILES_BANNER_BTN_STYLE, FILES_BANNER_STYLE } from './plugin-files'
+import { buildFilesOverlay, ensureSpinnerKeyframes } from './plugin-files'
 import { BUILTIN_AGENTS, type AgentPreset } from './settings'
 import { agentDisplayDesc, agentDisplayName, resolveLanguage, setLanguage, t, type LanguagePreference } from './i18n'
 
@@ -107,45 +107,31 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       | undefined
     const status = files?.statusOf()
     if (!files || !status || status.phase === 'ok') return
-    const banner = c.createDiv({ cls: 'dsh-files-banner' })
-    // 内联样式：自愈 UI 不依赖 styles.css（样式缺失时也必须可读）
-    Object.assign(banner.style, FILES_BANNER_STYLE)
-    const text =
-      status.phase === 'downloading'
-        ? t('files.downloading')
-        : status.phase === 'restored'
-          ? t('files.restored')
-          : t('files.failed')
-    banner.createSpan({ cls: 'dsh-files-banner-text', text })
-    if (status.phase === 'restored') {
-      const btn = banner.createEl('button', { text: t('files.reload') })
-      Object.assign(btn.style, FILES_BANNER_BTN_STYLE)
-      btn.onclick = () => {
-        try {
-          const plugins = (this.app as unknown as { plugins?: { disablePlugin(id: string): void; enablePlugin(id: string): void } }).plugins
-          plugins?.disablePlugin('harness-like')
-          plugins?.enablePlugin('harness-like')
-        } catch (err) {
-          this.ctx.notice.notice(String(err))
-        }
-      }
-    } else if (status.phase === 'failed') {
-      // 手动恢复指引：release 下载页 + 插件目录（可点击打开）
-      const link = banner.createEl('button', { text: t('files.openRelease') })
-      Object.assign(link.style, FILES_BANNER_BTN_STYLE, { color: 'var(--text-accent)' })
-      link.onclick = () => this.ctx.openExternal(files.releaseUrl)
-      const dir = banner.createSpan({ cls: 'dsh-files-banner-text', text: `${t('files.dir')} ${files.pluginDir}` })
-      dir.style.flex = '0 1 auto'
-      const openDir = banner.createEl('button', { text: t('files.openDir') })
-      Object.assign(openDir.style, FILES_BANNER_BTN_STYLE)
-      openDir.onclick = () => {
-        const root = (this.ctx.sandbox.scope as { vaultRoot?: string }).vaultRoot ?? ''
-        this.ctx.openExternal(root ? `${root}/${files.pluginDir}` : files.pluginDir)
-      }
-      const retry = banner.createEl('button', { text: t('files.retry') })
-      Object.assign(retry.style, FILES_BANNER_BTN_STYLE)
-      retry.onclick = () => void files.ensure()
-    }
+    ensureSpinnerKeyframes()
+    c.style.position = 'relative'
+    buildFilesOverlay(
+      c,
+      { phase: status.phase, pluginDir: files.pluginDir, releaseUrl: files.releaseUrl },
+      {
+        reload: () => {
+          try {
+            const plugins = (this.app as unknown as { plugins?: { disablePlugin(id: string): void; enablePlugin(id: string): void } }).plugins
+            plugins?.disablePlugin('harness-like')
+            plugins?.enablePlugin('harness-like')
+          } catch (err) {
+            this.ctx.notice.notice(String(err))
+          }
+        },
+        openExternal: (target) => {
+          const resolved =
+            target === files.pluginDir
+              ? `${(this.ctx.sandbox.scope as { vaultRoot?: string }).vaultRoot ?? ''}/${target}`
+              : target
+          this.ctx.openExternal(resolved)
+        },
+        retry: () => void files.ensure(),
+      },
+    )
   }
 
   private renderModelTab(c: HTMLElement): void {

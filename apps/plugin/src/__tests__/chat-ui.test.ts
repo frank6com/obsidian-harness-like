@@ -555,10 +555,11 @@ describe('插件文件自愈状态条（0.34.0）', () => {
     ;(v as { buildUi(): void }).buildUi()
     const banner = (v as { contentEl: HTMLElement }).contentEl.querySelector('.dsh-files-banner') as HTMLElement
     expect(banner).toBeTruthy()
-    // 遮罩层：全屏蒙层（内联样式，不依赖 styles.css）
-    expect(banner.style.position).toBe('absolute')
-    expect(banner.style.display).toBe('flex')
-    // 失败态：release 链接 / 打开目录 / 重试 三个按钮（目录为文本），点最后的重试
+    // 遮罩层：filesBannerEl 内挂全屏蒙层（内联样式，不依赖 styles.css）
+    const overlay = banner.querySelector(':scope > div') as HTMLElement
+    expect(overlay.style.position).toBe('absolute')
+    expect(overlay.style.display).toBe('flex')
+    // 失败态：release 链接 / 打开目录 / 重试 三个按钮，点最后的重试
     const buttons = banner.querySelectorAll('button')
     expect(buttons.length).toBe(3)
     buttons[buttons.length - 1]!.click()

@@ -5,6 +5,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { t } from './i18n'
 
 export type PluginFilesPhase = 'ok' | 'downloading' | 'restored' | 'failed'
 
@@ -141,7 +142,7 @@ export const FILES_BANNER_STYLE: Partial<CSSStyleDeclaration> = {
 }
 
 export const FILES_BANNER_BTN_STYLE: Partial<CSSStyleDeclaration> = {
-  padding: '2px 10px',
+  padding: '4px 12px',
   borderRadius: '6px',
   border: '1px solid var(--background-modifier-border)',
   background: 'var(--background-primary)',
@@ -149,4 +150,103 @@ export const FILES_BANNER_BTN_STYLE: Partial<CSSStyleDeclaration> = {
   fontSize: '12px',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
+}
+
+/** 注入 spinner 关键帧（幂等；不依赖 styles.css） */
+export function ensureSpinnerKeyframes(): void {
+  if (typeof document === 'undefined') return
+  if (document.getElementById('dsh-files-spin')) return
+  const style = document.createElement('style')
+  style.id = 'dsh-files-spin'
+  style.textContent = '@keyframes dsh-files-spin { to { transform: rotate(360deg); } }'
+  document.head.appendChild(style)
+}
+
+export interface FilesOverlayHandlers {
+  /** 重载宿主插件（restored 态按钮） */
+  reload(): void
+  /** 打开外部目标（release 下载页 / 插件目录） */
+  openExternal(target: string): void
+  /** 重试下载（failed 态按钮） */
+  retry(): void
+}
+
+export interface FilesOverlayInfo {
+  phase: string
+  pluginDir: string
+  releaseUrl: string
+}
+
+/**
+ * 构建自愈遮罩层（全屏蒙层 + 居中卡片；全部内联样式，不依赖 styles.css）。
+ * 文案分行靠左：标题 / 因果说明 / 操作按钮。
+ * root 需为相对定位容器（调用方设置 position: relative）。
+ */
+export function buildFilesOverlay(
+  root: HTMLElement,
+  info: FilesOverlayInfo,
+  handlers: FilesOverlayHandlers,
+): HTMLElement {
+  const overlay = root.createDiv()
+  Object.assign(overlay.style, {
+    position: 'absolute',
+    inset: '0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0, 0, 0, 0.45)',
+    zIndex: '100',
+    padding: '24px',
+    boxSizing: 'border-box',
+  })
+  const card = overlay.createDiv()
+  Object.assign(card.style, {
+    background: 'var(--background-primary)',
+    border: '1px solid var(--background-modifier-border)',
+    borderRadius: '10px',
+    padding: '20px 26px',
+    maxWidth: '560px',
+    width: '100%',
+    textAlign: 'left',
+    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.35)',
+  })
+  // 标题行
+  const title = card.createDiv({ text: t('files.title') })
+  Object.assign(title.style, { fontWeight: '600', fontSize: '14px', marginBottom: '10px' })
+  if (info.phase === 'downloading') {
+    // spinner + 说明（同一行左对齐）
+    const row = card.createDiv()
+    Object.assign(row.style, { display: 'flex', alignItems: 'center', gap: '10px' })
+    const spin = row.createSpan({ text: '⟳' })
+    Object.assign(spin.style, {
+      fontSize: '18px',
+      color: 'var(--text-accent)',
+      animation: 'dsh-files-spin 1s linear infinite',
+    })
+    row.createSpan({ text: t('files.downloading') }).style.flex = '1'
+  } else if (info.phase === 'restored') {
+    card.createDiv({ text: t('files.restored') }).style.cssText = 'font-size: 13px; line-height: 1.6;'
+    const actions = card.createDiv()
+    Object.assign(actions.style, { display: 'flex', gap: '8px', marginTop: '14px' })
+    const btn = actions.createEl('button', { text: t('files.reload') })
+    Object.assign(btn.style, FILES_BANNER_BTN_STYLE)
+    btn.onclick = () => handlers.reload()
+  } else {
+    // 失败：因果说明分行靠左
+    card.createDiv({ text: t('files.failed') }).style.cssText = 'font-size: 13px; line-height: 1.6;'
+    const dirLine = card.createDiv({ text: `${t('files.dir')} ${info.pluginDir}` })
+    Object.assign(dirLine.style, { fontSize: '12px', color: 'var(--text-muted)', marginTop: '10px' })
+    const actions = card.createDiv()
+    Object.assign(actions.style, { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '14px' })
+    const link = actions.createEl('button', { text: t('files.openRelease') })
+    Object.assign(link.style, FILES_BANNER_BTN_STYLE, { color: 'var(--text-accent)' })
+    link.onclick = () => handlers.openExternal(info.releaseUrl)
+    const openDir = actions.createEl('button', { text: t('files.openDir') })
+    Object.assign(openDir.style, FILES_BANNER_BTN_STYLE)
+    openDir.onclick = () => handlers.openExternal(info.pluginDir)
+    const retry = actions.createEl('button', { text: t('files.retry') })
+    Object.assign(retry.style, FILES_BANNER_BTN_STYLE)
+    retry.onclick = () => handlers.retry()
+  }
+  return overlay
 }

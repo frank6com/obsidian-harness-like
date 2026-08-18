@@ -23,7 +23,7 @@ import { agentDisplayDesc, agentDisplayName, getLanguage, resolveLanguage, setLa
 import zhDict from '../i18n/zh'
 import enDict from '../i18n/en'
 import { ConfirmModal, SessionRenameModal } from '../modals'
-import { FILES_BANNER_BTN_STYLE, FILES_BANNER_STYLE } from '../plugin-files'
+import { buildFilesOverlay, ensureSpinnerKeyframes } from '../plugin-files'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
 
@@ -746,11 +746,7 @@ export class ChatView extends ItemView {
     this.inputEl.disabled = running
   }
 
-  /**
-   * 插件文件自愈遮罩层：styles.css 缺失时全屏蒙层（内联样式 + 注入 spinner 关键帧，
-   * 不依赖 styles.css——自愈 UI 在样式缺失时也必须完整可读）。
-   * 下载中：spinner + 提示；已恢复/失败：状态 + 操作按钮。
-   */
+  /** 插件文件自愈遮罩层：styles.css 缺失时全屏蒙层（共享构建器，内联样式不依赖 styles.css） */
   private refreshFilesBanner(): void {
     const files = this.ctx.get('pluginFiles') as
       | {
@@ -766,53 +762,14 @@ export class ChatView extends ItemView {
       this.filesBannerEl.style.display = 'none'
       return
     }
-    this.ensureSpinnerKeyframes()
-    const overlay = this.filesBannerEl
-    overlay.empty()
-    Object.assign(overlay.style, {
-      position: 'absolute',
-      inset: '0',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'rgba(0, 0, 0, 0.45)',
-      zIndex: '100',
-    })
-    const card = overlay.createDiv()
-    Object.assign(card.style, {
-      background: 'var(--background-primary)',
-      border: '1px solid var(--background-modifier-border)',
-      borderRadius: '10px',
-      padding: '22px 30px',
-      maxWidth: '560px',
-      textAlign: 'center',
-      boxShadow: '0 4px 24px rgba(0, 0, 0, 0.35)',
-    })
-    if (status.phase === 'downloading') {
-      const spin = card.createSpan({ text: '⟳' })
-      Object.assign(spin.style, {
-        display: 'inline-block',
-        fontSize: '22px',
-        color: 'var(--text-accent)',
-        animation: 'dsh-files-spin 1s linear infinite',
-      })
-      card.createDiv({ text: t('files.downloading') }).style.marginTop = '10px'
-    } else {
-      card.createDiv({
-        text: status.phase === 'restored' ? t('files.restored') : t('files.failed'),
-      }).style.fontSize = '13px'
-      const actions = card.createDiv()
-      Object.assign(actions.style, {
-        display: 'flex',
-        justifyContent: 'center',
-        flexWrap: 'wrap',
-        gap: '8px',
-        marginTop: '14px',
-      })
-      if (status.phase === 'restored') {
-        const btn = actions.createEl('button', { text: t('files.reload') })
-        Object.assign(btn.style, FILES_BANNER_BTN_STYLE)
-        btn.onclick = () => {
+    ensureSpinnerKeyframes()
+    this.filesBannerEl.empty()
+    this.filesBannerEl.style.display = 'block'
+    buildFilesOverlay(
+      this.filesBannerEl,
+      { phase: status.phase, pluginDir: files.pluginDir, releaseUrl: files.releaseUrl },
+      {
+        reload: () => {
           try {
             const plugins = (this.app as unknown as { plugins?: { disablePlugin(id: string): void; enablePlugin(id: string): void } }).plugins
             plugins?.disablePlugin('harness-like')
@@ -820,32 +777,18 @@ export class ChatView extends ItemView {
           } catch (err) {
             this.ctx.notice.notice(String(err))
           }
-        }
-      } else {
-        // 手动恢复指引：release 下载页 + 插件目录（可点击打开）
-        const link = actions.createEl('button', { text: t('files.openRelease') })
-        Object.assign(link.style, FILES_BANNER_BTN_STYLE, { color: 'var(--text-accent)' })
-        link.onclick = () => this.ctx.openExternal(files.releaseUrl)
-        const openDir = actions.createEl('button', { text: `${t('files.dir')} ${files.pluginDir}` })
-        Object.assign(openDir.style, FILES_BANNER_BTN_STYLE)
-        openDir.onclick = () => {
-          const root = (this.ctx.sandbox.scope as { vaultRoot?: string }).vaultRoot ?? ''
-          this.ctx.openExternal(root ? `${root}/${files.pluginDir}` : files.pluginDir)
-        }
-        const retry = actions.createEl('button', { text: t('files.retry') })
-        Object.assign(retry.style, FILES_BANNER_BTN_STYLE)
-        retry.onclick = () => void files.ensure()
-      }
-    }
-  }
-
-  /** 注入 spinner 关键帧（幂等；不依赖 styles.css） */
-  private ensureSpinnerKeyframes(): void {
-    if (document.getElementById('dsh-files-spin')) return
-    const style = document.createElement('style')
-    style.id = 'dsh-files-spin'
-    style.textContent = '@keyframes dsh-files-spin { to { transform: rotate(360deg); } }'
-    document.head.appendChild(style)
+        },
+        openExternal: (target) => {
+          // 插件目录是 vault 相对路径 → 拼绝对路径；release URL 直接打开
+          const resolved =
+            target === files.pluginDir
+              ? `${(this.ctx.sandbox.scope as { vaultRoot?: string }).vaultRoot ?? ''}/${target}`
+              : target
+          this.ctx.openExternal(resolved)
+        },
+        retry: () => void files.ensure(),
+      },
+    )
   }
 
   // ---------- 会话列表 / 绑定 / 输入 ----------
