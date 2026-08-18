@@ -27,6 +27,8 @@ export interface AgentRunContext {
   onStream?(delta: string): void
   /** 推理过程增量（reasoning_content），实时回调 UI */
   onThinking?(delta: string): void
+  /** token 用量（流式 include_usage），实时回调 UI */
+  onUsage?(usage: { prompt: number; completion: number }): void
   /** 阶段状态（不落盘，UI 直接订阅） */
   onPhase?(phase: AgentPhase): void
   /** 历史事件（重建上下文） */
@@ -136,6 +138,7 @@ export async function runAgentLoop(ac: AgentRunContext): Promise<void> {
         onDelta: ac.onStream,
         onThinking: ac.onThinking,
         model: ac.model,
+        onUsage: ac.onUsage,
       })
 
       if (res.content) {

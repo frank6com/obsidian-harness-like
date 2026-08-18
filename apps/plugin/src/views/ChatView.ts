@@ -39,6 +39,11 @@ function summarize(value: unknown): string {
   return text.length > 300 ? text.slice(0, 300) + ' …' : text
 }
 
+/** token 估算：混合中英文按字符数近似（无真实 usage 时的兜底） */
+export function estimateTokens(chars: number): number {
+  return Math.round(chars / 1.7)
+}
+
 /** "已停止"状态标记（zh/en 默认文案；防语言切换后匹配失效） */
 const STOP_MARKERS = new Set<string>()
 for (const dict of [zhDict, enDict]) {
@@ -106,6 +111,8 @@ export class ChatView extends ItemView {
   private turnCopied = false
   /** 最近一次渲染的 assistant 原始内容（防重比较用，textContent 不可靠） */
   private lastAssistantRaw: string | null = null
+  /** 当前轮次统计（时间/字符数/token 用量；用于结束工具栏） */
+  private turnStats: { start: number; chars: number; usage: { prompt: number; completion: number } | null } | null = null
   /** 最近处理的事件指纹（监听器叠加兜底：同一事件只处理一次） */
   private lastEventKey = ''
   /** 对话内思考折叠卡片（推理过程/阶段状态，可展开查看） */
@@ -319,6 +326,7 @@ export class ChatView extends ItemView {
     if (e.type === 'turn/start') {
       // 新一轮次容器（send() 已先建好含用户消息的容器，这里幂等）
       this.openTurnContainer()
+      if (this.turnStats) this.turnStats.start = e.ts
       this.streamingEl = null
       this.streamingText = ''
     } else if (e.type === 'assistant/message') {
@@ -338,6 +346,7 @@ export class ChatView extends ItemView {
       // 否则下一轮流式气泡会拼接上一轮残留文本
       this.streamingText = ''
       this.lastAssistantRaw = e.content
+      if (this.turnStats) this.turnStats.chars += e.content.length
       this.turnText.push(`${t('chat.msg.assistant')}：\n${e.content}`)
       this.closeThinking()
     } else if (e.type === 'system/message') {
@@ -355,6 +364,7 @@ export class ChatView extends ItemView {
     this.turnEl = this.messagesEl.createDiv({ cls: 'dsh-turn' })
     this.turnText = []
     this.turnCopied = false
+    this.turnStats = { start: Date.now(), chars: 0, usage: null }
   }
 
   /** 新一轮次：容器 + 用户消息 + 累积文本 */
@@ -375,6 +385,20 @@ export class ChatView extends ItemView {
     }
     this.turnCopied = true
     const actions = this.turnEl.createDiv({ cls: 'dsh-turn-actions' })
+    // 元信息：完成时间 / 耗时 / token 计数（真实 usage 或估算） / 生成效率
+    const stats = this.turnStats
+    const meta = actions.createDiv({ cls: 'dsh-turn-meta' })
+    meta.createSpan({ text: t('chat.turn.time', { time: new Date(Date.now()).toLocaleTimeString() }) })
+    if (stats) {
+      const elapsed = (Date.now() - stats.start) / 1000
+      meta.createSpan({ text: t('chat.turn.elapsed', { s: elapsed.toFixed(1) }) })
+      const tokens = stats.usage ? stats.usage.completion : estimateTokens(stats.chars)
+      if (tokens > 0) {
+        meta.createSpan({ text: t('chat.turn.tokens', { approx: stats.usage ? '' : '≈', n: tokens }) })
+        const rate = elapsed > 0 ? Math.round(tokens / elapsed) : 0
+        if (rate > 0) meta.createSpan({ text: t('chat.turn.rate', { n: rate }) })
+      }
+    }
     const btn = actions.createEl('button', { cls: 'dsh-turn-copy', text: t('chat.copyTurn') })
     btn.onclick = () => {
       void navigator.clipboard.writeText(this.turnText.join('\n\n')).then(() => {
@@ -563,6 +587,7 @@ export class ChatView extends ItemView {
         `你还可以创建和维护 Harness Like 用户插件（${this.pluginsDirRel()}）：用 create_plugin 建骨架、write_plugin_file 写纯 JS main.js（覆盖已有文件需用户确认；读取文件用 read_note）、reload_plugin 加载生效；开发指南见 plugin_guide。`,
         '插件代码必须通过 ctx.* 服务访问宿主能力（ribbon/statusbar/views/commands/vault/notice 等），禁止直接操作 Obsidian DOM；inject 必须声明 apply 里用到的每一个服务；调用 ctx.* 方法前先查 plugin_guide 的「服务方法速查」获取准确签名，严禁臆测方法名（如 vault 列表用 getMarkdownPaths 而非 getFiles/getMarkdownFiles）。',
         '创建带面板（ItemView）的插件并加载成功后，用 open_view 打开面板让用户看到界面。',
+        '交互入口默认优先命令/面板/状态栏；左侧边栏 ribbon 图标仅在用户明确要求时使用（侧栏空间宝贵，不要默认添加）。',
         note ? `仅当前笔记模式：当前笔记 ${note}\n\n笔记内容：\n${noteCtx.slice(0, 8000)}` : '',
       ]
         .filter(Boolean)
@@ -595,6 +620,16 @@ export class ChatView extends ItemView {
         onEvent: sink,
         onStream: streaming ? (delta) => this.appendStream(delta) : undefined,
         onThinking: (delta) => this.appendThinking(delta),
+        onUsage: (u) => {
+          if (this.turnStats) {
+            this.turnStats.usage = this.turnStats.usage
+              ? {
+                  prompt: this.turnStats.usage.prompt + u.prompt,
+                  completion: this.turnStats.usage.completion + u.completion,
+                }
+              : u
+          }
+        },
         onPhase: (phase) => this.setPhase(phase),
         history,
         system,

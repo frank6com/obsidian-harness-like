@@ -37,6 +37,8 @@ export interface LlmCallerOptions {
   onDelta?: (delta: string) => void
   /** 推理过程增量（DeepSeek reasoner 的 reasoning_content），实时回调 */
   onThinking?: (delta: string) => void
+  /** token 用量（DeepSeek 流式 include_usage；端点不支持时不会回调） */
+  onUsage?: (usage: { prompt: number; completion: number }) => void
   /** 会话级模型选择，格式 "providerId/model"；缺省用默认提供方 */
   model?: string
 }
@@ -111,7 +113,7 @@ export class DeepSeekAdapter extends LlmAdapter {
   }
 
   override async *stream(
-    options: GenerateOptions & { onThinking?: (delta: string) => void },
+    options: GenerateOptions & { onThinking?: (delta: string) => void; onUsage?: (u: { prompt: number; completion: number }) => void },
   ): AsyncIterable<StreamChunk> {
     const cfg = this.getConfigByProvider(options.provider)
     const apiKey = assertUsableApiKey(cfg.apiKey, 'harness-like', 'settings.apiKey')
@@ -121,6 +123,8 @@ export class DeepSeekAdapter extends LlmAdapter {
       model: options.model,
       messages: toWireMessages(options.messages, options.system),
       stream: true,
+      // 请求流式 usage（末块返回 token 用量；端点不支持时忽略）
+      stream_options: { include_usage: true },
     }
     if (options.tools?.length) {
       body.tools = options.tools.map((t) => ({
@@ -176,6 +180,14 @@ export class DeepSeekAdapter extends LlmAdapter {
             choices?: Array<{
               delta?: { content?: string; reasoning_content?: string; tool_calls?: ToolCallDelta[] }
             }>
+            usage?: { prompt_tokens?: number; completion_tokens?: number }
+          }
+          // 流式 usage（末块，choices 为空）：透传给 UI 做 token 计数
+          if (chunk.usage && (chunk.usage.prompt_tokens || chunk.usage.completion_tokens)) {
+            options.onUsage?.({
+              prompt: chunk.usage.prompt_tokens ?? 0,
+              completion: chunk.usage.completion_tokens ?? 0,
+            })
           }
           const delta = chunk.choices?.[0]?.delta
           // 推理过程（DeepSeek reasoner 等）：实时透传给 UI 折叠块
@@ -331,7 +343,8 @@ export function createLlmCaller(llm: LlmRuntime, cfg: LlmRuntimeConfig): LlmCall
         maxTokens: c.maxTokens,
         signal: options.signal,
         onThinking: options.onThinking,
-      } as GenerateOptions & { onThinking?: (delta: string) => void })
+        onUsage: options.onUsage,
+      } as GenerateOptions & { onThinking?: (delta: string) => void; onUsage?: (u: { prompt: number; completion: number }) => void })
 
       for await (const chunk of chunks) {
         if (chunk.type === 'text-delta') {

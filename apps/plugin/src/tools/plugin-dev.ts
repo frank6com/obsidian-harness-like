@@ -28,6 +28,11 @@ const PLUGIN_ID_RE = /^[a-z0-9][a-z0-9-_]{0,63}$/
 
 export const PLUGIN_GUIDE = `# Harness Like 用户插件开发指南（纯 JS 路径）
 
+交互方式选择（创建插件前先确定，勿默认 ribbon）：
+- 默认优先：命令（ctx.commands.addCommand，命令面板可调用）、面板（ctx.views + open_view 即时展示）、状态栏（轻量信息）
+- 左侧边栏 ribbon 图标（ctx.ribbon）仅在用户明确要求时使用——侧栏空间宝贵，默认不要添加
+- 修改插件后宿主会自动递增 package.json 的 version 与 dsh.version（新版本重载时会重新请求授权确认），无需手动改版本号
+
 插件位于 vault 的 .obsidian/harness-like-plugins/<id>/ 目录，结构：
 
 - package.json：声明插件元数据（dsh 字段必填）
@@ -239,6 +244,8 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
             await ctx.vault.createFolder(path.posix.join(pluginsDirRel, pluginId, parent))
           }
           await ctx.vault.write(vaultRel, String(input.content ?? ''))
+          // 修改插件后自动递增版本号（version + dsh.version），新版本触发重新授权确认
+          await bumpPluginVersion(ctx, pluginsDirRel, pluginId)
           return { ok: true, path: vaultRel }
         },
       })
@@ -412,4 +419,31 @@ async function fileExists(ctx: { vault: { read(p: string): Promise<string> } }, 
   } catch {
     return false
   }
+}
+
+/** 递增插件版本号：version 与 dsh.version 同时 +1 patch（非法版本跳过） */
+async function bumpPluginVersion(
+  ctx: { vault: { read(p: string): Promise<string>; write(p: string, c: string): Promise<void> } },
+  pluginsDirRel: string,
+  pluginId: string,
+): Promise<void> {
+  const pkgPath = path.posix.join(pluginsDirRel, pluginId, 'package.json')
+  let pkg: { version?: unknown; dsh?: { version?: unknown } }
+  try {
+    pkg = JSON.parse(await ctx.vault.read(pkgPath))
+  } catch {
+    return // package.json 缺失/损坏：跳过
+  }
+  const bump = (v: unknown): string | undefined => {
+    if (typeof v !== 'string') return undefined
+    const m = /^(\d+)\.(\d+)\.(\d+)/.exec(v.trim())
+    if (!m) return undefined
+    return `${m[1]}.${m[2]}.${Number(m[3]) + 1}`
+  }
+  const version = bump(pkg.version)
+  const dshVersion = pkg.dsh ? bump(pkg.dsh.version) : undefined
+  if (!version && !dshVersion) return
+  if (version) pkg.version = version
+  if (dshVersion && pkg.dsh) pkg.dsh.version = dshVersion
+  await ctx.vault.write(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 }

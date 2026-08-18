@@ -223,7 +223,8 @@ describe('plugin_status / reload_plugin', () => {
     const out = await ctx.toolsCompat.get('plugin_status')!.execute({})
     expect(out).toEqual({
       count: 1,
-      plugins: [{ id: 'gen-plugin', version: '0.0.1', status: 'stopped', error: undefined }],
+      // 写 main.js 后宿主自动递增版本号 → 0.0.2
+      plugins: [{ id: 'gen-plugin', version: '0.0.2', status: 'stopped', error: undefined }],
     })
   })
 
@@ -286,3 +287,25 @@ describe('plugin_status / reload_plugin', () => {
     expect(reload.isError).toBe(false)
   })
 })
+
+  it('write_plugin_file 每次写入自动递增插件版本号（version + dsh.version）', async () => {
+    const { ctx, pluginsDir } = await setup(undefined, async () => true)
+    await ctx.toolsCompat.get('create_plugin')!.execute({ id: 'ver-test' })
+    const readPkg = async () =>
+      JSON.parse(await fs.promises.readFile(path.join(pluginsDir, 'ver-test', 'package.json'), 'utf8'))
+    expect((await readPkg()).version).toBe('0.0.1')
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'ver-test',
+      file: 'main.js',
+      content: 'module.exports = {}',
+    })
+    const pkg2 = await readPkg()
+    expect(pkg2.version).toBe('0.0.2')
+    expect(pkg2.dsh.version).toBe('0.0.2')
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'ver-test',
+      file: 'main.js',
+      content: 'module.exports = { v: 2 }',
+    })
+    expect((await readPkg()).version).toBe('0.0.3')
+  })

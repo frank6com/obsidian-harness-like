@@ -317,6 +317,14 @@
   cursor: pointer;
 }
 
+.dsh-turn-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
 .dsh-turn-copy:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);

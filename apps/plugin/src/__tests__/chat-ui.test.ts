@@ -42,7 +42,7 @@ function polyfillObsidianDom(): void {
   }
 }
 
-import { ChatView, filterModelHistory } from '../views/ChatView'
+import { ChatView, estimateTokens, filterModelHistory } from '../views/ChatView'
 
 const PROVIDERS = [
   { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-chat', 'deepseek-reasoner'] },
@@ -585,5 +585,42 @@ describe('插件文件自愈状态条（0.34.0）', () => {
     ;(v as { buildUi(): void }).buildUi()
     const banner = (v as { contentEl: HTMLElement }).contentEl.querySelector('.dsh-files-banner') as HTMLElement
     expect(banner.style.display).toBe('none')
+  })
+})
+
+describe('轮次结束工具栏（0.35.0）', () => {
+  it('turn 结束后显示元信息（时间/耗时/tokens/效率）+ 复制按钮', () => {
+    const v = makeView() as unknown as Record<string, unknown>
+    ;(v as { messagesEl: HTMLElement }).messagesEl = document.createElement('div')
+    v.currentSessionId = 's1'
+    ;(v as { startTurn(text: string): void }).startTurn('你好')
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({
+      sessionId: 's1',
+      type: 'turn/start',
+      ts: Date.now(),
+    })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({
+      sessionId: 's1',
+      type: 'assistant/message',
+      ts: Date.now(),
+      content: '这是一段很长的回答内容用于统计 token 数量。'.repeat(5),
+    })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({
+      sessionId: 's1',
+      type: 'turn/end',
+      ts: Date.now(),
+    })
+    const el = (v as { messagesEl: HTMLElement }).messagesEl
+    const meta = el.querySelector('.dsh-turn-meta')
+    expect(meta).toBeTruthy()
+    expect(meta!.querySelectorAll('span').length).toBeGreaterThanOrEqual(3)
+    expect(meta!.textContent).toContain('tokens')
+    expect(el.querySelector('.dsh-turn-copy')).toBeTruthy()
+  })
+
+  it('estimateTokens：字符数换算近似 token 数', () => {
+    expect(estimateTokens(170)).toBe(100)
+    expect(estimateTokens(0)).toBe(0)
+    expect(estimateTokens(1)).toBe(1)
   })
 })
