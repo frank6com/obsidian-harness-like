@@ -232,18 +232,52 @@ export function buildFilesOverlay(
     Object.assign(btn.style, FILES_BANNER_BTN_STYLE)
     btn.onclick = () => handlers.reload()
   } else {
-    // 失败：因果说明分行靠左
+    // 失败：因果说明 → 可尝试选项 → 手动步骤（编号、整行可点击）→ 重试，全部左对齐分行
     card.createDiv({ text: t('files.failed') }).style.cssText = 'font-size: 13px; line-height: 1.6;'
-    const dirLine = card.createDiv({ text: `${t('files.dir')} ${info.pluginDir}` })
-    Object.assign(dirLine.style, { fontSize: '12px', color: 'var(--text-muted)', marginTop: '10px' })
+    const options = card.createDiv({ text: t('files.failedOptions') })
+    Object.assign(options.style, { fontSize: '13px', marginTop: '12px' })
+    const reinstall = card.createDiv({ text: `· ${t('files.optionReinstall')}` })
+    Object.assign(reinstall.style, { fontSize: '13px', lineHeight: '1.7', marginLeft: '10px' })
+    const manual = card.createDiv({ text: `· ${t('files.optionManual')}` })
+    Object.assign(manual.style, { fontSize: '13px', lineHeight: '1.7', marginLeft: '10px' })
+    // 步骤 1：从 release 下载 styles.css（整行可点击跳转）
+    const step1 = card.createEl('button', { text: t('files.stepDownload') })
+    Object.assign(step1.style, {
+      display: 'block',
+      width: '100%',
+      textAlign: 'left',
+      marginLeft: '10px',
+      marginTop: '4px',
+      padding: '2px 0',
+      background: 'transparent',
+      border: 'none',
+      color: 'var(--text-accent)',
+      fontSize: '13px',
+      lineHeight: '1.7',
+      cursor: 'pointer',
+    })
+    step1.onclick = () => handlers.openExternal(info.releaseUrl)
+    // 步骤 2：复制到插件所在目录（显示路径，整行可点击打开目录）
+    const step2 = card.createEl('button', { text: `${t('files.stepCopy')}${info.pluginDir}` })
+    Object.assign(step2.style, {
+      display: 'block',
+      width: '100%',
+      textAlign: 'left',
+      marginLeft: '10px',
+      padding: '2px 0',
+      background: 'transparent',
+      border: 'none',
+      color: 'var(--text-accent)',
+      fontSize: '13px',
+      lineHeight: '1.7',
+      cursor: 'pointer',
+      wordBreak: 'break-all',
+      whiteSpace: 'normal',
+    })
+    step2.onclick = () => handlers.openExternal(info.pluginDir)
+    // 重新尝试自动修复
     const actions = card.createDiv()
-    Object.assign(actions.style, { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '14px' })
-    const link = actions.createEl('button', { text: t('files.openRelease') })
-    Object.assign(link.style, FILES_BANNER_BTN_STYLE, { color: 'var(--text-accent)' })
-    link.onclick = () => handlers.openExternal(info.releaseUrl)
-    const openDir = actions.createEl('button', { text: t('files.openDir') })
-    Object.assign(openDir.style, FILES_BANNER_BTN_STYLE)
-    openDir.onclick = () => handlers.openExternal(info.pluginDir)
+    Object.assign(actions.style, { display: 'flex', gap: '8px', marginTop: '16px' })
     const retry = actions.createEl('button', { text: t('files.retry') })
     Object.assign(retry.style, FILES_BANNER_BTN_STYLE)
     retry.onclick = () => handlers.retry()
