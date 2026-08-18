@@ -137,6 +137,7 @@ const dict: Record<string, string> = {
   'pm.detail.history': 'Version history',
   'pm.detail.notRunning': 'Plugin not running — start it to trigger its commands / open its panel.',
   'pm.detail.noCaps': 'No extension capabilities detected',
+  'pm.detail.noCommands': 'No commands available',
   'pm.detail.status': 'Status',
   'pm.detail.capsTitle': 'Extension capabilities',
   'pm.detail.actions': 'Actions',

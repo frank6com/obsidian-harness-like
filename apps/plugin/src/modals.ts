@@ -513,6 +513,22 @@ export async function renderBackupList(
   }
 }
 
+/** 该插件注册的命令（主插件前缀分组：harness-like:<pluginId>:） */
+export function listPluginCommands(
+  app: App,
+  pluginId: string,
+): Array<{ id: string; name: string }> {
+  try {
+    const all =
+      (app as unknown as { commands?: { listCommands?(): Array<{ id: string; name: string }> } }).commands
+        ?.listCommands?.() ?? []
+    const prefix = `harness-like:${pluginId}:`
+    return all.filter((c) => c.id.startsWith(prefix))
+  } catch {
+    return []
+  }
+}
+
 /** 插件版本历史弹窗：列出备份，可恢复/删除（薄壳，渲染逻辑在 renderBackupList） */
 export class PluginHistoryModal extends Modal {
   constructor(
@@ -751,7 +767,7 @@ export class PluginDetailModal extends Modal {
         btn.onclick = () => this.ctx.views.open(rec.viewType!)
       }
       if (caps.includes('commands')) {
-        for (const c of this.listPluginCommands()) {
+        for (const c of listPluginCommands(this.app, this.pluginId)) {
           const b = invoke.createEl('button', { cls: 'dsh-btn', text: c.name })
           b.onclick = () => this.ctx.commands.execute(c.id)
         }
@@ -767,16 +783,4 @@ export class PluginDetailModal extends Modal {
     })
   }
 
-  /** 该插件注册的命令（主插件前缀分组：harness-like:<pluginId>:） */
-  private listPluginCommands(): Array<{ id: string; name: string }> {
-    try {
-      const all =
-        (this.app as unknown as { commands?: { listCommands?(): Array<{ id: string; name: string }> } }).commands
-          ?.listCommands?.() ?? []
-      const prefix = `harness-like:${this.pluginId}:`
-      return all.filter((c) => c.id.startsWith(prefix))
-    } catch {
-      return []
-    }
-  }
 }

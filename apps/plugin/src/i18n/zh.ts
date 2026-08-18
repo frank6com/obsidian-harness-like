@@ -142,6 +142,7 @@ const dict: Record<string, string> = {
   'pm.detail.history': '历史版本',
   'pm.detail.notRunning': '插件未运行，启动后可触发其命令/打开面板。',
   'pm.detail.noCaps': '未检测到扩展能力',
+  'pm.detail.noCommands': '无可用命令',
   'pm.detail.status': '状态',
   'pm.detail.capsTitle': '扩展能力',
   'pm.detail.actions': '操作',
