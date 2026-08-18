@@ -17,6 +17,8 @@ export interface PluginBackupMeta {
   reason: BackupReason
   fileCount: number
   bytes: number
+  /** 备份内 package.json 的插件版本（展示用；读取失败为 undefined） */
+  version?: string
 }
 
 export class PluginBackups {
@@ -89,17 +91,32 @@ export class PluginBackups {
         continue
       }
       let bytes = 0
+      let version: string | undefined
       for (const f of files) {
         try {
           bytes += (await fs.stat(path.join(dir, f))).size
         } catch {
           // 忽略单个文件读取失败
         }
+        if (f === 'package.json' && version === undefined) {
+          try {
+            const pkg = JSON.parse(await fs.readFile(path.join(dir, f), 'utf8')) as { version?: unknown }
+            if (typeof pkg.version === 'string') version = pkg.version
+          } catch {
+            // 读取失败则无版本信息
+          }
+        }
       }
-      out.push({ id: name, time: parsed.time, reason: parsed.reason, fileCount: files.length, bytes })
+      out.push({ id: name, time: parsed.time, reason: parsed.reason, fileCount: files.length, bytes, version })
     }
     out.sort((a, b) => b.time - a.time)
     return out
+  }
+
+  /** 删除一份备份（带 id 校验；目录不存在时静默成功） */
+  async remove(pluginId: string, backupId: string): Promise<void> {
+    if (!PluginBackups.parseId(backupId)) throw new Error(`非法备份 id: ${backupId}`)
+    await fs.rm(path.join(this.pluginDir(pluginId), backupId), { recursive: true, force: true })
   }
 
   /** 取最新一份备份 */

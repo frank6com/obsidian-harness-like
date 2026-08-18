@@ -461,14 +461,29 @@ export class PluginHistoryModal extends Modal {
     for (const b of backups) {
       const row = list.createDiv({ cls: 'dsh-pm-backup-row' })
       const info = row.createDiv({ cls: 'dsh-pm-backup-info' })
-      info.createDiv({ cls: 'dsh-pm-backup-time', text: new Date(b.time).toLocaleString() })
+      // 时间行 + 版本号徽章
+      const timeLine = info.createDiv({ cls: 'dsh-pm-backup-time' })
+      timeLine.createSpan({ text: new Date(b.time).toLocaleString() })
+      if (b.version) {
+        timeLine.createSpan({ cls: 'dsh-pm-backup-version', text: t('pm.history.version', { v: b.version }) })
+      }
       info.createDiv({
         cls: 'dsh-pm-backup-sub',
         text: `${t('pm.history.reason.' + b.reason)} · ${b.fileCount} ${t('pm.history.files')} · ${(b.bytes / 1024).toFixed(1)} KB`,
       })
       const btn = row.createEl('button', { cls: 'dsh-btn', text: t('pm.history.restore') })
       btn.onclick = () => void this.restore(b.id, b.time)
+      const del = row.createEl('button', { cls: 'dsh-btn', text: '✕', attr: { title: t('pm.history.delete') } })
+      del.onclick = () => void this.removeBackup(b.id)
     }
+  }
+
+  /** 删除一份备份（带确认） */
+  private async removeBackup(backupId: string): Promise<void> {
+    const ok = await new ConfirmModal(this.app, t('pm.history.deleteConfirm'), t('common.delete')).ask()
+    if (!ok) return
+    await this.ctx.pluginBackups.remove(this.pluginId, backupId)
+    void this.render()
   }
 
   private async restore(backupId: string, time: number): Promise<void> {

@@ -911,6 +911,19 @@
 .dsh-pm-backup-time {
   font-weight: 600;
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dsh-pm-backup-version {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--interactive-accent);
+  color: var(--text-accent);
+  background: var(--background-secondary);
 }
 
 .dsh-pm-backup-sub {
