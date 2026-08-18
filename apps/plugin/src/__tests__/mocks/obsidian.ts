@@ -58,6 +58,16 @@ export class Setting {
 export class WorkspaceLeaf {}
 export class App {}
 
+/** setCssStyles polyfill（Obsidian 运行时 API；测试环境补齐，映射到 style 直赋） */
+if (typeof HTMLElement !== 'undefined') {
+  const proto = HTMLElement.prototype as unknown as Record<string, unknown>
+  if (!proto.setCssStyles) {
+    proto.setCssStyles = function (this: HTMLElement, styles: Record<string, string>) {
+      Object.assign(this.style, styles)
+    }
+  }
+}
+
 /** PluginSettingTab 最小替身（真实 1.13 类型面已移除 display，运行时仍调用） */
 export class PluginSettingTab {
   app = {} as never

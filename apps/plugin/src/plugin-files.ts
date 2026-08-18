@@ -130,17 +130,6 @@ declare module '@deepseek-ai/cordis' {
 }
 
 /** 自愈状态条的基础样式（内联，不依赖 styles.css——自愈 UI 在样式缺失时也必须可读） */
-export const FILES_BANNER_STYLE: Partial<CSSStyleDeclaration> = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  padding: '6px 12px',
-  fontSize: '12px',
-  borderBottom: '1px solid var(--background-modifier-border)',
-  background: 'var(--background-secondary)',
-  color: 'var(--text-muted)',
-}
-
 export const FILES_BANNER_BTN_STYLE: Partial<CSSStyleDeclaration> = {
   padding: '4px 12px',
   borderRadius: '6px',
@@ -150,16 +139,6 @@ export const FILES_BANNER_BTN_STYLE: Partial<CSSStyleDeclaration> = {
   fontSize: '12px',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
-}
-
-/** 注入 spinner 关键帧（幂等；不依赖 styles.css） */
-export function ensureSpinnerKeyframes(): void {
-  if (typeof document === 'undefined') return
-  if (document.getElementById('dsh-files-spin')) return
-  const style = document.createElement('style')
-  style.id = 'dsh-files-spin'
-  style.textContent = '@keyframes dsh-files-spin { to { transform: rotate(360deg); } }'
-  document.head.appendChild(style)
 }
 
 export interface FilesOverlayHandlers {
@@ -188,7 +167,7 @@ export function buildFilesOverlay(
   handlers: FilesOverlayHandlers,
 ): HTMLElement {
   const overlay = root.createDiv()
-  Object.assign(overlay.style, {
+  overlay.setCssStyles({
     position: 'absolute',
     inset: '0',
     display: 'flex',
@@ -200,7 +179,7 @@ export function buildFilesOverlay(
     boxSizing: 'border-box',
   })
   const card = overlay.createDiv()
-  Object.assign(card.style, {
+  card.setCssStyles({
     background: 'var(--background-primary)',
     border: '1px solid var(--background-modifier-border)',
     borderRadius: '10px',
@@ -212,37 +191,43 @@ export function buildFilesOverlay(
   })
   // 标题行
   const title = card.createDiv({ text: t('files.title') })
-  Object.assign(title.style, { fontWeight: '600', fontSize: '14px', marginBottom: '10px' })
+  title.setCssStyles({ fontWeight: '600', fontSize: '14px', marginBottom: '10px' })
   if (info.phase === 'downloading') {
     // spinner + 说明（同一行左对齐）
     const row = card.createDiv()
-    Object.assign(row.style, { display: 'flex', alignItems: 'center', gap: '10px' })
+    row.setCssStyles({ display: 'flex', alignItems: 'center', gap: '10px' })
     const spin = row.createSpan({ text: '⟳' })
-    Object.assign(spin.style, {
-      fontSize: '18px',
-      color: 'var(--text-accent)',
-      animation: 'dsh-files-spin 1s linear infinite',
-    })
-    row.createSpan({ text: t('files.downloading') }).style.flex = '1'
+    spin.setCssStyles({ fontSize: '18px', color: 'var(--text-accent)' })
+    // spinner 动画用 Web Animations API（官方 review 禁止运行时创建 <style> 元素）
+    if (typeof spin.animate === 'function') {
+      spin.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], {
+        duration: 1000,
+        iterations: Infinity,
+      })
+    }
+    const downloading = row.createSpan({ text: t('files.downloading') })
+    downloading.setCssStyles({ flex: '1' })
   } else if (info.phase === 'restored') {
-    card.createDiv({ text: t('files.restored') }).style.cssText = 'font-size: 13px; line-height: 1.6;'
+    const restored = card.createDiv({ text: t('files.restored') })
+    restored.setCssStyles({ fontSize: '13px', lineHeight: '1.6' })
     const actions = card.createDiv()
-    Object.assign(actions.style, { display: 'flex', gap: '8px', marginTop: '14px' })
+    actions.setCssStyles({ display: 'flex', gap: '8px', marginTop: '14px' })
     const btn = actions.createEl('button', { text: t('files.reload') })
-    Object.assign(btn.style, FILES_BANNER_BTN_STYLE)
+    btn.setCssStyles(FILES_BANNER_BTN_STYLE)
     btn.onclick = () => handlers.reload()
   } else {
     // 失败：因果说明 → 可尝试选项 → 手动步骤（编号、整行可点击）→ 重试，全部左对齐分行
-    card.createDiv({ text: t('files.failed') }).style.cssText = 'font-size: 13px; line-height: 1.6;'
+    const failed = card.createDiv({ text: t('files.failed') })
+    failed.setCssStyles({ fontSize: '13px', lineHeight: '1.6' })
     const options = card.createDiv({ text: t('files.failedOptions') })
-    Object.assign(options.style, { fontSize: '13px', marginTop: '12px' })
+    options.setCssStyles({ fontSize: '13px', marginTop: '12px' })
     const reinstall = card.createDiv({ text: `· ${t('files.optionReinstall')}` })
-    Object.assign(reinstall.style, { fontSize: '13px', lineHeight: '1.7', marginLeft: '10px' })
+    reinstall.setCssStyles({ fontSize: '13px', lineHeight: '1.7', marginLeft: '10px' })
     const manual = card.createDiv({ text: `· ${t('files.optionManual')}` })
-    Object.assign(manual.style, { fontSize: '13px', lineHeight: '1.7', marginLeft: '10px' })
+    manual.setCssStyles({ fontSize: '13px', lineHeight: '1.7', marginLeft: '10px' })
     // 步骤 1：从 release 下载 styles.css（整行可点击跳转）
     const step1 = card.createEl('button', { text: t('files.stepDownload') })
-    Object.assign(step1.style, {
+    step1.setCssStyles({
       display: 'block',
       width: '100%',
       textAlign: 'left',
@@ -259,7 +244,7 @@ export function buildFilesOverlay(
     step1.onclick = () => handlers.openExternal(info.releaseUrl)
     // 步骤 2：复制到插件所在目录（显示路径，整行可点击打开目录）
     const step2 = card.createEl('button', { text: `${t('files.stepCopy')}${info.pluginDir}` })
-    Object.assign(step2.style, {
+    step2.setCssStyles({
       display: 'block',
       width: '100%',
       textAlign: 'left',
@@ -277,9 +262,9 @@ export function buildFilesOverlay(
     step2.onclick = () => handlers.openExternal(info.pluginDir)
     // 重新尝试自动修复
     const actions = card.createDiv()
-    Object.assign(actions.style, { display: 'flex', gap: '8px', marginTop: '16px' })
+    actions.setCssStyles({ display: 'flex', gap: '8px', marginTop: '16px' })
     const retry = actions.createEl('button', { text: t('files.retry') })
-    Object.assign(retry.style, FILES_BANNER_BTN_STYLE)
+    retry.setCssStyles(FILES_BANNER_BTN_STYLE)
     retry.onclick = () => handlers.retry()
   }
   return overlay

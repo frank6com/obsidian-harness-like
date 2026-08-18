@@ -23,7 +23,7 @@ import { agentDisplayDesc, agentDisplayName, getLanguage, resolveLanguage, setLa
 import zhDict from '../i18n/zh'
 import enDict from '../i18n/en'
 import { ConfirmModal, SessionRenameModal } from '../modals'
-import { buildFilesOverlay, ensureSpinnerKeyframes } from '../plugin-files'
+import { buildFilesOverlay } from '../plugin-files'
 
 export const CHAT_VIEW_TYPE = 'dsh-chat'
 
@@ -157,7 +157,7 @@ export class ChatView extends ItemView {
     this.contentEl.empty()
     this.root = this.contentEl.createDiv({ cls: 'dsh-chat' })
     // 自愈遮罩层需要相对定位的父容器
-    this.root.style.position = 'relative'
+    this.root.setCssStyles({ position: 'relative' })
     this.root.classList.toggle('is-collapsed', this.listCollapsed)
 
     // 头部：折叠按钮 + 标题（左），插件管理器（右对齐）；新会话按钮移至会话列表顶部
@@ -171,7 +171,7 @@ export class ChatView extends ItemView {
 
     // 插件文件自愈状态条（styles.css 缺失时显示，位于头部下方）
     this.filesBannerEl = this.root.createDiv({ cls: 'dsh-files-banner' })
-    this.filesBannerEl.style.display = 'none'
+    this.filesBannerEl.setCssStyles({ display: 'none' })
     this.refreshFilesBanner()
     this.disposers.push(this.ctx.on('dsh/plugin-files', () => this.refreshFilesBanner()))
 
@@ -759,12 +759,11 @@ export class ChatView extends ItemView {
     const status = files?.statusOf()
     if (!files || !status || status.phase === 'ok') {
       this.filesBannerEl.empty()
-      this.filesBannerEl.style.display = 'none'
+      this.filesBannerEl.setCssStyles({ display: 'none' })
       return
     }
-    ensureSpinnerKeyframes()
     this.filesBannerEl.empty()
-    this.filesBannerEl.style.display = 'block'
+    this.filesBannerEl.setCssStyles({ display: 'block' })
     buildFilesOverlay(
       this.filesBannerEl,
       { phase: status.phase, pluginDir: files.pluginDir, releaseUrl: files.releaseUrl },

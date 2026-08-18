@@ -7,7 +7,7 @@ import { App, PluginSettingTab, Setting } from 'obsidian'
 import type { Context } from '@deepseek-ai/cordis'
 import type HarnessLikePlugin from './main'
 import { AgentEditModal, ConfirmModal, ModelPickModal } from './modals'
-import { buildFilesOverlay, ensureSpinnerKeyframes } from './plugin-files'
+import { buildFilesOverlay } from './plugin-files'
 import { BUILTIN_AGENTS, type AgentPreset } from './settings'
 import { agentDisplayDesc, agentDisplayName, resolveLanguage, setLanguage, t, type LanguagePreference } from './i18n'
 
@@ -107,8 +107,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
       | undefined
     const status = files?.statusOf()
     if (!files || !status || status.phase === 'ok') return
-    ensureSpinnerKeyframes()
-    c.style.position = 'relative'
+    c.setCssStyles({ position: 'relative' })
     buildFilesOverlay(
       c,
       { phase: status.phase, pluginDir: files.pluginDir, releaseUrl: files.releaseUrl },
