@@ -83,6 +83,9 @@ function makeView(opts?: { defaultModelId?: string; providers?: unknown[] }): Ch
     get: () => undefined,
   }
   const view = new ChatView({} as never, ctx as never) as unknown as ChatViewInternals
+  // 装配最小会话列表容器：turn/end 等事件会异步触发 refreshSessions，
+  // 无此容器时 doRefreshSessions 的 empty() 抛 undefined 异常（unhandled rejection）
+  ;(view as { sessionRowsEl?: HTMLElement }).sessionRowsEl = document.createElement('div')
   return view
 }
 
@@ -680,5 +683,174 @@ describe('并发刷新与工具栏重做（0.35.1）', () => {
     const btns = el.querySelector('.dsh-turn-btns')
     expect(btns).toBeTruthy()
     expect(btns!.querySelectorAll('button').length).toBe(2) // 复制 + 重做
+  })
+
+  it('重做：当前会话不重建，开新轮次容器并重新生成（二次可重做）', () => {
+    const v = makeView() as unknown as Record<string, unknown>
+    ;(v as { messagesEl: HTMLElement }).messagesEl = document.createElement('div')
+    ;(v as { currentSessionId: string | null }).currentSessionId = 's1'
+    ;(v as { startTurn(text: string): void }).startTurn('重新生成测试')
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/start', ts: Date.now() })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({
+      sessionId: 's1',
+      type: 'assistant/message',
+      ts: Date.now(),
+      content: '回答内容',
+    })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/end', ts: Date.now() })
+    const el = (v as { messagesEl: HTMLElement }).messagesEl
+    const btns = el.querySelector('.dsh-turn-btns')!
+    const redoBtn = btns.querySelectorAll('button')[1] as HTMLButtonElement
+    const runSpy = vi
+      .spyOn(v as unknown as { run(s: string, t: string, a?: boolean): Promise<void> }, 'run')
+      .mockResolvedValue(undefined)
+    const openSessionSpy = vi
+      .spyOn(v as unknown as { openSession(id: string): void }, 'openSession')
+      .mockImplementation(() => {})
+    redoBtn.click()
+    expect(openSessionSpy).not.toHaveBeenCalled() // 当前会话不重建
+    expect(runSpy).toHaveBeenCalledWith('s1', '重新生成测试', true)
+    expect(el.querySelectorAll('.dsh-turn').length).toBe(2) // 新轮次容器已开启
+    // 新轮次结束后再次出现重做按钮，可二次重做（turnStats 已写回）
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/start', ts: Date.now() })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({
+      sessionId: 's1',
+      type: 'assistant/message',
+      ts: Date.now(),
+      content: '新回答',
+    })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/end', ts: Date.now() })
+    const turns = el.querySelectorAll('.dsh-turn')
+    const lastTurn = turns[turns.length - 1]!
+    const btns2 = lastTurn.querySelector('.dsh-turn-btns')!
+    const redoBtn2 = btns2.querySelectorAll('button')[1] as HTMLButtonElement
+    redoBtn2.click()
+    expect(runSpy).toHaveBeenCalledTimes(2)
+    expect(runSpy).toHaveBeenLastCalledWith('s1', '重新生成测试', true)
+  })
+})
+
+describe('会话渲染滚动（0.35.7）', () => {
+  it('renderSession：重建会话后强制滚到底部（打开历史会话显示最新内容）', async () => {
+    const ctx = {
+      settings: {
+        get: (k: string, d: unknown) => {
+          if (k === 'providers') return PROVIDERS
+          if (k === 'renderMarkdown') return false
+          return d
+        },
+        set: () => {},
+      },
+      on: vi.fn(() => () => {}),
+      sessionLog: {
+        append: async () => {},
+        list: async () => [],
+        read: async () => [
+          { type: 'user/message', ts: 1, sessionId: 's1', content: '你好' },
+          { type: 'turn/start', ts: 2, sessionId: 's1' },
+          { type: 'assistant/message', ts: 3, sessionId: 's1', content: '这是历史回复' },
+          { type: 'turn/end', ts: 4, sessionId: 's1' },
+        ] as never,
+        readMeta: async () => null,
+        remove: async () => {},
+        patchMeta: async () => {},
+      },
+      toolsCompat: { list: () => [] },
+      llmCaller: {},
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => undefined,
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { buildUi(): void }).buildUi()
+    const el = (v as { messagesEl: HTMLElement }).messagesEl
+    Object.defineProperty(el, 'scrollHeight', { value: 2000, configurable: true })
+    Object.defineProperty(el, 'clientHeight', { value: 100, configurable: true })
+    el.scrollTop = 0
+    ;(v as { currentSessionId: string | null }).currentSessionId = 's1'
+    await (v as { renderSession(): Promise<void> }).renderSession()
+    expect(el.scrollTop).toBe(2000) // 重建后强制滚底
+  })
+
+  it('renderSession：重建的历史会话不显示重做按钮（重建后重做不可用）', async () => {
+    const ctx = {
+      settings: {
+        get: (k: string, d: unknown) => {
+          if (k === 'providers') return PROVIDERS
+          if (k === 'renderMarkdown') return false
+          return d
+        },
+        set: () => {},
+      },
+      on: vi.fn(() => () => {}),
+      sessionLog: {
+        append: async () => {},
+        list: async () => [],
+        read: async () => [
+          { type: 'user/message', ts: 1, sessionId: 's1', content: '你好' },
+          { type: 'turn/start', ts: 2, sessionId: 's1' },
+          { type: 'assistant/message', ts: 3, sessionId: 's1', content: '历史回复' },
+          { type: 'turn/end', ts: 4, sessionId: 's1' },
+        ] as never,
+        readMeta: async () => null,
+        remove: async () => {},
+        patchMeta: async () => {},
+      },
+      toolsCompat: { list: () => [] },
+      llmCaller: {},
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => undefined,
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { buildUi(): void }).buildUi()
+    ;(v as { currentSessionId: string | null }).currentSessionId = 's1'
+    await (v as { renderSession(): Promise<void> }).renderSession()
+    const el = (v as { messagesEl: HTMLElement }).messagesEl
+    expect(el.querySelectorAll('.dsh-turn-redo').length).toBe(0) // 无重做
+    const btns = el.querySelector('.dsh-turn-btns')!
+    expect(btns.querySelectorAll('button').length).toBe(1) // 仅复制
+  })
+})
+
+describe('重做按钮只保留最后一次（0.35.7）', () => {
+  it('新轮次开始后，上一轮的重做按钮被移除，仅最后一轮保留', () => {
+    const v = makeView() as unknown as Record<string, unknown>
+    ;(v as { messagesEl: HTMLElement }).messagesEl = document.createElement('div')
+    ;(v as { currentSessionId: string | null }).currentSessionId = 's1'
+    // 第一轮
+    ;(v as { startTurn(text: string): void }).startTurn('第一轮问题')
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/start', ts: 1 })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({
+      sessionId: 's1',
+      type: 'assistant/message',
+      ts: 2,
+      content: '第一轮回答',
+    })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/end', ts: 3 })
+    expect((v as { messagesEl: HTMLElement }).messagesEl.querySelectorAll('.dsh-turn-redo').length).toBe(1)
+    // 第二轮
+    ;(v as { startTurn(text: string): void }).startTurn('第二轮问题')
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/start', ts: 4 })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({
+      sessionId: 's1',
+      type: 'assistant/message',
+      ts: 5,
+      content: '第二轮回答',
+    })
+    ;(v as { onSessionEvent(e: unknown): void }).onSessionEvent({ sessionId: 's1', type: 'turn/end', ts: 6 })
+    const el = (v as { messagesEl: HTMLElement }).messagesEl
+    expect(el.querySelectorAll('.dsh-turn-redo').length).toBe(1) // 全局只剩最后一轮
+    const turns = el.querySelectorAll('.dsh-turn')
+    expect(turns[0]!.querySelector('.dsh-turn-redo')).toBeNull() // 第一轮的重做已移除
+    expect(turns[1]!.querySelector('.dsh-turn-redo')).toBeTruthy() // 最后一轮保留
   })
 })

@@ -369,6 +369,8 @@ export class ChatView extends ItemView {
   /** 打开当前轮次容器（幂等；无内容时按需创建） */
   private openTurnContainer(): void {
     if (this.turnEl) return
+    // 新轮次开始：重做只保留在最后一次轮次，上一轮的移除（历史轮次不再可重做）
+    for (const b of this.messagesEl.querySelectorAll('.dsh-turn-redo')) b.remove()
     this.turnEl = this.messagesEl.createDiv({ cls: 'dsh-turn' })
     this.turnText = []
     this.turnCopied = false
@@ -419,14 +421,26 @@ export class ChatView extends ItemView {
         window.setTimeout(() => copy.setText('⧉'), 1200)
       })
     }
-    // 重做：重新生成本轮回复（跳过重新写入用户消息）
-    const redo = btns.createEl('button', { cls: 'dsh-turn-copy', text: '↻', attr: { title: t('chat.redo') } })
-    redo.onclick = () => {
-      const sid = stats?.sessionId
-      const text = stats?.userText
-      if (!sid || !text || this.runningSessions.has(sid)) return
-      this.openSession(sid)
-      void this.run(sid, text, true)
+    // 重做：仅用于最后一次实时轮次（startTurn/redo 已写入 userText/sessionId）。
+    // renderSession 重建的历史轮次不写入 → 不显示重做（重建后重做不可用，不如不显示）。
+    // 按钮来自当前渲染会话，currentSessionId 必等于 sid，无需 openSession 重建
+    //（重建会把视图拽回对话顶部）。开一个新轮次容器承接新思考/回复并强制滚底。
+    if (stats?.userText && stats?.sessionId) {
+      const redo = btns.createEl('button', { cls: 'dsh-turn-copy dsh-turn-redo', text: '↻', attr: { title: t('chat.redo') } })
+      redo.onclick = () => {
+        const sid = stats?.sessionId
+        const text = stats?.userText
+        if (!sid || !text || this.runningSessions.has(sid)) return
+        if (this.currentSessionId !== sid) this.openSession(sid)
+        this.closeTurn()
+        this.openTurnContainer()
+        if (this.turnStats) {
+          this.turnStats.userText = text
+          this.turnStats.sessionId = sid
+        }
+        this.scrollToBottom(true)
+        void this.run(sid, text, true)
+      }
     }
     this.turnEl = null
   }
@@ -1206,6 +1220,9 @@ export class ChatView extends ItemView {
     }
     // 末尾未收尾的轮次（中断/旧日志无 turn 标记）：补上复制按钮
     this.closeTurn()
+    // 重建后强制滚到底部：切换会话 / 打开历史会话默认展示最新一次内容，
+    // 避免 DOM 清空重建后 scrollTop 停在顶部（重来按钮也依赖此行为）
+    this.scrollToBottom(true)
   }
 
   /** 空状态引导：示例问题 + 未配置 key 提示 */

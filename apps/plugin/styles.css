@@ -453,6 +453,12 @@
 }
 
 /* 代码块复制按钮 */
+/* 隐藏 Obsidian MarkdownRenderer 内置的图标复制按钮（.copy-code-button，位于代码块左下角），
+   面板内仅保留文字版 .dsh-code-copy（右上角），避免同一代码块出现两个复制按钮 */
+.dsh-msg-assistant pre .copy-code-button {
+  display: none;
+}
+
 .dsh-code-copy {
   position: absolute;
   top: 4px;
