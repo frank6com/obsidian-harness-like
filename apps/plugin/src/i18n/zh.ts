@@ -208,6 +208,8 @@ const dict: Record<string, string> = {
   'settings.model.contextTokens': '输入上下文窗口（token）',
   'settings.model.contextTokensDesc': '0 = 未知/端点默认。信息性记录，从端点获取模型时若端点提供元数据会自动填入',
   'settings.model.contextDetected': '已从端点元数据填入上下文窗口: {n} tokens',
+  'chat.jump.top': '回到顶部',
+  'chat.jump.bottom': '跳到底部',
   'settings.model.headers': '自定义请求头',
   'settings.model.headersDesc': '每行 "Header: value"（如网关鉴权）',
   'settings.model.deleteChannel': '删除此通道',

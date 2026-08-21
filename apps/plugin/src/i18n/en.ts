@@ -201,6 +201,8 @@ const dict: Record<string, string> = {
   'settings.model.contextTokens': 'Input context window (tokens)',
   'settings.model.contextTokensDesc': '0 = unknown/endpoint default. Informational; auto-filled when the endpoint exposes model metadata',
   'settings.model.contextDetected': 'Context window auto-filled from endpoint metadata: {n} tokens',
+  'chat.jump.top': 'Jump to top',
+  'chat.jump.bottom': 'Jump to bottom',
   'settings.model.headers': 'Custom request headers',
   'settings.model.headersDesc': 'One "Header: value" per line (e.g. gateway auth)',
   'settings.model.deleteChannel': 'Delete this channel',

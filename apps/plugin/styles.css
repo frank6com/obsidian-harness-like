@@ -58,6 +58,39 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  /* 快速滚动按钮组的定位基准 */
+  position: relative;
+}
+
+/* 快速滚动按钮：消息区右下角悬浮（回顶 / 到底） */
+.dsh-jump-btns {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 5;
+}
+
+.dsh-jump-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.75;
+}
+
+.dsh-jump-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+  opacity: 1;
 }
 
 .dsh-chat-list {

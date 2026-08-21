@@ -854,3 +854,53 @@ describe('重做按钮只保留最后一次（0.35.7）', () => {
     expect(turns[1]!.querySelector('.dsh-turn-redo')).toBeTruthy() // 最后一轮保留
   })
 })
+
+describe('快速滚动按钮（0.38.0）', () => {
+  it('buildUi 装配回顶/到底按钮，点击生效', () => {
+    const v = makeView() as unknown as Record<string, unknown>
+    ;(v as { buildUi(): void }).buildUi()
+    const btns = (v as { contentEl: HTMLElement }).contentEl.querySelectorAll('.dsh-jump-btn')
+    expect(btns.length).toBe(2)
+    // 到底：强制滚到 scrollHeight
+    const el = (v as { messagesEl: HTMLElement }).messagesEl
+    Object.defineProperty(el, 'scrollHeight', { value: 3000, configurable: true })
+    ;(btns[1] as HTMLButtonElement).click()
+    expect(el.scrollTop).toBe(3000)
+    // 回顶：scrollTop 归零
+    el.scrollTop = 1500
+    ;(btns[0] as HTMLButtonElement).click()
+    expect(el.scrollTop).toBe(0)
+  })
+
+  it('renderSession 清空消息区后按钮仍存在（挂载在 body 不随会话重建）', async () => {
+    const ctx = {
+      settings: {
+        get: (k: string, d: unknown) => (k === 'providers' ? PROVIDERS : d),
+        set: () => {},
+      },
+      on: vi.fn(() => () => {}),
+      sessionLog: {
+        append: async () => {},
+        list: async () => [],
+        read: async () => [] as never,
+        readMeta: async () => null,
+        remove: async () => {},
+        patchMeta: async () => {},
+      },
+      toolsCompat: { list: () => [] },
+      llmCaller: {},
+      emit: vi.fn(),
+      sandbox: { scope: { configDir: '.obsidian' } },
+      notice: { notice: () => {} },
+      vault: { read: async () => '' },
+      workspace: { getActiveFile: () => null },
+      get: () => undefined,
+    }
+    polyfillObsidianDom()
+    const v = new ChatView({} as never, ctx as never) as unknown as Record<string, unknown>
+    ;(v as { buildUi(): void }).buildUi()
+    ;(v as { currentSessionId: string | null }).currentSessionId = 's-empty'
+    await (v as { renderSession(): Promise<void> }).renderSession()
+    expect((v as { contentEl: HTMLElement }).contentEl.querySelectorAll('.dsh-jump-btn').length).toBe(2)
+  })
+})

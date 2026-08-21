@@ -199,6 +199,17 @@ export class ChatView extends ItemView {
     this.sessionRowsEl = this.listEl.createDiv({ cls: 'dsh-session-rows' })
     this.messagesEl = body.createDiv({ cls: 'dsh-chat-messages' })
 
+    // 快速滚动：对话过长时一键回顶/到底（悬浮于消息区右下角，不随 renderSession 清空）
+    const jumpBtns = body.createDiv({ cls: 'dsh-jump-btns' })
+    const jumpTop = jumpBtns.createEl('button', { cls: 'dsh-jump-btn', text: '⤒', attr: { title: t('chat.jump.top') } })
+    jumpTop.onclick = () => {
+      this.messagesEl.scrollTop = 0
+    }
+    const jumpBottom = jumpBtns.createEl('button', { cls: 'dsh-jump-btn', text: '⤓', attr: { title: t('chat.jump.bottom') } })
+    jumpBottom.onclick = () => {
+      this.scrollToBottom(true)
+    }
+
     // 阶段状态条（思考/工具/等待审批/已停止）
     this.phaseEl = this.root.createDiv({ cls: 'dsh-phase', text: '' })
 
