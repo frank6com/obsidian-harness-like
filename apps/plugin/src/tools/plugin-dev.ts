@@ -12,6 +12,7 @@
  */
 
 import * as path from 'path'
+import * as vm from 'vm'
 import type { Plugin } from '@deepseek-ai/cordis'
 import type { PluginRecord } from '@harness-like/plugin-runtime'
 import { autoRecoverLastGood } from '../plugin-backups'
@@ -329,8 +330,8 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
           }
           if (code) {
             try {
-              // eslint-disable-next-line no-new-func
-              new Function(code)
+              // vm.Script 只编译不执行：纯 JS 插件代码的语法校验（无求值风险，报错含文件名）
+              new vm.Script(code, { filename: `${id}/${entry}` })
             } catch (err) {
               errors.push(`JS 语法错误: ${err instanceof Error ? err.message : String(err)}`)
             }
