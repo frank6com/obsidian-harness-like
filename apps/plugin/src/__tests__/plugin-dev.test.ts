@@ -356,3 +356,84 @@ describe('plugin_status / reload_plugin', () => {
     expect(rec).toBeTruthy()
     expect(rec!.capabilities).toContain('tools')
   })
+
+describe('check_plugin 校验', () => {
+  it('正常代码通过（ok=true，无 errors）', async () => {
+    const { ctx } = await setup()
+    await ctx.toolsCompat.get('create_plugin')!.execute({ id: 'chk-ok', description: 'x' })
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'chk-ok',
+      file: 'main.js',
+      content:
+        'module.exports = { name: "chk-ok", inject: ["notice"], apply(ctx) { ctx.notice.notice("hi") } }',
+    })
+    const out = (await ctx.toolsCompat.get('check_plugin')!.execute({ plugin_id: 'chk-ok' })) as {
+      ok: boolean
+      errors: string[]
+    }
+    expect(out.ok).toBe(true)
+    expect(out.errors).toEqual([])
+  })
+
+  it('臆测方法名（vault.getFiles）被拦截并指路正确方法', async () => {
+    const { ctx } = await setup()
+    await ctx.toolsCompat.get('create_plugin')!.execute({ id: 'chk-bad', description: 'x' })
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'chk-bad',
+      file: 'main.js',
+      content:
+        'module.exports = { name: "x", inject: ["vault"], apply(ctx) { const f = ctx.vault.getFiles() } }',
+    })
+    const out = (await ctx.toolsCompat.get('check_plugin')!.execute({ plugin_id: 'chk-bad' })) as {
+      ok: boolean
+      errors: string[]
+    }
+    expect(out.ok).toBe(false)
+    expect(out.errors.some((e) => e.includes('getFiles'))).toBe(true)
+    expect(out.errors.some((e) => e.includes('getMarkdownPaths'))).toBe(true)
+  })
+
+  it('JS 语法错误被捕获', async () => {
+    const { ctx } = await setup()
+    await ctx.toolsCompat.get('create_plugin')!.execute({ id: 'chk-syntax', description: 'x' })
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'chk-syntax',
+      file: 'main.js',
+      content: 'module.exports = { name: "x", apply(ctx) {',
+    })
+    const out = (await ctx.toolsCompat.get('check_plugin')!.execute({ plugin_id: 'chk-syntax' })) as {
+      ok: boolean
+      errors: string[]
+    }
+    expect(out.ok).toBe(false)
+    expect(out.errors.some((e) => e.includes('JS 语法错误'))).toBe(true)
+  })
+
+  it('this.app 与全局 DOM 查询被拦截', async () => {
+    const { ctx } = await setup()
+    await ctx.toolsCompat.get('create_plugin')!.execute({ id: 'chk-app', description: 'x' })
+    await ctx.toolsCompat.get('write_plugin_file')!.execute({
+      plugin_id: 'chk-app',
+      file: 'main.js',
+      content:
+        'module.exports = { name: "x", apply() { const w = this.app.workspace; document.querySelector(".workspace-ribbon") } }',
+    })
+    const out = (await ctx.toolsCompat.get('check_plugin')!.execute({ plugin_id: 'chk-app' })) as {
+      ok: boolean
+      errors: string[]
+    }
+    expect(out.ok).toBe(false)
+    expect(out.errors.some((e) => e.includes('this.app'))).toBe(true)
+    expect(out.errors.some((e) => e.includes('document.querySelector'))).toBe(true)
+  })
+
+  it('package.json 缺失时报错（未创建骨架直接校验）', async () => {
+    const { ctx } = await setup()
+    const out = (await ctx.toolsCompat.get('check_plugin')!.execute({ plugin_id: 'ghost' })) as {
+      ok: boolean
+      errors: string[]
+    }
+    expect(out.ok).toBe(false)
+    expect(out.errors.some((e) => e.includes('package.json'))).toBe(true)
+  })
+})

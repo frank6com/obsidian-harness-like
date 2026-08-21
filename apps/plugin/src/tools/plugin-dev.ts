@@ -27,19 +27,28 @@ export interface PluginDevToolsOptions {
 
 const PLUGIN_ID_RE = /^[a-z0-9][a-z0-9-_]{0,63}$/
 
-export const PLUGIN_GUIDE = `# Harness Like 用户插件开发指南（纯 JS 路径）
+export const PLUGIN_GUIDE = `# Harness Like 用户插件开发指南（纯 JS）
 
-交互方式选择（创建插件前先确定，勿默认 ribbon）：
-- 默认优先：命令（ctx.commands.addCommand，命令面板可调用）、面板（ctx.views + open_view 即时展示）、状态栏（轻量信息）
-- 左侧边栏 ribbon 图标（ctx.ribbon）仅在用户明确要求时使用——侧栏空间宝贵，默认不要添加
-- 修改插件后宿主会自动递增 package.json 的 version 与 dsh.version（新版本重载时会重新请求授权确认），无需手动改版本号
+## 标准工作流（严格按顺序执行）
+1. create_plugin(id, description) —— 创建插件骨架（目录 + package.json 自动生成）
+2. write_plugin_file(plugin_id, 'main.js', 完整代码) —— 写实现（模板见下文，纯 JS 无需任何构建）
+3. check_plugin(plugin_id) —— 必须调用：校验语法与禁用 API；errors 全部修正并重新校验通过后才能进入下一步
+4. reload_plugin(plugin_id) —— 加载生效（版本变化会弹授权确认，等用户操作）
+5. 有面板时 open_view(type) 打开展示给用户
+排错：plugin_status 查状态与加载错误；plugin_history 列历史备份；plugin_rollback 回退版本。
+回读已写文件：用 read_note，路径为 vault 相对路径 .obsidian/harness-like-plugins/<id>/<file>。
 
-插件位于 vault 的 .obsidian/harness-like-plugins/<id>/ 目录，结构：
+## 第一步：选交互入口（写代码前先定，勿默认 ribbon）
+- 默认优先：命令（命令面板可调用）/ 面板（ItemView，配 open_view 即时展示）/ 状态栏（轻量信息）
+- 左侧边栏 ribbon 图标：仅在用户明确要求时添加——侧栏空间宝贵；即使旧对话或示例出现过 ribbon，也不要主动加
+- 版本号由宿主在每次 write_plugin_file 后自动递增，不要手动改
 
-- package.json：声明插件元数据（dsh 字段必填）
-- main.js：CJS 产物，module.exports 导出插件对象
+## 插件目录结构
+位于 vault 的 .obsidian/harness-like-plugins/<id>/：
+- package.json：元数据（dsh 字段必填）—— create_plugin 自动生成，无需手写
+- main.js：CJS 模块，module.exports 导出插件对象 —— 用 write_plugin_file 写
 
-package.json 模板：
+package.json 内容（供参考，create_plugin 已自动生成）：
 
 {
   "name": "my-plugin",
@@ -48,13 +57,12 @@ package.json 模板：
   "dsh": { "id": "my-plugin", "version": "0.0.1", "entry": "main.js" }
 }
 
-main.js 最小模板（纯 JS，无需构建）：
-
-const { Context } = require('@deepseek-ai/cordis')
+## main.js 模板 A：无界面（工具 / 命令 / 状态栏）
+注意：不需要 require('@deepseek-ai/cordis')，ctx 由宿主注入。
 
 module.exports = {
   name: 'my-plugin',
-  inject: ['toolsCompat', 'commands', 'notice'],
+  inject: ['toolsCompat', 'commands', 'notice'],   // ← 用到谁就声明谁
   apply(ctx) {
     ctx.effect(() => [
       ctx.toolsCompat.register({
@@ -66,7 +74,7 @@ module.exports = {
         },
       }),
       ctx.commands.addCommand({
-        id: 'my-plugin:hello',
+        id: 'hello',
         name: '示例命令',
         callback: () => ctx.notice.notice('你好'),
       }),
@@ -74,74 +82,73 @@ module.exports = {
   },
 }
 
-可用服务（inject 声明）：toolsCompat（注册工具）、commands（注册命令）、views（注册/打开自定义面板）、
-vault（读写笔记）、editor（当前编辑器）、workspace（活跃文件）、notice（通知）、ribbon（侧边栏图标）、
-statusbar（状态栏）、settings（设置/设置页）、sandbox、approval、sessionLog、llmCaller、
-dshI18n（覆盖主插件界面文案，翻译插件用）。
-
-服务方法速查（务必按此签名调用，不要臆测方法名）：
-- ctx.vault：getMarkdownPaths() -> string[]（vault 相对路径列表）；read(path) -> string；write(path, content)；
-  create(path, content)；createFolder(path)（逐层创建）；delete(path)；rename(oldPath, newPath)；
-  on(ev, cb)（ev: vault/modify|create|delete|rename，cb(path, oldPath?)）
-- ctx.views：registerView(type, (leaf) => view)；open(type)
-- ctx.commands：addCommand({ id, name, callback })（id/名称自动带主插件前缀，无需手写）；execute(id)（执行任意已注册命令，含 Obsidian 核心插件命令如 templates:insert-template）
-- ctx.ribbon：addRibbonIcon(icon, title, callback) -> { remove }
-- ctx.statusbar：addStatusBarItem() -> { el, remove }
-- ctx.settingsTab：register({ id, name, render(containerEl) })（注册自己的设置页；render 里可用 Obsidian 的 Setting 组件）
-- ctx.notice：notice(message, timeoutMs?)
-- ctx.workspace：getActiveFile() -> string | null；onFileOpen(cb)
-- ctx.editor：getSelection()、insertText(text)、replaceSelection(text)；无活动编辑器时方法返回 null
-- ctx.toolsCompat：register({ name, description, input, execute })（execute 返回 JSON 可序列化对象）
-
-可用事件（ctx.on）：dsh/session/event（会话事件）、vault/modify|create|delete|rename、
-workspace/file-open、dsh/waiting-approval（审批弹窗打开）。
-
-常见错误（务必避免，否则插件加载失败）：
-- ctx.vault 只有 getMarkdownPaths()/read/write/create/createFolder/delete/rename/on —— 没有 getFiles/getMarkdownFiles/list 等方法
-- 禁止使用 this.app 或 obsidian API 直接操作 Obsidian（一律走 ctx.* 服务）；面板类需 extends ItemView 并实现 getViewType/getDisplayText/onOpen
-- ctx.toolsCompat.register 返回的 disposer 必须接入 ctx.effect（否则插件重载会报"工具已注册"）
-
-铁律（违反会导致报错或错误实现）：
-1. inject 必须声明 apply 里用到的【每一个】服务——漏一个访问就报
-   "cannot get property X without inject"。
-2. 禁止直接操作 Obsidian DOM（document.querySelector('.workspace-ribbon') 等内部类名），
-   一律通过 ctx.* 服务：侧边栏图标用 ctx.ribbon.addRibbonIcon，状态栏用 ctx.statusbar。
-3. 所有注册必须包进 ctx.effect(() => [disposer1, disposer2])，插件停止时自动撤销。
-
-带界面的插件（自定义面板：注册视图 + 命令打开，构建需 --external:obsidian）：
+## main.js 模板 B：带面板（ItemView）
+唯一允许的 require 是 obsidian（取 ItemView）；仍无需任何构建，写完直接 reload_plugin。
 
 const { ItemView } = require('obsidian')
 
 class MyView extends ItemView {
-  getViewType() { return 'my-view' }
+  getViewType() { return 'my-view' }        // 三个方法缺一不可
   getDisplayText() { return '我的面板' }
   getIcon() { return 'pencil' }
   onOpen() {
-    this.contentEl.createEl('h3', { text: '你好，dsh！' })
+    this.contentEl.createEl('h3', { text: '你好，Harness Like！' })
   }
 }
 
 module.exports = {
   name: 'my-plugin',
-  inject: ['views', 'commands', 'ribbon', 'notice'],   // ← 用到谁就声明谁
+  inject: ['views', 'commands'],
   apply(ctx) {
     ctx.effect(() => [
       ctx.views.registerView('my-view', (leaf) => new MyView(leaf)),
       ctx.commands.addCommand({
-        id: 'my-plugin:open-view',
+        id: 'open-view',
         name: '打开我的面板',
-        callback: () => ctx.views.open('my-view'),
+        callback: () => ctx.views.open('my-view'),   // open 的 type 必须与 registerView 一致
       }),
-      ctx.ribbon.addRibbonIcon('pencil', '打开我的面板', () => ctx.views.open('my-view')),
     ])
   },
 }
 
-更多 UI 能力（与 Obsidian 原生插件对齐）：
-- 底部状态栏：const item = ctx.statusbar.addStatusBarItem(); item.el.setText('...')（disposer = item.remove）
-- 设置页：ctx.settings.registerSettingTab(new (require('obsidian').PluginSettingTab)(...))——需在设置 Tab 的 display() 里渲染
+## 服务与方法速查（唯一权威来源；调用前核对此处，禁止臆测方法名）
+inject 可声明的服务：toolsCompat / commands / views / vault / editor / workspace /
+notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / llmCaller / dshI18n
 
-翻译插件（覆盖主插件界面文案，键级覆盖 zh/en，插件停止自动还原）：
+- ctx.vault：getMarkdownPaths() -> string[]（vault 相对路径列表）；read(path) -> string；write(path, content)；
+  create(path, content)；createFolder(path)（逐层创建）；delete(path)；rename(oldPath, newPath)；
+  on(ev, cb)（ev: vault/modify|create|delete|rename，cb(path, oldPath?)）
+  ⚠️ 没有 getFiles/getMarkdownFiles/list 方法，列笔记只用 getMarkdownPaths()
+- ctx.toolsCompat：register({ name, description, input, execute })（execute 返回 JSON 可序列化对象）
+- ctx.commands：addCommand({ id, name, callback })（id 自动带主插件前缀，无需手写）；execute(id)（可执行任意已注册命令，含 Obsidian 核心插件命令）
+- ctx.views：registerView(type, (leaf) => view)；open(type)
+- ctx.notice：notice(message, timeoutMs?)
+- ctx.workspace：getActiveFile() -> string | null；onFileOpen(cb)
+- ctx.editor：getSelection() / insertText(text) / replaceSelection(text)（无活动编辑器时返回 null）
+- ctx.ribbon：addRibbonIcon(icon, title, callback) -> { remove }（仅用户明确要求时使用）
+- ctx.statusbar：addStatusBarItem() -> { el, remove }（disposer = item.remove）
+- ctx.settingsTab：register({ id, name, render(containerEl) })（注册独立设置页；render 里可用 Obsidian 的 Setting 组件）
+- ctx.dshI18n：registerLocale(lang, dict)（键级覆盖主插件 zh/en 文案，翻译插件用）
+
+## 可用事件（ctx.on）
+dsh/session/event（会话事件）、dsh/waiting-approval（审批弹窗打开）、workspace/file-open、
+vault/modify|create|delete|rename。
+
+## 铁律（违反即加载失败或错误实现）
+1. inject 必须声明 apply 里用到的【每一个】服务——漏一个访问就报
+   "cannot get property X without inject"。
+2. 所有注册必须包进 ctx.effect(() => [disposer1, disposer2])，插件停止时自动撤销；
+   register/addCommand/addRibbonIcon 的返回值就是 disposer，不接入 effect 重载时会报"工具已注册"。
+3. 禁止 this.app、禁止直接操作 Obsidian DOM（document.querySelector('.workspace-ribbon') 等），
+   一律通过 ctx.* 服务。
+4. 面板类必须 extends ItemView 并实现 getViewType/getDisplayText/onOpen 三个方法。
+5. 工具 execute 只能返回 JSON 可序列化对象（不能返回函数 / DOM / 循环引用）。
+
+## 命令命名归一化
+addCommand 的 id 与显示名自动归一化为 \`<主插件id>:<插件id>:<命令>\` 与
+\`Harness Like: <命令名>（<插件id>）\`；命令面板按主插件名即可找到全部功能，id 手写前缀也会被去重。
+
+## 翻译插件模板（覆盖主插件界面文案，键级覆盖 zh/en，插件停止自动还原）
 
 module.exports = {
   name: 'my-translation',
@@ -157,13 +164,8 @@ module.exports = {
   },
 }
 
-注意：
-- 工具 execute 返回 JSON 可序列化对象。
-- ctx.commands.addCommand 注册的命令自动归一化命名：id 为 \`<主插件id>:<插件id>:<命令>\`，
-  显示名为 \`<主插件名>: <命令名>（<插件id>）\`（如 Harness Like: 打开面板（my-plugin）），
-  命令面板按主插件名即可找到全部功能；id 无需手写前缀，写了也会被归一化去重。
-- 修改 main.js 后调用 reload_plugin 生效；运行中插件重载需用户确认授权。
-- 插件构建命令把 obsidian 也 external：esbuild src/main.js --bundle --external:@deepseek-ai/cordis --external:obsidian --format=cjs --outfile=main.js`
+## 附：TS 开发者本地构建（纯 JS 场景忽略本节）
+esbuild src/main.ts --bundle --external:@deepseek-ai/cordis --external:obsidian --format=cjs --outfile=main.js`
 
 export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Object {
   return {
@@ -176,7 +178,7 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
 
       ctx.toolsCompat.register({
         name: 'plugin_guide',
-        description: '获取 Harness Like 用户插件开发指南（模板代码、API、流程）',
+        description: '获取 Harness Like 用户插件开发指南（标准工作流、main.js 模板、API 速查）。创建或修改用户插件前必读',
         input: { type: 'object', properties: {} },
         execute() {
           return { guide: PLUGIN_GUIDE }
@@ -220,7 +222,7 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
 
       ctx.toolsCompat.register({
         name: 'write_plugin_file',
-        description: '写入插件目录内的文件（覆盖已存在文件需用户确认；读取文件请用 read_note，勿用本工具）',
+        description: '写入插件目录内的文件（覆盖已存在文件需用户确认，覆盖前自动备份）。读取已写文件用 read_note（路径 .obsidian/harness-like-plugins/<插件id>/<file>），勿用本工具读',
         input: {
           type: 'object',
           properties: {
@@ -283,6 +285,79 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
             )
           }
           return { count: rows.length, plugins: rows }
+        },
+      })
+
+      ctx.toolsCompat.register({
+        name: 'check_plugin',
+        description: '校验用户插件代码（JS 语法 / 禁用 API / 元数据 / 上次加载错误）。写完或修改插件代码后必须调用本工具；errors 全部修正并重新校验通过后，才能调用 reload_plugin',
+        input: {
+          type: 'object',
+          properties: { plugin_id: { type: 'string', description: '插件 id' } },
+          required: ['plugin_id'],
+        },
+        async execute(input) {
+          const id = String(input.plugin_id ?? '')
+          const errors: string[] = []
+          const warnings: string[] = []
+
+          // ① 元数据：package.json 结构与一致性
+          const pkgPath = path.posix.join(pluginsDirRel, id, 'package.json')
+          let entry = 'main.js'
+          try {
+            const pkg = JSON.parse(await ctx.vault.read(pkgPath)) as {
+              dsh?: { id?: unknown; entry?: unknown }
+            }
+            if (!pkg.dsh || typeof pkg.dsh !== 'object') {
+              errors.push('package.json 缺少 dsh 字段（{ "dsh": { "id", "version", "entry" } }）')
+            } else {
+              if (typeof pkg.dsh.id !== 'string' || !pkg.dsh.id) errors.push('package.json 缺少 dsh.id')
+              else if (pkg.dsh.id !== id) errors.push(`package.json dsh.id（${pkg.dsh.id}）与插件目录名（${id}）不一致`)
+              if (typeof pkg.dsh.entry === 'string' && pkg.dsh.entry) entry = pkg.dsh.entry
+              else errors.push('package.json 缺少 dsh.entry')
+            }
+          } catch {
+            errors.push('package.json 缺失或不是合法 JSON（用 create_plugin 生成骨架）')
+          }
+
+          // ② 入口文件：存在性 + JS 语法（new Function 只编译不执行）
+          let code = ''
+          try {
+            code = await ctx.vault.read(path.posix.join(pluginsDirRel, id, entry))
+          } catch {
+            errors.push(`入口文件不存在: ${entry}（用 write_plugin_file 写入）`)
+          }
+          if (code) {
+            try {
+              // eslint-disable-next-line no-new-func
+              new Function(code)
+            } catch (err) {
+              errors.push(`JS 语法错误: ${err instanceof Error ? err.message : String(err)}`)
+            }
+            scanPluginCode(code, errors, warnings)
+          }
+
+          // ③ 运行时状态：带出上次加载失败的真实错误
+          try {
+            const inspected = ctx.pluginRuntime.inspect(id)
+            if (inspected.status === 'error' && inspected.error) {
+              warnings.push(`上次加载失败: ${inspected.error}`)
+            }
+          } catch {
+            // 未加载过：忽略
+          }
+
+          return JSON.parse(
+            JSON.stringify({
+              ok: errors.length === 0,
+              plugin_id: id,
+              errors,
+              warnings,
+              note: errors.length
+                ? '必须修正全部 errors 后再次调用本工具，通过后才能 reload_plugin'
+                : '检查通过，可以调用 reload_plugin 加载生效',
+            }),
+          )
         },
       })
 
@@ -433,6 +508,40 @@ function normalizePluginRel(raw: string): string {
   const parts = normalized.split('/')
   if (parts.some((p) => p === '..' || p === '')) return ''
   return parts.join('/')
+}
+
+/**
+ * 插件代码静态扫描（check_plugin 第②层）：
+ * 模型对 Obsidian 原生 API 有强先验（vault.getFiles/getMarkdownFiles 等），
+ * 会写进生成的插件代码——ctx.vault 上并不存在，运行时才炸。此处加载前拦截并指路。
+ */
+function scanPluginCode(code: string, errors: string[], warnings: string[]): void {
+  const vaultBlacklist: Array<[RegExp, string]> = [
+    [/\.getFiles\s*\(/, 'ctx.vault.getFiles() 不存在：列笔记用 ctx.vault.getMarkdownPaths()（返回路径字符串数组）'],
+    [/\.getMarkdownFiles\s*\(/, 'ctx.vault.getMarkdownFiles() 不存在：用 ctx.vault.getMarkdownPaths()'],
+    [/\.getAbstractFileByPath\s*\(/, 'ctx.vault.getAbstractFileByPath() 不存在：读文件用 ctx.vault.read(path)'],
+    [/\.cachedRead\s*\(/, 'ctx.vault.cachedRead() 不存在：用 ctx.vault.read(path)'],
+  ]
+  for (const [re, msg] of vaultBlacklist) {
+    if (re.test(code)) errors.push(msg)
+  }
+  if (/\bthis\.app\b/.test(code)) {
+    errors.push('禁止 this.app：一律通过 ctx.* 服务访问宿主能力')
+  }
+  if (/document\.(querySelector|getElementById|querySelectorAll)\s*\(/.test(code)) {
+    errors.push('禁止 document.querySelector/getElementById 全局查询 Obsidian DOM：面板内操作自身 contentEl，其余一律走 ctx.* 服务')
+  }
+  if (/document\.createElement\s*\(/.test(code)) {
+    warnings.push('建议用 Obsidian 的 el.createEl/createDiv 替代 document.createElement')
+  }
+  for (const m of code.matchAll(/require\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+    const spec = m[1]
+    if (spec !== 'obsidian' && spec !== '@deepseek-ai/cordis') {
+      warnings.push(`require('${spec}') 非法：仅 obsidian 可 require`)
+    } else if (spec === '@deepseek-ai/cordis') {
+      warnings.push("require('@deepseek-ai/cordis') 无必要：ctx 由宿主注入，直接使用即可")
+    }
+  }
 }
 
 async function fileExists(ctx: { vault: { read(p: string): Promise<string> } }, rel: string): Promise<boolean> {
