@@ -13,7 +13,7 @@ The best Harness Like experience: **no coding — let the agent create, load and
 
 > Create a plugin with a panel showing the folders in this vault and the file count under each folder.
 
-**② The agent does the rest** — it reads the dev guide, scaffolds the plugin, writes the code, loads it (authorize in the prompt on first load) and opens the panel.
+**② The agent does the rest** — it reads the dev guide, scaffolds the plugin, writes the code, **verifies it automatically** (syntax & forbidden-API checks, self-fixes issues), loads it (authorize in the prompt on first load) and opens the panel.
 
 **③ Use and iterate** — done when the panel appears; ask for changes right in the chat:
 
@@ -31,7 +31,7 @@ The agent modifies the code and reloads it — changes apply immediately.
 
 ## Managing plugins
 
-Plugin Manager (top-right "Plugin Manager" button in the chat header): authorize (single = this version / double = trust future versions), reload, stop, delete; grants can be reviewed/revoked in Settings → Plugin Grants.
+Plugin Manager (top-right "Plugin Manager" button in the chat header): authorize (single = this version / double = trust future versions), reload, stop, delete; the **⧉ button next to each plugin name copies its ID** for easy referencing in chat (it's the parameter the agent's plugin tools take); grants can be reviewed/revoked in Settings → Plugin Grants.
 
 ## Tips
 

@@ -30,6 +30,7 @@
 | `plugin_guide` 插件开发指南 | — | — | ✅ |
 | `create_plugin` 创建子插件 | — | — | ✅ |
 | `write_plugin_file` 写子插件文件 | — | — | ✅ |
+| `check_plugin` 校验子插件代码（语法/禁用 API） | — | — | ✅ |
 | `plugin_status` 子插件状态 | — | — | ✅ |
 | `reload_plugin` 重载子插件 | — | — | ✅ |
 | `open_view` 打开子插件面板 | — | — | ✅ |

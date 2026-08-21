@@ -30,6 +30,7 @@ For **developers**: how Harness Like (the host plugin) maps Obsidian's extension
 | `plugin_guide` | — | — | ✅ |
 | `create_plugin` | — | — | ✅ |
 | `write_plugin_file` | — | — | ✅ |
+| `check_plugin` (verify plugin code: syntax / forbidden APIs) | — | — | ✅ |
 | `plugin_status` | — | — | ✅ |
 | `reload_plugin` | — | — | ✅ |
 | `open_view` | — | — | ✅ |

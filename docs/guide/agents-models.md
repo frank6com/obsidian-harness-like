@@ -23,7 +23,7 @@ Three built-in modes:
 ## Models
 
 - **Providers (channels)**: Settings → Models. Each channel = name + Base URL (OpenAI-compatible) + API Key + model list + parameters.
-- **Fetch models**: "Fetch from endpoint" opens a searchable picker (typing a new name adds it as a candidate).
+- **Fetch models**: "Fetch from endpoint" opens a searchable picker (typing a new name adds it as a candidate); if the endpoint exposes model metadata, the context window is auto-filled.
 - **Per-model default**: set any model as default — the fallback for new chats.
 - **Per-session switching**: via the model button (upward menu) in the panel toolbar.
-- Parameters: temperature (slider), max output tokens, custom headers (one `Header: value` per line).
+- Parameters: temperature (slider), max output tokens (0 = endpoint default; reasoning models share this quota between thinking and answer — 8192+ recommended, too small causes "thinks forever but no answer"), input context window (informational), custom headers (one `Header: value` per line).

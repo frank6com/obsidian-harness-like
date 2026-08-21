@@ -45,11 +45,11 @@ Harness Like is an Obsidian implementation inspired by DeepSeek Harness. It embe
 
 ### Feature highlights
 
-- **Chat + tools**: streaming, live tool cards, phase indicator, stop/retry;
+- **Chat + tools**: streaming, live tool cards, phase indicator, stop/retry; auto-continuation when the model returns an empty response (e.g. thinking exhausted the output quota);
 - **Three agent modes**: Chat (read-only) / Edit (read & write notes) / Create (build plugins) + custom agents with capability whitelists;
 - **Approval chain**: per-tool policy → current-note mode → directory whitelist → approval dialog;
-- **Create plugins in conversation**: panels, commands, tools, icons, translations — no coding;
-- **Multi-provider models** (OpenAI-compatible) with per-model defaults;
+- **Create plugins in conversation**: panels, commands, tools, icons, translations — no coding; the AI verifies generated code (syntax & forbidden APIs) before loading;
+- **Multi-provider models** (OpenAI-compatible) with per-model defaults and context-window metadata;
 - **Session export** to a configurable directory; **backup/migrate** by copying folders;
 - **Bilingual UI** (follows Obsidian's language); translation plugins can override strings.
 
@@ -110,11 +110,11 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 
 ### 功能一览
 
-- **对话 + 工具**：流式输出、工具卡片实时状态、阶段提示条、停止/重试；
+- **对话 + 工具**：流式输出、工具卡片实时状态、阶段提示条、停止/重试；模型空响应（如思考耗尽输出配额）自动续跑；
 - **三种智能体模式**：对话（只读）/ 修编（读写笔记）/ 创造（创建插件）+ 自定义智能体（能力白名单）；
 - **审批链**：工具级策略 → 仅当前笔记 → 目录白名单 → 审批弹窗；
-- **对话内创建子插件**：面板、命令、工具、图标、翻译——零代码；
-- **多模型提供方**（OpenAI 兼容）、模型级默认；
+- **对话内创建子插件**：面板、命令、工具、图标、翻译——零代码；AI 加载前自动校验生成代码（语法与禁用 API）；
+- **多模型提供方**（OpenAI 兼容）、模型级默认、上下文窗口元数据；
 - **会话导出**到可配置目录；**备份/迁移**只需复制目录；
 - **中英文界面**（跟随 Obsidian 语言）；翻译插件可覆盖文案。
 

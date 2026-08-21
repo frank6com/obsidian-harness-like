@@ -12,7 +12,7 @@ User plugins are **Cordis plugins** running inside Obsidian (loaded by Harness L
 Plugin Manager (top-right "Plugin Manager" button in the chat header):
 
 - **Authorize & Load**: single-check = this version only; double-check = trust future versions;
-- While running: **Open Panel / Reload / Stop / Delete**;
+- While running: **Open Panel / Reload / Stop / Delete**; the **⧉ next to each plugin name copies its ID** (for referencing in chat);
 - Grants can be reviewed/revoked in Settings → Plugin Grants.
 
 ## Using sub-plugin commands
