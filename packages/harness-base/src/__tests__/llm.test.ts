@@ -132,6 +132,70 @@ describe('llm caller（官方栈）', () => {
     expect(JSON.parse(result.toolCalls[0]!.arguments)).toEqual({ path: 'a.md' })
   })
 
+  it('finish_reason=length 透传到 ChatResult（max_tokens 截断检测）', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        body: sseBody(
+          'data: {"choices":[{"delta":{"reasoning_content":"深度思考中"},"finish_reason":null}]}\n\n',
+          'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\n',
+          'data: [DONE]\n\n',
+        ),
+      }),
+    )
+    const { caller } = await setup()
+    const result = await caller.call({ messages: [], tools: [] })
+    expect(result.content).toBe('')
+    expect(result.toolCalls).toHaveLength(0)
+    expect(result.finishReason).toBe('length')
+  })
+
+  it('reasoning_content 流式收集到 ChatResult.reasoning', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        body: sseBody(
+          'data: {"choices":[{"delta":{"reasoning_content":"先想"}}]}\n\n',
+          'data: {"choices":[{"delta":{"reasoning_content":"再答"}}]}\n\n',
+          'data: {"choices":[{"delta":{"content":"答案"}}]}\n\n',
+          'data: [DONE]\n\n',
+        ),
+      }),
+    )
+    const { caller } = await setup()
+    const result = await caller.call({ messages: [], tools: [] })
+    expect(result.reasoning).toBe('先想再答')
+    expect(result.content).toBe('答案')
+  })
+
+  it('assistant 消息的 reasoning 回传为 wire 的 reasoning_content', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      body: sseBody('data: [DONE]\n\n'),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const { caller } = await setup()
+    await caller.call({
+      messages: [
+        ...sampleMessages,
+        {
+          role: 'assistant',
+          content: '继续',
+          reasoning: '之前的思考过程',
+          tool_calls: [{ id: 'c2', type: 'function', function: { name: 'f2', arguments: '{}' } }],
+        },
+      ],
+      tools: sampleTools,
+    })
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(init.body as string)
+    const withReasoning = body.messages.find((m: { reasoning_content?: string }) => m.reasoning_content)
+    expect(withReasoning?.reasoning_content).toBe('之前的思考过程')
+    expect(withReasoning?.content).toBe('继续')
+  })
+
   it('非 2xx：LlmError → error finish → 抛出含状态摘要的错误', async () => {
     vi.stubGlobal(
       'fetch',

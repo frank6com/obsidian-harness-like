@@ -113,10 +113,16 @@ export function buildMessages(history: SessionEvent[], system?: string): LLMMess
   return out
 }
 
+/** 截断续跑引导：思考耗尽输出配额时注入，让模型跳过冗长推理直接产出（一次性消息，不落盘） */
+const TRUNCATION_CONTINUATION_PROMPT =
+  '你上一轮响应因输出长度限制被截断且未产生任何内容。请跳过冗长推理，直接执行下一步：调用所需工具，或给出最终回答。'
+
 export async function runAgentLoop(ac: AgentRunContext): Promise<void> {
   const maxTurns = ac.maxTurns ?? 8
   const messages = buildMessages(ac.history, ac.system)
   const signal = ac.signal
+  // 连续截断续跑次数：超限后落盘提示终止，防止无限烧 token
+  let continuations = 0
   const throwIfAborted = (): void => {
     if (signal?.aborted) {
       const err = new Error('已停止')
@@ -149,14 +155,38 @@ export async function runAgentLoop(ac: AgentRunContext): Promise<void> {
           content: res.content,
         }
         ac.onEvent(ev)
-        messages.push({ role: 'assistant', content: res.content })
+        messages.push({ role: 'assistant', content: res.content, reasoning: res.reasoning })
       }
 
-      if (!res.toolCalls.length) break
+      if (!res.toolCalls.length) {
+        // 空响应（无论 length 截断还是端点异常返回 stop+空）均自动续跑：注入一次性引导，
+        // 让模型跳过冗长推理直接产出。实测部分第三方端点长思考后返回 stop + 空内容而非
+        // 规范的 length，故不能只认 length。连续上限 2 次，仍失败则落盘提示终止。
+        if (!res.content && continuations < 2) {
+          continuations++
+          messages.push({ role: 'user', content: TRUNCATION_CONTINUATION_PROMPT })
+          continue
+        }
+        // 续跑仍失败：落盘提示让用户看到原因，不再静默结束
+        if (!res.content) {
+          const truncated = res.finishReason === 'length'
+          const hint = truncated
+            ? '本轮回复被输出上限截断（已自动重试仍为空）：推理模型的思考与回答共享 max_tokens 配额。请在 设置 → 模型 中调大该通道的「最大输出 token 数」（建议 ≥ 8192）后重试。'
+            : '模型连续多次未返回任何内容（已自动重试）：可能是端点异常或上下文过长。可重试、精简需求，或在 设置 → 模型 中调大「最大输出 token 数」后再试。'
+          ac.onEvent({
+            type: 'system/message',
+            ts: Date.now(),
+            sessionId: ac.sessionId,
+            content: hint,
+          })
+        }
+        break
+      }
 
       messages.push({
         role: 'assistant',
         content: res.content ?? '',
+        reasoning: res.reasoning,
         tool_calls: toWireToolCalls(res.toolCalls),
       })
 

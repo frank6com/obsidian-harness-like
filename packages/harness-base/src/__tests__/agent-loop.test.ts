@@ -205,4 +205,108 @@ describe('runAgentLoop', () => {
     ).rejects.toMatchObject({ name: 'AbortError' })
     expect(events.some((e) => e.type === 'turn/end')).toBe(true)
   })
+
+  it('length 截断空响应：注入引导消息自动续跑并产出（无需人工"继续"）', async () => {
+    const llm = stubCaller([
+      { content: '', toolCalls: [], finishReason: 'length' },
+      { content: '这是续跑后的回答', toolCalls: [] },
+    ])
+    const tools = new ToolRegistry()
+    const events: SessionEvent[] = []
+    await runAgentLoop({
+      sessionId: 's1',
+      llm,
+      tools,
+      executeTool: async () => ({ ok: true, output: null }),
+      onEvent: (e) => events.push(e),
+      history: [],
+    })
+    // 续跑产出正常落盘；无截断提示
+    expect(events.some((e) => e.type === 'assistant/message')).toBe(true)
+    expect(events.some((e) => e.type === 'system/message')).toBe(false)
+    // 第二次调用的消息里带一次性引导（messages 为共享引用，断言存在性而非尾部）
+    const second = llm.call.mock.calls[1]![0] as { messages: Array<{ role: string; content: string }> }
+    expect(second.messages.some((m) => m.role === 'user' && m.content.includes('被截断'))).toBe(true)
+    expect(llm.call).toHaveBeenCalledTimes(2)
+  })
+
+  it('length 截断且已有内容：正常结束不续跑', async () => {
+    const llm = stubCaller([{ content: '被截断的半句话', toolCalls: [], finishReason: 'length' }])
+    const tools = new ToolRegistry()
+    const events: SessionEvent[] = []
+    await runAgentLoop({
+      sessionId: 's1',
+      llm,
+      tools,
+      executeTool: async () => ({ ok: true, output: null }),
+      onEvent: (e) => events.push(e),
+      history: [],
+    })
+    expect(events.some((e) => e.type === 'assistant/message')).toBe(true)
+    expect(events.some((e) => e.type === 'system/message')).toBe(false)
+    expect(llm.call).toHaveBeenCalledTimes(1)
+  })
+
+  it('端点异常空响应（stop 无 finish_reason 场景）：同样自动续跑', async () => {
+    const llm = stubCaller([
+      { content: '', toolCalls: [] }, // 无 finish_reason（部分第三方端点行为）
+      { content: '续跑产出', toolCalls: [] },
+    ])
+    const tools = new ToolRegistry()
+    const events: SessionEvent[] = []
+    await runAgentLoop({
+      sessionId: 's1',
+      llm,
+      tools,
+      executeTool: async () => ({ ok: true, output: null }),
+      onEvent: (e) => events.push(e),
+      history: [],
+    })
+    expect(events.some((e) => e.type === 'assistant/message')).toBe(true)
+    expect(events.some((e) => e.type === 'system/message')).toBe(false)
+    expect(llm.call).toHaveBeenCalledTimes(2)
+  })
+
+  it('连续截断超过上限：落盘提示终止（共 3 次调用 = 初始 + 2 次续跑）', async () => {
+    const llm = stubCaller([
+      { content: '', toolCalls: [], finishReason: 'length' },
+      { content: '', toolCalls: [], finishReason: 'length' },
+      { content: '', toolCalls: [], finishReason: 'length' },
+    ])
+    const tools = new ToolRegistry()
+    const events: SessionEvent[] = []
+    await runAgentLoop({
+      sessionId: 's1',
+      llm,
+      tools,
+      executeTool: async () => ({ ok: true, output: null }),
+      onEvent: (e) => events.push(e),
+      history: [],
+    })
+    expect(llm.call).toHaveBeenCalledTimes(3)
+    const sys = events.find((e) => e.type === 'system/message')
+    expect(sys?.type === 'system/message' && sys.content).toContain('输出上限截断')
+    expect(sys?.type === 'system/message' && sys.content).toContain('max_tokens')
+  })
+
+  it('连续无 finish_reason 空响应超过上限：落盘提示终止', async () => {
+    const llm = stubCaller([
+      { content: '', toolCalls: [] },
+      { content: '', toolCalls: [] },
+      { content: '', toolCalls: [] },
+    ])
+    const tools = new ToolRegistry()
+    const events: SessionEvent[] = []
+    await runAgentLoop({
+      sessionId: 's1',
+      llm,
+      tools,
+      executeTool: async () => ({ ok: true, output: null }),
+      onEvent: (e) => events.push(e),
+      history: [],
+    })
+    expect(llm.call).toHaveBeenCalledTimes(3)
+    const sys = events.find((e) => e.type === 'system/message')
+    expect(sys?.type === 'system/message' && sys.content).toContain('连续多次未返回任何内容')
+  })
 })

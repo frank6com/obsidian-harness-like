@@ -74,6 +74,9 @@ function toWireMessages(
       out.push({ role: 'tool', tool_call_id: m.source.callId, content: text })
     } else if (m.role === 'assistant') {
       const wire: Record<string, unknown> = { role: 'assistant', content: textOf(m.content) }
+      // DeepSeek 官方：带 tools 的多轮请求必须回传 reasoning_content，缺失会 400
+      const reasoning = m.content.find((b): b is ContentBlock & { type: 'reasoning' } => b.type === 'reasoning')
+      if (reasoning) wire.reasoning_content = reasoning.text
       const toolCalls = m.content
         .filter((b) => b.type === 'tool-call')
         .map((b) => ({
@@ -156,6 +159,8 @@ export class DeepSeekAdapter extends LlmAdapter {
     // SSE 解析 → StreamChunk（官方块词汇）
     let textAcc = ''
     let textStarted = false
+    let reasoningAcc = ''
+    let finishReason: string | undefined
     const toolAcc = new Map<number, { id: string; name: string; args: string }>()
     const toolIndex = new Map<number, number>() // OpenAI delta index → 块 index
     let nextBlockIndex = 1
@@ -179,6 +184,7 @@ export class DeepSeekAdapter extends LlmAdapter {
           const chunk = JSON.parse(data) as {
             choices?: Array<{
               delta?: { content?: string; reasoning_content?: string; tool_calls?: ToolCallDelta[] }
+              finish_reason?: string | null
             }>
             usage?: { prompt_tokens?: number; completion_tokens?: number }
           }
@@ -189,10 +195,17 @@ export class DeepSeekAdapter extends LlmAdapter {
               completion: chunk.usage.completion_tokens ?? 0,
             })
           }
+          // finish_reason（通常随最后一个含 delta 的块或独立块返回）：
+          // length = 输出被 max_tokens 截断（推理模型的思考与回答共享配额，截断时 content 可能为空）
+          const fr = chunk.choices?.[0]?.finish_reason
+          if (fr) finishReason = fr
           const delta = chunk.choices?.[0]?.delta
-          // 推理过程（DeepSeek reasoner 等）：实时透传给 UI 折叠块
+          // 推理过程（DeepSeek reasoner 等）：实时透传给 UI 折叠块 + 累积（多轮工具调用需回传）。
+          // index 固定 -1：reasoning 与 text/tool 块无关联，仅作词汇占位。
           if (delta?.reasoning_content) {
             options.onThinking?.(delta.reasoning_content)
+            reasoningAcc += delta.reasoning_content
+            yield { type: 'reasoning-delta', index: -1, text: delta.reasoning_content }
           }
           if (delta?.content) {
             if (!textStarted) {
@@ -250,7 +263,10 @@ export class DeepSeekAdapter extends LlmAdapter {
     yield {
       type: 'finish',
       reason: (toolAcc.size ? { kind: 'tool-calls' } : { kind: 'stop' }) as FinishReason,
-    }
+      // 端点原始 finish_reason（stop/length/tool_calls）与思维链全文；附加字段供调用器透传
+      finishReason,
+      reasoning: reasoningAcc || undefined,
+    } as StreamChunk & { finishReason?: string; reasoning?: string }
   }
 }
 
@@ -306,6 +322,7 @@ export function createLlmCaller(llm: LlmRuntime, cfg: LlmRuntimeConfig): LlmCall
         }
         if (m.role === 'assistant') {
           const blocks: ContentBlock[] = []
+          if (m.reasoning) blocks.push({ type: 'reasoning', text: m.reasoning })
           if (m.content) blocks.push({ type: 'text', text: m.content })
           if (m.tool_calls) {
             for (const tc of m.tool_calls) {
@@ -330,8 +347,10 @@ export function createLlmCaller(llm: LlmRuntime, cfg: LlmRuntimeConfig): LlmCall
       })
 
       let content = ''
+      let reasoning = ''
       const toolCalls = new Map<number, ToolCall>()
       let finish: FinishReason | undefined
+      let finishReason: string | undefined
 
       const chunks = llm.stream({
         provider,
@@ -350,6 +369,8 @@ export function createLlmCaller(llm: LlmRuntime, cfg: LlmRuntimeConfig): LlmCall
         if (chunk.type === 'text-delta') {
           content += chunk.text
           options.onDelta?.(chunk.text)
+        } else if (chunk.type === 'reasoning-delta') {
+          reasoning += chunk.text
         } else if (chunk.type === 'tool-call-delta') {
           const cur = toolCalls.get(chunk.index) ?? { id: '', name: '', arguments: '' }
           if (chunk.id && !cur.id) cur.id = chunk.id
@@ -364,6 +385,7 @@ export function createLlmCaller(llm: LlmRuntime, cfg: LlmRuntimeConfig): LlmCall
           toolCalls.set(chunk.index, cur)
         } else if (chunk.type === 'finish') {
           finish = chunk.reason
+          finishReason = (chunk as { finishReason?: string }).finishReason
         }
       }
 
@@ -376,6 +398,8 @@ export function createLlmCaller(llm: LlmRuntime, cfg: LlmRuntimeConfig): LlmCall
       return {
         content,
         toolCalls: [...toolCalls.values()].filter((t) => t.name),
+        finishReason,
+        reasoning: reasoning || undefined,
       }
     },
   }

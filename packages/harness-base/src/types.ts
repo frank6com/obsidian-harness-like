@@ -76,11 +76,17 @@ export interface LLMMessage {
   name?: string
   tool_call_id?: string
   tool_calls?: OpenAIToolCall[]
+  /** assistant 思维链（reasoning_content），带 tools 的多轮回传用 */
+  reasoning?: string
 }
 
 export interface ChatResult {
   content: string
   toolCalls: ToolCall[]
+  /** 端点返回的 finish_reason（stop/length/tool_calls/...）；length = 输出被 max_tokens 截断 */
+  finishReason?: string
+  /** 本轮思维链（reasoning_content）；带 tools 的多轮请求需回传（DeepSeek 官方要求，缺失会 400） */
+  reasoning?: string
 }
 
 /** 执行结果：供 agent 循环回填 tool/result 事件 */
