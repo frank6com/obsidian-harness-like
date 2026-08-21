@@ -50,8 +50,10 @@ export interface ProviderConfig {
   models: string[]
   /** 采样温度（0-2），0 = 端点默认 */
   temperature: number
-  /** 最大输出 token 数，0 = 不限制 */
+  /** 最大输出 token 数，0 = 端点默认（DeepSeek 默认 4096；推理模型思考与回答共享此配额） */
   maxTokens: number
+  /** 输入上下文窗口 token 数，0 = 未知/端点默认（信息性记录；获取模型时尽力从端点元数据读取） */
+  contextTokens: number
   /** 自定义请求头，每行 "Header: value" */
   extraHeaders: string[]
 }
@@ -121,6 +123,7 @@ export const DEFAULT_PROVIDER: ProviderConfig = {
   models: ['deepseek-chat'],
   temperature: 0.7,
   maxTokens: 0,
+  contextTokens: 0,
   extraHeaders: [],
 }
 
@@ -169,6 +172,7 @@ function asProvider(p: Partial<ProviderConfig> & { model?: string }): ProviderCo
     models: models.length ? [...new Set(models)] : [],
     temperature: typeof p.temperature === 'number' ? p.temperature : DEFAULT_PROVIDER.temperature,
     maxTokens: typeof p.maxTokens === 'number' ? p.maxTokens : DEFAULT_PROVIDER.maxTokens,
+    contextTokens: typeof p.contextTokens === 'number' ? p.contextTokens : DEFAULT_PROVIDER.contextTokens,
     extraHeaders: Array.isArray(p.extraHeaders) ? p.extraHeaders : [],
   }
 }

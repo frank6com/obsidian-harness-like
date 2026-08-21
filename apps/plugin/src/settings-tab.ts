@@ -167,6 +167,7 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         models: [],
         temperature: 0.7,
         maxTokens: 0,
+        contextTokens: 0,
         extraHeaders: [],
       })
       this.activeProviderId = id
@@ -215,19 +216,25 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
           .onClick(async () => {
             try {
               const fetched = await this.fetchModels(p.baseURL, p.apiKey)
-              if (!fetched.length) {
+              if (!fetched.models.length) {
                 this.ctx.notice.notice(t('settings.model.fetchEmpty'))
                 return
               }
-              const picked = await new ModelPickModal(this.app, fetched, p.models).ask()
+              const picked = await new ModelPickModal(this.app, fetched.models, p.models).ask()
               if ('cancel' in picked || !picked.models.length) {
                 this.ctx.notice.notice(t('settings.model.nonePicked'))
                 return
               }
               p.models = [...new Set([...p.models, ...picked.models])]
+              // 元数据预填：端点提供了上下文长度且当前未设置时自动填入
+              let metaHint = ''
+              if (fetched.contextTokens && !p.contextTokens) {
+                p.contextTokens = fetched.contextTokens
+                metaHint = ' ' + t('settings.model.contextDetected', { n: fetched.contextTokens })
+              }
               await this.plugin.saveSettings()
               this.display()
-              this.ctx.notice.notice(t('settings.model.added', { count: picked.models.length }))
+              this.ctx.notice.notice(t('settings.model.added', { count: picked.models.length }) + metaHint)
             } catch (err) {
               this.ctx.notice.notice(
                 t('settings.model.fetchFailed', { msg: err instanceof Error ? err.message : String(err) }),
@@ -301,6 +308,16 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         }),
       )
     new Setting(form)
+      .setName(t('settings.model.contextTokens'))
+      .setDesc(t('settings.model.contextTokensDesc'))
+      .addText((t) =>
+        t.setValue(String(p.contextTokens ?? 0)).onChange(async (v) => {
+          p.contextTokens = Math.max(0, Math.floor(Number(v) || 0))
+          t.setValue(String(p.contextTokens))
+          await this.plugin.saveSettings()
+        }),
+      )
+    new Setting(form)
       .setName(t('settings.model.headers'))
       .setDesc(t('settings.model.headersDesc'))
       .addTextArea((t) =>
@@ -329,15 +346,28 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
     }
   }
 
-  /** 从 OpenAI 兼容端点获取模型列表 */
-  private async fetchModels(baseURL: string, apiKey: string): Promise<string[]> {
+  /** 从 OpenAI 兼容端点获取模型列表；尽力解析上下文长度元数据（非标准扩展字段，读不到为 undefined） */
+  private async fetchModels(baseURL: string, apiKey: string): Promise<{ models: string[]; contextTokens?: number }> {
     const url = baseURL.replace(/\/+$/, '') + '/models'
     const res = await fetch(url, {
       headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {},
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = (await res.json()) as { data?: Array<{ id?: string }> }
-    return (data.data ?? []).map((m) => m.id ?? '').filter(Boolean)
+    const data = (await res.json()) as {
+      data?: Array<{
+        id?: string
+        context_length?: number
+        max_model_len?: number
+        max_context_length?: number
+      }>
+    }
+    const arr = data.data ?? []
+    const models = arr.map((m) => m.id ?? '').filter(Boolean)
+    // 上下文元数据：OpenRouter(context_length) / vLLM(max_model_len) 等扩展字段，通道内取最大值
+    const candidates = arr
+      .map((m) => m.context_length ?? m.max_model_len ?? m.max_context_length)
+      .filter((n): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0)
+    return { models, contextTokens: candidates.length ? Math.max(...candidates) : undefined }
   }
 
   // ---------- 智能体 ----------
