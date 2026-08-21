@@ -62,7 +62,8 @@
   position: relative;
 }
 
-/* 快速滚动按钮：消息区右下角悬浮（回顶 / 到底） */
+/* 快速滚动按钮：消息区右下角悬浮（回顶 / 到底）。
+   默认隐藏，滚动时按方向短暂显示（.is-visible），约 2s 后自动淡出 */
 .dsh-jump-btns {
   position: absolute;
   right: 14px;
@@ -84,10 +85,17 @@
   font-size: 15px;
   line-height: 1;
   padding: 0;
-  opacity: 0.75;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
 }
 
-.dsh-jump-btn:hover {
+.dsh-jump-btn.is-visible {
+  opacity: 0.85;
+  pointer-events: auto;
+}
+
+.dsh-jump-btn.is-visible:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
   opacity: 1;

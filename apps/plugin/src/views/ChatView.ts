@@ -100,6 +100,8 @@ export class ChatView extends ItemView {
   private sessionRowsEl!: HTMLElement
   /** 思考文本 DOM 更新节流句柄（长推理文本防卡顿） */
   private thinkingTimer: number | null = null
+  /** 快速滚动按钮自动隐藏计时器（滚动停止约 2s 后淡出） */
+  private jumpTimer: number | null = null
   private disposers: Array<() => void> = []
   /** 语言切换时若正在生成，等本轮结束后重建 */
   private pendingRebuild = false
@@ -199,16 +201,45 @@ export class ChatView extends ItemView {
     this.sessionRowsEl = this.listEl.createDiv({ cls: 'dsh-session-rows' })
     this.messagesEl = body.createDiv({ cls: 'dsh-chat-messages' })
 
-    // 快速滚动：对话过长时一键回顶/到底（悬浮于消息区右下角，不随 renderSession 清空）
+    // 快速滚动：默认隐藏，用户滚动时按方向短暂显示对应按钮（向上滚→回顶，向下滚→到底），
+    // 约 2s 无操作自动淡出。挂 body（relative）不被 renderSession 清空；
+    // 贴底不显示 ⤓、贴顶不显示 ⤒——也天然过滤了程序性滚动（滚底/跟随）的误显示。
     const jumpBtns = body.createDiv({ cls: 'dsh-jump-btns' })
-    const jumpTop = jumpBtns.createEl('button', { cls: 'dsh-jump-btn', text: '⤒', attr: { title: t('chat.jump.top') } })
+    const jumpTop = jumpBtns.createEl('button', { cls: 'dsh-jump-btn dsh-jump-top', text: '⤒', attr: { title: t('chat.jump.top') } })
     jumpTop.onclick = () => {
       this.messagesEl.scrollTop = 0
     }
-    const jumpBottom = jumpBtns.createEl('button', { cls: 'dsh-jump-btn', text: '⤓', attr: { title: t('chat.jump.bottom') } })
+    const jumpBottom = jumpBtns.createEl('button', { cls: 'dsh-jump-btn dsh-jump-bottom', text: '⤓', attr: { title: t('chat.jump.bottom') } })
     jumpBottom.onclick = () => {
       this.scrollToBottom(true)
     }
+    let lastTop = this.messagesEl.scrollTop
+    const showJump = (which: 'top' | 'bottom'): void => {
+      jumpTop.classList.toggle('is-visible', which === 'top')
+      jumpBottom.classList.toggle('is-visible', which === 'bottom')
+      if (this.jumpTimer !== null) window.clearTimeout(this.jumpTimer)
+      this.jumpTimer = window.setTimeout(() => {
+        this.jumpTimer = null
+        jumpTop.classList.remove('is-visible')
+        jumpBottom.classList.remove('is-visible')
+      }, 2000)
+    }
+    const onMessagesScroll = (): void => {
+      const el = this.messagesEl
+      const delta = el.scrollTop - lastTop
+      lastTop = el.scrollTop
+      if (el.scrollHeight - el.clientHeight <= 0) return // 内容不足一屏：不显示
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 120
+      const atTop = el.scrollTop <= 0
+      if (delta < 0 && !atTop) showJump('top')
+      else if (delta > 0 && !atBottom) showJump('bottom')
+    }
+    this.messagesEl.addEventListener('scroll', onMessagesScroll)
+    this.disposers.push(() => this.messagesEl.removeEventListener('scroll', onMessagesScroll))
+    this.disposers.push(() => {
+      if (this.jumpTimer !== null) window.clearTimeout(this.jumpTimer)
+      this.jumpTimer = null
+    })
 
     // 阶段状态条（思考/工具/等待审批/已停止）
     this.phaseEl = this.root.createDiv({ cls: 'dsh-phase', text: '' })

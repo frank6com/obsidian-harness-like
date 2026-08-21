@@ -872,6 +872,73 @@ describe('快速滚动按钮（0.38.0）', () => {
     expect(el.scrollTop).toBe(0)
   })
 
+  it('默认隐藏；向上滚短暂显示回顶、向下滚显示到底，超时自动淡出', () => {
+    vi.useFakeTimers()
+    try {
+      const v = makeView() as unknown as Record<string, unknown>
+      ;(v as { buildUi(): void }).buildUi()
+      const el = (v as { messagesEl: HTMLElement }).messagesEl
+      Object.defineProperty(el, 'scrollHeight', { value: 3000, configurable: true })
+      Object.defineProperty(el, 'clientHeight', { value: 300, configurable: true })
+      const topBtn = el.parentElement!.querySelector('.dsh-jump-top') as HTMLElement
+      const bottomBtn = el.parentElement!.querySelector('.dsh-jump-bottom') as HTMLElement
+      expect(topBtn.classList.contains('is-visible')).toBe(false)
+      expect(bottomBtn.classList.contains('is-visible')).toBe(false)
+      // 向下滚（不在底部）：显示 ⤓
+      el.scrollTop = 1000
+      el.dispatchEvent(new Event('scroll'))
+      expect(bottomBtn.classList.contains('is-visible')).toBe(true)
+      expect(topBtn.classList.contains('is-visible')).toBe(false)
+      // 向上滚（不在顶部）：切换为 ⤒
+      el.scrollTop = 500
+      el.dispatchEvent(new Event('scroll'))
+      expect(topBtn.classList.contains('is-visible')).toBe(true)
+      expect(bottomBtn.classList.contains('is-visible')).toBe(false)
+      // 约 2s 无操作：自动淡出
+      vi.advanceTimersByTime(2100)
+      expect(topBtn.classList.contains('is-visible')).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('贴底向下滚 / 顶部原地滚动 / 内容不足一屏：不显示任何按钮', () => {
+    // 场景 A：已在底部继续向下滚，⤓ 无意义不显示
+    const a = makeView() as unknown as Record<string, unknown>
+    ;(a as { buildUi(): void }).buildUi()
+    const elA = (a as { messagesEl: HTMLElement }).messagesEl
+    Object.defineProperty(elA, 'scrollHeight', { value: 3000, configurable: true })
+    Object.defineProperty(elA, 'clientHeight', { value: 300, configurable: true })
+    const bottomBtnA = elA.parentElement!.querySelector('.dsh-jump-bottom') as HTMLElement
+    elA.scrollTop = 2700
+    elA.dispatchEvent(new Event('scroll'))
+    elA.scrollTop = 2760
+    elA.dispatchEvent(new Event('scroll'))
+    expect(bottomBtnA.classList.contains('is-visible')).toBe(false)
+    // 场景 B：顶部原地滚动（delta=0），⤒ 无意义不显示
+    const b = makeView() as unknown as Record<string, unknown>
+    ;(b as { buildUi(): void }).buildUi()
+    const elB = (b as { messagesEl: HTMLElement }).messagesEl
+    Object.defineProperty(elB, 'scrollHeight', { value: 3000, configurable: true })
+    Object.defineProperty(elB, 'clientHeight', { value: 300, configurable: true })
+    const topBtnB = elB.parentElement!.querySelector('.dsh-jump-top') as HTMLElement
+    elB.scrollTop = 0
+    elB.dispatchEvent(new Event('scroll'))
+    expect(topBtnB.classList.contains('is-visible')).toBe(false)
+    // 场景 C：内容不足一屏（无滚动空间），任何滚动都不显示
+    const c = makeView() as unknown as Record<string, unknown>
+    ;(c as { buildUi(): void }).buildUi()
+    const elC = (c as { messagesEl: HTMLElement }).messagesEl
+    Object.defineProperty(elC, 'scrollHeight', { value: 200, configurable: true })
+    Object.defineProperty(elC, 'clientHeight', { value: 300, configurable: true })
+    const topBtnC = elC.parentElement!.querySelector('.dsh-jump-top') as HTMLElement
+    const bottomBtnC = elC.parentElement!.querySelector('.dsh-jump-bottom') as HTMLElement
+    elC.scrollTop = 50
+    elC.dispatchEvent(new Event('scroll'))
+    expect(topBtnC.classList.contains('is-visible')).toBe(false)
+    expect(bottomBtnC.classList.contains('is-visible')).toBe(false)
+  })
+
   it('renderSession 清空消息区后按钮仍存在（挂载在 body 不随会话重建）', async () => {
     const ctx = {
       settings: {
