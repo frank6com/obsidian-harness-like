@@ -210,6 +210,7 @@ const dict: Record<string, string> = {
   'settings.model.contextDetected': '已从端点元数据填入上下文窗口: {n} tokens',
   'chat.jump.top': '回到顶部',
   'chat.jump.bottom': '跳到底部',
+  'pm.copyId': '复制插件 ID（用于对话中引用）',
   'settings.model.headers': '自定义请求头',
   'settings.model.headersDesc': '每行 "Header: value"（如网关鉴权）',
   'settings.model.deleteChannel': '删除此通道',

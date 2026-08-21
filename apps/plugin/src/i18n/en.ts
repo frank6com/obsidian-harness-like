@@ -203,6 +203,7 @@ const dict: Record<string, string> = {
   'settings.model.contextDetected': 'Context window auto-filled from endpoint metadata: {n} tokens',
   'chat.jump.top': 'Jump to top',
   'chat.jump.bottom': 'Jump to bottom',
+  'pm.copyId': 'Copy plugin ID (for referencing in chat)',
   'settings.model.headers': 'Custom request headers',
   'settings.model.headersDesc': 'One "Header: value" per line (e.g. gateway auth)',
   'settings.model.deleteChannel': 'Delete this channel',

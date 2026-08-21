@@ -733,9 +733,29 @@
 }
 
 .dsh-pm-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
   font-size: 14px;
   color: var(--text-normal);
+}
+
+/* 插件名后的复制 ID 按钮：低调常驻，hover 提亮 */
+.dsh-pm-copy-id {
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.dsh-pm-copy-id:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
 }
 
 .dsh-pm-desc {

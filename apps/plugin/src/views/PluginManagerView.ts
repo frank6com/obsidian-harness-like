@@ -96,10 +96,20 @@ export class PluginManagerView extends ItemView {
       const grant = this.ctx.approval.getGrant(id)
       const row = this.contentEl.createDiv({ cls: 'dsh-pm-row' })
       const info = row.createDiv({ cls: 'dsh-pm-info' })
-      info.createDiv({
-        cls: 'dsh-pm-name',
-        text: `${id}${rec.manifest ? ` v${rec.manifest.version}` : ''}`,
+      // 插件名 + 复制按钮：复制 id 便于在对话中引用（agent 工具参数即 plugin_id）
+      const nameEl = info.createDiv({ cls: 'dsh-pm-name' })
+      nameEl.createSpan({ text: `${id}${rec.manifest ? ` v${rec.manifest.version}` : ''}` })
+      const copyId = nameEl.createEl('button', {
+        cls: 'dsh-pm-copy-id',
+        text: '⧉',
+        attr: { title: t('pm.copyId') },
       })
+      copyId.onclick = () => {
+        void navigator.clipboard.writeText(id).then(() => {
+          copyId.setText('✓')
+          window.setTimeout(() => copyId.setText('⧉'), 1200)
+        })
+      }
       if (rec.manifest?.description) {
         info.createDiv({ cls: 'dsh-pm-desc', text: rec.manifest.description })
       }
