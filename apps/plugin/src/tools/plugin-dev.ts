@@ -114,7 +114,7 @@ module.exports = {
 
 ## 服务与方法速查（唯一权威来源；调用前核对此处，禁止臆测方法名）
 inject 可声明的服务：toolsCompat / commands / views / vault / editor / workspace /
-notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / llmCaller / dshI18n
+notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / llmCaller / dshI18n / protocol
 
 - ctx.vault：getMarkdownPaths() -> string[]（vault 相对路径列表）；read(path) -> string；write(path, content)；
   create(path, content)；createFolder(path)（逐层创建）；delete(path)；rename(oldPath, newPath)；
@@ -130,6 +130,13 @@ notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / ll
 - ctx.statusbar：addStatusBarItem() -> { el, remove }（disposer = item.remove）
 - ctx.settingsTab：register({ id, name, render(containerEl) })（注册独立设置页；render 里可用 Obsidian 的 Setting 组件）
 - ctx.dshI18n：registerLocale(lang, dict)（键级覆盖主插件 zh/en 文案，翻译插件用）
+- ctx.protocol：register(cmd, handler(params))（注册 obsidian:// 深链动作，返回 disposer）。
+  实际 URL：obsidian://harness-like?plugin=<你的插件id>&cmd=<动作名>&key=value；
+  handler 收到的 params 为其余 query 透传（已剥离 plugin/cmd，值均为 string；无值参数 = "true"）。
+  动作名参数是 cmd 不是 action（action 被 Obsidian 保留，恒为入口名）；动作名无需带插件 id
+  前缀（loader 自动注入）。示例：
+  ctx.protocol.register('add-task', (p) => ctx.notice.notice(\`收到: \${p.text}\`))
+  对应 obsidian://harness-like?plugin=my-plugin&cmd=add-task&text=hello
 
 ## 可用事件（ctx.on）
 dsh/session/event（会话事件）、dsh/waiting-approval（审批弹窗打开）、workspace/file-open、
@@ -148,6 +155,12 @@ vault/modify|create|delete|rename。
 ## 命令命名归一化
 addCommand 的 id 与显示名自动归一化为 \`<主插件id>:<插件id>:<命令>\` 与
 \`Harness Like: <命令名>（<插件id>）\`；命令面板按主插件名即可找到全部功能，id 手写前缀也会被去重。
+
+## 深链（obsidian://）入口
+protocol.register 的动作统一走宿主单一入口 obsidian://harness-like，
+以 query 参数 plugin=<插件id>&cmd=<动作名> 路由到对应 handler（loader 自动携带你的插件 id）。
+动作名参数是 cmd 不是 action（action 为 Obsidian 保留字，会被覆盖为入口名）。
+插件停止后深链自动失效（提示"未运行"），重新加载即恢复。
 
 ## 翻译插件模板（覆盖主插件界面文案，键级覆盖 zh/en，插件停止自动还原）
 

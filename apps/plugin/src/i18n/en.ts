@@ -124,6 +124,7 @@ const dict: Record<string, string> = {
   'pm.cap.tools': 'Tools',
   'pm.cap.statusbar': 'Status bar',
   'pm.cap.settings': 'Settings',
+  'pm.cap.protocol': 'Deep link',
   'pm.reload.done': 'Plugin reloaded: {id}',
   'pm.reload.autoRecovered': 'Load failed — auto-restored the last working version: {id}',
   'pm.reload.failed': 'Load failed: {msg}',
@@ -311,6 +312,9 @@ const dict: Record<string, string> = {
   'export.exportedAt': 'Exported at',
   'export.boundNote': 'Bound note',
   'export.none': 'none',
+
+  'protocol.missingParams': 'Deep link missing plugin/cmd parameters: obsidian://harness-like?plugin=<id>&cmd=<name>',
+  'protocol.notFound': 'No handler responded: plugin "{plugin}" is not running or has no command "{cmd}"',
 }
 
 export default dict

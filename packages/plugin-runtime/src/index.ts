@@ -70,6 +70,7 @@ export function detectCapabilities(code: string): PluginCapabilities {
   if (/toolsCompat\.register|ctx\.tools\.register/.test(code)) capabilities.push('tools')
   if (/addStatusBarItem\s*\(/.test(code)) capabilities.push('statusbar')
   if (/registerSettingTab/.test(code)) capabilities.push('settings')
+  if (/protocol\.register\s*\(/.test(code)) capabilities.push('protocol')
   const m = code.match(/registerView\s*\(\s*['"]([^'"]+)['"]/)
   return { capabilities, viewType: m?.[1] }
 }
@@ -123,24 +124,44 @@ export async function loadUserPlugin(
   const baseCommands = ctx.get('commands') as
     | { addCommand(cmd: { id: string; name?: string }): unknown }
     | undefined
-  const pluginCtx = baseCommands
-    ? ctx.extend({
-        commands: {
-          addCommand: (cmd: { id: string; name?: string }) =>
-            baseCommands.addCommand({
-              ...cmd,
-              id: hostId
-                ? `${hostId}:${manifest.id}:${bareCommandId(cmd.id)}`
-                : `${manifest.id}:${bareCommandId(cmd.id)}`,
-              name: cmd.name
-                ? hostId
-                  ? `${hostName}: ${bareCommandName(cmd.name)}（${manifest.id}）`
-                  : `${manifest.id}: ${bareCommandName(cmd.name)}`
-                : cmd.name,
-            }),
-        },
-      })
-    : ctx
+  // 协议动作强制携带来源插件 id（API 层，不依赖插件作者自觉）：
+  // 子插件 ctx.protocol.register(cmd, handler) 经此包裹为
+  // register(插件id, cmd, handler)，实际入口
+  // obsidian://harness-like?plugin=<插件id>&cmd=<动作名>——防止冒充他人命名空间。
+  const baseProtocol = ctx.get('protocol') as
+    | { register(pluginId: string, action: string, handler: (params: Record<string, string>) => unknown): () => void }
+    | undefined
+  const pluginCtx =
+    baseCommands || baseProtocol
+      ? ctx.extend({
+          ...(baseCommands
+            ? {
+                commands: {
+                  addCommand: (cmd: { id: string; name?: string }) =>
+                    baseCommands.addCommand({
+                      ...cmd,
+                      id: hostId
+                        ? `${hostId}:${manifest.id}:${bareCommandId(cmd.id)}`
+                        : `${manifest.id}:${bareCommandId(cmd.id)}`,
+                      name: cmd.name
+                        ? hostId
+                          ? `${hostName}: ${bareCommandName(cmd.name)}（${manifest.id}）`
+                          : `${manifest.id}: ${bareCommandName(cmd.name)}`
+                        : cmd.name,
+                    }),
+                },
+              }
+            : {}),
+          ...(baseProtocol
+            ? {
+                protocol: {
+                  register: (action: string, handler: (params: Record<string, string>) => unknown) =>
+                    baseProtocol.register(manifest.id, action, handler),
+                },
+              }
+            : {}),
+        })
+      : ctx
 
   const fiber = pluginCtx.plugin(exported as { apply(ctx: never): unknown }) as unknown as {
     dispose(): Promise<void>

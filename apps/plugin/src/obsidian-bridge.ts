@@ -157,6 +157,13 @@ export function toApiLike(app: App, plugin?: Plugin): ObsidianApiLike {
         new Notice(message, timeout)
       },
     },
+    protocol: {
+      registerObsidianProtocolHandler(action, handler) {
+        // 唯一入口：宿主 Plugin 实例的 registerObsidianProtocolHandler（随宿主 unload 由 Obsidian 清理）
+        if (!plugin) throw new Error('protocol 服务需要宿主插件实例')
+        plugin.registerObsidianProtocolHandler(action, handler)
+      },
+    },
     openTarget: async (target) => {
       const { shell } = require('electron') as {
         shell: {

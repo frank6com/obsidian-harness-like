@@ -124,6 +124,7 @@ export class PluginManagerView extends ItemView {
           tools: t('pm.cap.tools'),
           statusbar: t('pm.cap.statusbar'),
           settings: t('pm.cap.settings'),
+          protocol: t('pm.cap.protocol'),
         }
         for (const c of caps) {
           capRow.createSpan({ cls: 'dsh-pm-cap', text: LABELS[c] ?? c })

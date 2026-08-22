@@ -8,7 +8,7 @@
 
 import * as fs from 'fs'
 import * as path from 'path'
-import { Plugin, type Editor, type WorkspaceLeaf } from 'obsidian'
+import { Plugin, Notice, type Editor, type WorkspaceLeaf } from 'obsidian'
 import * as obsidianModule from 'obsidian'
 import * as cordis from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
@@ -30,6 +30,7 @@ import { HarnessLikeSettingsTab, type TabId } from './settings-tab'
 import { PluginBackups } from './plugin-backups'
 import { PluginFilesSelfHeal, fetchTextWithTimeout } from './plugin-files'
 import { userSettingsTabPlugin } from './user-settings-tab'
+import { protocolServicePlugin } from './protocol-service'
 import { getLanguage, registerLocale, resolveLanguage, setLanguage, t } from './i18n'
 import { WriteApprovalModal, GrantModal, ConfirmModal, CommandApprovalModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
@@ -200,6 +201,26 @@ export default class HarnessLikePlugin extends Plugin {
 
     // 用户插件设置页注册（ctx.settingsTab）：宿主创建真实 PluginSettingTab
     this.fibers.push(ctx.plugin(userSettingsTabPlugin(this.app, this)))
+
+    // obsidian:// 协议扩展点（ctx.protocol）：宿主只向 Obsidian 注册一次统一入口
+    // obsidian://<manifest.id>?plugin=<子插件id>&cmd=<动作名>&...（无公开注销 API，
+    // 单入口把该限制收敛为一个 listener；子插件注册/卸载只是内存路由表增删。
+    // 路由参数用 cmd：Obsidian 解析 URI 时 data.action 恒为入口名，query 的 action 不可用）
+    const hostAction = this.manifest.id
+    this.fibers.push(
+      ctx.plugin(
+        protocolServicePlugin({
+          registerEntry: (handler) => apiLike.protocol.registerObsidianProtocolHandler(hostAction, handler),
+          notify: (kind, detail) => {
+            const msg =
+              kind === 'missing'
+                ? t('protocol.missingParams')
+                : t('protocol.notFound', { plugin: detail.plugin ?? '', cmd: detail.cmd ?? '' })
+            new Notice(msg)
+          },
+        }),
+      ),
+    )
 
     // 编辑器桥：把 Obsidian 的 activeEditor 暴露为 ctx.editor
     ctx.editor.setProvider(() => {

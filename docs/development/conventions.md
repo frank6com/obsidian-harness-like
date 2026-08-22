@@ -9,7 +9,8 @@
 ## Internal protocol names (do not change)
 
 - Data dir `.obsidian/harness-like/`, user plugins dir `.obsidian/harness-like-plugins/`;
-- Service keys `ctx.sessionLog / toolsCompat / llmCaller / sandbox / approval / dshI18n`;
+- Service keys `ctx.sessionLog / toolsCompat / llmCaller / sandbox / approval / dshI18n / protocol`;
+- Deep-link entry `obsidian://harness-like?plugin=<id>&cmd=<name>` — the route parameter is `cmd`, **never** `action` (Obsidian's URI parser overwrites `data.action` with the URL action segment, verified in app.js: `return r.action = i`);
 - Event domains `dsh/session/event`, `dsh/waiting-approval`, `dsh/settings-updated`; log prefix `[dsh]`;
 - The `dsh` field in user plugin manifests (`dsh.id` etc.).
 

@@ -68,6 +68,11 @@ export interface SettingsUiLike {
   addSettingTab(tab: unknown): void
 }
 
+/** obsidian:// 协议处理器注册（Plugin.registerObsidianProtocolHandler 的结构描述，无对应注销 API） */
+export interface ProtocolLike {
+  registerObsidianProtocolHandler(action: string, handler: (params: Record<string, string>) => unknown): void
+}
+
 export interface NoticeLike {
   notice(message: string, timeout?: number): void
 }
@@ -81,6 +86,8 @@ export interface ObsidianApiLike {
   statusbar: StatusbarLike
   settingsUi: SettingsUiLike
   notice: NoticeLike
+  /** obsidian:// 协议处理器注册（宿主 Plugin 实例转发） */
+  protocol: ProtocolLike
   /** 打开外部目标：http(s) 走系统浏览器，本地路径走默认应用（由桥接层实现） */
   openTarget(target: string): Promise<void>
 }

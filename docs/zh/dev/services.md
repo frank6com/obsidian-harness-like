@@ -14,6 +14,7 @@
 - **editor**：`getSelection()` / `insertText(text)` / `replaceSelection(text)`（无活动编辑器返回 null）
 - **toolsCompat**：`register({ name, description, input, execute })`（execute 返回 JSON 可序列化对象）
 - **settings**：`get(key, fallback)` / `set(key, value)`；`registerSettingTab(tab)`
+- **protocol**：`register(cmd, handler(params))` —— 注册 obsidian:// 深链动作，返回 disposer。入口 URL：`obsidian://harness-like?plugin=<你的插件id>&cmd=<动作名>&key=value`（loader 自动携带插件 id；params 为其余 query 透传，字符串值，已剥离 plugin/cmd；无值参数为 `"true"`）。动作参数是 `cmd` 不是 `action`——Obsidian 保留 action 且恒覆盖为入口名
 - **sandbox / approval / sessionLog / llmCaller / dshI18n**：见对应章节
 
 ## 事件（ctx.on）

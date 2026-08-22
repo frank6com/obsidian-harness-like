@@ -19,6 +19,16 @@ Plugin Manager (top-right "Plugin Manager" button in the chat header):
 
 Commands registered by sub-plugins appear in the palette as `Harness Like: command (sub-plugin-id)` (e.g. `Harness Like: Open panel (folder-stats)`) — press Ctrl/Cmd+P and search "Harness Like", or just ask the agent to run it.
 
+## Triggering sub-plugins from outside (obsidian:// deep links)
+
+Sub-plugins that register deep-link actions can be triggered from browsers, shortcuts, or other apps:
+
+```
+obsidian://harness-like?plugin=<sub-plugin-id>&cmd=<action>&param=value
+```
+
+For example, if a sub-plugin offers an `add-task` action, then `obsidian://harness-like?plugin=tasks&cmd=add-task&text=Buy%20milk` runs it inside the vault. If the action doesn't exist or the plugin isn't running, a notice explains why.
+
 ## Backup & migration
 
 A sub-plugin is just the files under `.obsidian/harness-like-plugins/<id>/` (package.json + main.js). **Backup/migrate = copy the folder**:

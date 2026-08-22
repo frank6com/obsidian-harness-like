@@ -15,6 +15,7 @@ Call these exact signatures — do not guess method names.
 - **editor**: `getSelection()` / `insertText(text)` / `replaceSelection(text)` (null when no active editor)
 - **toolsCompat**: `register({ name, description, input, execute })` (execute returns JSON-serializable)
 - **settings**: `get(key, fallback)` / `set(key, value)`; `registerSettingTab(tab)`
+- **protocol**: `register(cmd, handler(params))` — register an `obsidian://` deep-link action; returns a disposer. Entry URL: `obsidian://harness-like?plugin=<your-plugin-id>&cmd=<action>&key=value` (the loader injects your plugin id automatically; `params` receives the remaining query values as strings, with `plugin`/`cmd` stripped; valueless params arrive as `"true"`). The route parameter is `cmd`, **not** `action` — Obsidian reserves `action` and always overwrites it with the entry name
 - **sandbox / approval / sessionLog / llmCaller / dshI18n**: see the respective chapters
 
 ## Events (ctx.on)

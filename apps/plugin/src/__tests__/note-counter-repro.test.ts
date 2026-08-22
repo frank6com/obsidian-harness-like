@@ -53,6 +53,7 @@ function stubApi(records: {
     statusbar: { addStatusBarItem: () => ({ el: {} as HTMLElement, remove: () => {} }) },
     settingsUi: { addSettingTab: () => {} },
     notice: { notice: () => {} },
+    protocol: { registerObsidianProtocolHandler: () => {} },
     openTarget: async () => {},
   }
 }

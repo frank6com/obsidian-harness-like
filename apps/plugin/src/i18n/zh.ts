@@ -129,6 +129,7 @@ const dict: Record<string, string> = {
   'pm.cap.tools': '工具',
   'pm.cap.statusbar': '状态栏',
   'pm.cap.settings': '设置页',
+  'pm.cap.protocol': '深链',
   'pm.reload.done': '插件已重新加载: {id}',
   'pm.reload.autoRecovered': '加载失败，已自动回退到最近可用版本: {id}',
   'pm.reload.failed': '加载失败: {msg}',
@@ -327,6 +328,10 @@ const dict: Record<string, string> = {
   'export.exportedAt': '导出时间',
   'export.boundNote': '绑定笔记',
   'export.none': '无',
+
+  // ---------- obsidian:// 协议扩展点 ----------
+  'protocol.missingParams': '深链缺少 plugin/cmd 参数：obsidian://harness-like?plugin=<插件id>&cmd=<动作名>',
+  'protocol.notFound': '无插件响应：插件「{plugin}」未运行或没有动作「{cmd}」',
 }
 
 export default dict

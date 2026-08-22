@@ -44,6 +44,7 @@ function stubApi(records: { commands: Array<{ id: string; name?: string }> }): O
     statusbar: { addStatusBarItem: () => ({ el: {} as HTMLElement, remove: () => {} }) },
     settingsUi: { addSettingTab: () => {} },
     notice: { notice: () => {} },
+    protocol: { registerObsidianProtocolHandler: () => {} },
     openTarget: async () => {},
   }
 }

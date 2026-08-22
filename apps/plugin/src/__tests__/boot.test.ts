@@ -49,6 +49,7 @@ function stubApi(): ObsidianApiLike {
       addSettingTab: () => {},
     },
     notice: { notice: () => {} },
+    protocol: { registerObsidianProtocolHandler: () => {} },
     openTarget: async () => {},
   }
 }

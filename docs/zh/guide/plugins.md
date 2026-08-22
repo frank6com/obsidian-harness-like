@@ -19,6 +19,16 @@
 
 子插件注册的命令会在命令面板中显示为 `Harness Like: 命令（子插件id）`（如 `Harness Like: 打开面板（folder-stats）`）——打开命令面板（Ctrl/Cmd+P）搜索 "Harness Like" 即可找到；也可以直接问 agent 帮你执行。
 
+## 从外部触发子插件（obsidian:// 深链）
+
+注册了深链动作的子插件可以从浏览器、快捷指令、其他应用直接触发：
+
+```
+obsidian://harness-like?plugin=<子插件id>&cmd=<动作名>&参数=值
+```
+
+例如某子插件提供 `add-task` 动作，则 `obsidian://harness-like?plugin=tasks&cmd=add-task&text=买牛奶` 会在库内执行对应功能。动作不存在或插件未运行时会弹提示说明原因。
+
 ## 备份与迁移
 
 子插件 = `.obsidian/harness-like-plugins/<id>/` 下的文件（package.json + main.js）。**备份/迁移 = 复制该目录**：

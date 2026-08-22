@@ -28,6 +28,7 @@ function stubApi(overrides: Record<string, unknown> = {}) {
     statusbar: { addStatusBarItem: () => ({ el: {} as HTMLElement, remove: () => {} }) },
     settingsUi: { addSettingTab: () => {} },
     notice: { notice: () => {} },
+    protocol: { registerObsidianProtocolHandler: () => {} },
     openTarget: async () => {},
     ...overrides,
   }
