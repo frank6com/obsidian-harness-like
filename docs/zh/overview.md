@@ -19,7 +19,7 @@ Harness Like 是 DeepSeek Harness 理念的 Obsidian 实现：在 Obsidian 插�
 
 ## 界面一览
 
-![对话面板](/screenshots/zh/chat.png)
+![对话面板](/screenshots/zh/Chat.png)
 ![设置 — 模型](/screenshots/zh/Settings.gif)
 ![插件管理器](/screenshots/zh/Plugins.png)
 
