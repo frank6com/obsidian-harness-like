@@ -29,6 +29,23 @@ describe('detectCapabilities', () => {
   it('空代码无能力', () => {
     expect(detectCapabilities('')).toEqual({ capabilities: [], viewType: undefined })
   })
+
+  it('常量声明的视图类型可解析（打包重命名场景）', () => {
+    const code = `
+      const VIEW_TYPE_NOTE_COUNTER = "note-counter-view"
+      ctx.views.registerView(VIEW_TYPE_NOTE_COUNTER, (leaf) => new MyView(leaf))
+    `
+    const d = detectCapabilities(code)
+    expect(d.capabilities).toContain('panel')
+    expect(d.viewType).toBe('note-counter-view')
+  })
+
+  it('未知标识符不误报视图类型', () => {
+    const code = `ctx.views.registerView(resolveType(), (leaf) => new MyView(leaf))`
+    const d = detectCapabilities(code)
+    expect(d.capabilities).toContain('panel')
+    expect(d.viewType).toBeUndefined()
+  })
 })
 
 describe('命令前缀强制', () => {
@@ -113,5 +130,43 @@ describe('命令前缀强制', () => {
     expect(registered).toEqual([{ pluginId: 'demo-plugin', action: 'open' }])
     expect(disposers.length).toBe(1)
     await loaded.fiber.dispose()
+  })
+
+  it('运行时捕获实际注册的视图类型（静态扫描常量漏检时仍可打开面板）', async () => {
+    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-cap-'))
+    const dir = path.join(root, 'demo-plugin')
+    await fs.promises.mkdir(dir, { recursive: true })
+    // 产物用拼接表达式注册视图：静态扫描（字面量/常量声明）必然漏检 viewType
+    await fs.promises.writeFile(
+      path.join(dir, 'package.json'),
+      JSON.stringify({ dsh: { id: 'demo-plugin', version: '0.0.1', entry: 'main.js' } }),
+    )
+    await fs.promises.writeFile(
+      path.join(dir, 'main.js'),
+      [
+        `module.exports = {`,
+        `  inject: ['views'],`,
+        `  apply(ctx) {`,
+        `    ctx.effect(() => ctx.views.registerView(['runtime', 'view'].join('-'), () => ({})))`,
+        `  },`,
+        `}`,
+      ].join('\n'),
+    )
+
+    const ctx = new Context()
+    const unregistered: string[] = []
+    ctx.reflect.provide('views', {
+      registerView: (type: string) => {
+        return () => unregistered.push(type)
+      },
+      openView: () => {},
+    })
+
+    const loaded = await loadUserPlugin(ctx, dir, {
+      require: (id) => (id === '@deepseek-ai/cordis' ? cordis : undefined),
+    })
+    expect(loaded.viewTypes).toEqual(['runtime-view'])
+    await loaded.fiber.dispose()
+    expect(unregistered).toEqual(['runtime-view'])
   })
 })

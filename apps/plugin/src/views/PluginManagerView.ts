@@ -6,12 +6,16 @@
 import { ItemView, Menu, WorkspaceLeaf } from 'obsidian'
 import * as path from 'path'
 import type { Context } from '@deepseek-ai/cordis'
+import type { PluginRecord, PluginStatus } from '@harness-like/plugin-runtime'
 import { ConfirmModal, DeletedPluginsModal, GrantModal, PluginDetailModal, listPluginCommands } from '../modals'
 import { autoRecoverLastGood } from '../plugin-backups'
 import { grantDisplay } from '../settings'
 import { getLanguage, resolveLanguage, setLanguage, t, type LanguagePreference } from '../i18n'
 
 export const PLUGIN_MANAGER_VIEW_TYPE = 'dsh-plugin-manager'
+
+/** 列表状态过滤：全部 / 运行中 / 已停止 / 错误（tab 分组） */
+type StatusFilter = 'all' | PluginStatus
 
 export interface PluginManagerOptions {
   /** 在系统文件管理器中打开目录（如插件目录） */
@@ -68,15 +72,21 @@ export class PluginManagerView extends ItemView {
 
   private disposers: Array<() => void> = []
 
+  /** 当前状态过滤 tab（重渲染间保留） */
+  private filter: StatusFilter = 'all'
+
   private async refresh(): Promise<void> {
     this.contentEl.empty()
     this.contentEl.createEl('h4', { text: t('pm.heading') })
-    const bar = this.contentEl.createDiv({ cls: 'dsh-pm-bar' })
-    const reload = bar.createEl('button', { cls: 'dsh-btn', text: t('pm.refresh') })
+    // 工具栏：左侧状态过滤 tab，右侧 刷新 / 打开插件目录 / 已删除插件
+    const toolbar = this.contentEl.createDiv({ cls: 'dsh-pm-toolbar' })
+    const tabsEl = toolbar.createDiv({ cls: 'dsh-pm-tabs' })
+    const tools = toolbar.createDiv({ cls: 'dsh-pm-tools' })
+    const reload = tools.createEl('button', { cls: 'dsh-btn', text: t('pm.refresh') })
     reload.onclick = () => void this.refresh()
-    const openDir = bar.createEl('button', { cls: 'dsh-btn', text: t('pm.openDir') })
+    const openDir = tools.createEl('button', { cls: 'dsh-btn', text: t('pm.openDir') })
     openDir.onclick = () => this.options.openFolder(this.ctx.sandbox.scope.pluginsDir)
-    const deleted = bar.createEl('button', { cls: 'dsh-btn', text: t('pm.deleted') })
+    const deleted = tools.createEl('button', { cls: 'dsh-btn', text: t('pm.deleted') })
     deleted.onclick = () => new DeletedPluginsModal(this.app, this.ctx, () => void this.refresh()).open()
 
     const ids = await this.ctx.pluginRuntime.discover()
@@ -91,8 +101,44 @@ export class PluginManagerView extends ItemView {
       return
     }
 
-    for (const id of ids) {
-      const rec = this.ctx.pluginRuntime.get(id) ?? this.ctx.pluginRuntime.inspect(id)
+    // 状态分组：运行中 → 已停止 → 错误，组内按 id 字母序（目录顺序不稳定）
+    const STATUS_ORDER: Record<string, number> = { running: 0, stopped: 1, error: 2 }
+    const recs = ids
+      .map((id) => this.ctx.pluginRuntime.get(id) ?? this.ctx.pluginRuntime.inspect(id))
+      .sort(
+        (a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99) || a.id.localeCompare(b.id),
+      )
+
+    // 状态 tab 分组过滤（带计数；重渲染间保留选中项）
+    const TABS: Array<{ key: StatusFilter; label: string }> = [
+      { key: 'all', label: t('pm.tab.all') },
+      { key: 'running', label: t('pm.status.running') },
+      { key: 'stopped', label: t('pm.status.stopped') },
+      { key: 'error', label: t('pm.status.error') },
+    ]
+    for (const tab of TABS) {
+      const count = tab.key === 'all' ? recs.length : recs.filter((r) => r.status === tab.key).length
+      const tabBtn = tabsEl.createEl('button', {
+        cls: `dsh-pm-tab${this.filter === tab.key ? ' is-active' : ''}`,
+      })
+      tabBtn.createSpan({ text: tab.label })
+      tabBtn.createSpan({ cls: 'dsh-pm-tab-count', text: String(count) })
+      tabBtn.onclick = () => {
+        if (this.filter === tab.key) return
+        this.filter = tab.key
+        void this.refresh()
+      }
+    }
+
+    const shown: PluginRecord[] =
+      this.filter === 'all' ? recs : recs.filter((r) => r.status === this.filter)
+    if (!shown.length) {
+      this.contentEl.createDiv({ cls: 'dsh-pm-tab-empty', text: t('pm.tab.empty') })
+      return
+    }
+
+    for (const rec of shown) {
+      const id = rec.id
       const grant = this.ctx.approval.getGrant(id)
       const row = this.contentEl.createDiv({ cls: 'dsh-pm-row' })
       const info = row.createDiv({ cls: 'dsh-pm-info' })

@@ -119,6 +119,11 @@ export class PluginBackups {
     await fs.rm(path.join(this.pluginDir(pluginId), backupId), { recursive: true, force: true })
   }
 
+  /** 删除某插件的全部备份（已删除插件"永久删除"用；目录不存在时静默成功） */
+  async removeAll(pluginId: string): Promise<void> {
+    await fs.rm(this.pluginDir(pluginId), { recursive: true, force: true })
+  }
+
   /** 取最新一份备份 */
   async latest(pluginId: string): Promise<PluginBackupMeta | null> {
     const all = await this.list(pluginId)

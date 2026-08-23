@@ -52,6 +52,8 @@ export interface LoadedPlugin {
   dir: string
   manifest: UserPluginManifest
   fiber: { dispose(): Promise<void> }
+  /** 运行时实际注册的视图类型（loader 拦截 ctx.views.registerView 记录；静态扫描对常量/拼接名会漏检） */
+  viewTypes?: string[]
 }
 
 export interface PluginCapabilities {
@@ -71,8 +73,18 @@ export function detectCapabilities(code: string): PluginCapabilities {
   if (/addStatusBarItem\s*\(/.test(code)) capabilities.push('statusbar')
   if (/registerSettingTab/.test(code)) capabilities.push('settings')
   if (/protocol\.register\s*\(/.test(code)) capabilities.push('protocol')
-  const m = code.match(/registerView\s*\(\s*['"]([^'"]+)['"]/)
-  return { capabilities, viewType: m?.[1] }
+  // 视图类型：优先匹配字面量；否则尝试解析常量声明
+  // （const VIEW_TYPE = 'xxx' 后 registerView(VIEW_TYPE, …)，打包重命名后仍可按名回溯）
+  let viewType = code.match(/registerView\s*\(\s*['"]([^'"]+)['"]/)?.[1]
+  if (!viewType) {
+    const ident = code.match(/registerView\s*\(\s*([A-Za-z_$][\w$]*)\s*,/)?.[1]
+    if (ident && !['this', 'window', 'globalThis'].includes(ident)) {
+      viewType = code.match(
+        new RegExp(`(?:const|let|var)\\s+${ident}\\s*(?::[^=;\\n]+)?=\\s*['"]([^'"]+)['"]`),
+      )?.[1]
+    }
+  }
+  return { capabilities, viewType }
 }
 
 /** 读取并执行入口产物，挂载为 Cordis 插件 */
@@ -131,8 +143,16 @@ export async function loadUserPlugin(
   const baseProtocol = ctx.get('protocol') as
     | { register(pluginId: string, action: string, handler: (params: Record<string, string>) => unknown): () => void }
     | undefined
+  // 视图类型运行时捕获：子插件经 ctx.views.registerView(type, creator) 注册时记录实际 type。
+  // 静态扫描（detectCapabilities）只能匹配字符串字面量，常量/拼接的视图名会漏检，
+  // 导致插件管理器「面板」徽章在而打开按钮消失——以运行时注册为准。
+  const baseViews = ctx.get('views') as
+    | { registerView(type: string, creator: unknown): () => void }
+    | undefined
+  const viewTypes: string[] = []
+  const hasWraps = Boolean(baseCommands || baseProtocol || baseViews)
   const pluginCtx =
-    baseCommands || baseProtocol
+    hasWraps
       ? ctx.extend({
           ...(baseCommands
             ? {
@@ -160,6 +180,16 @@ export async function loadUserPlugin(
                 },
               }
             : {}),
+          ...(baseViews
+            ? {
+                views: {
+                  registerView: (type: string, creator: unknown) => {
+                    if (!viewTypes.includes(type)) viewTypes.push(type)
+                    return baseViews.registerView(type, creator)
+                  },
+                },
+              }
+            : {}),
         })
       : ctx
 
@@ -167,7 +197,7 @@ export async function loadUserPlugin(
     dispose(): Promise<void>
   } & PromiseLike<unknown>
   await fiber
-  return { id: manifest.id, dir, manifest, fiber }
+  return { id: manifest.id, dir, manifest, fiber, viewTypes }
 }
 
 export type PluginStatus = 'running' | 'stopped' | 'error'
@@ -261,6 +291,11 @@ export class PluginRuntime {
         viewType = detected.viewType
       } catch {
         // 能力检测失败不阻断加载
+      }
+      if (loaded.viewTypes?.length) {
+        // 运行时实际注册优先：静态扫描对常量/拼接视图名漏检时按钮不消失
+        viewType = loaded.viewTypes[0]
+        if (!capabilities.includes('panel')) capabilities = ['panel', ...capabilities]
       }
       const rec: PluginRecord = {
         id,

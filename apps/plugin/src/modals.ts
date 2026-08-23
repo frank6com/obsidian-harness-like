@@ -576,13 +576,18 @@ export class DeletedPluginsModal extends Modal {
   private async render(): Promise<void> {
     const { contentEl } = this
     contentEl.empty()
-    contentEl.createEl('h3', { text: t('pm.deleted') })
     const live = await this.ctx.pluginRuntime.discover()
     const deleted = await this.ctx.pluginBackups.deletedPlugins(live)
+    contentEl.createEl('h3', { text: t('pm.deleted') })
     if (!deleted.length) {
       contentEl.createDiv({ cls: 'dsh-modal-empty', text: t('pm.deleted.empty') })
       return
     }
+    // 顶部工具行：清空全部（破坏性操作，需确认）
+    const head = contentEl.createDiv({ cls: 'dsh-deleted-head' })
+    head.createDiv({ cls: 'dsh-modal-empty dsh-deleted-hint', text: t('pm.deleted.hint') })
+    const clearAll = head.createEl('button', { cls: 'dsh-btn dsh-btn-danger', text: t('pm.deleted.clearAll') })
+    clearAll.onclick = () => void this.clearAll(deleted)
     const list = contentEl.createDiv({ cls: 'dsh-modal-list' })
     for (const id of deleted) {
       const row = list.createDiv({ cls: 'dsh-pm-backup-row' })
@@ -592,6 +597,8 @@ export class DeletedPluginsModal extends Modal {
       info.createDiv({ cls: 'dsh-pm-backup-sub', text: t('pm.deleted.backupCount', { count: backups.length }) })
       const btn = row.createEl('button', { cls: 'dsh-btn dsh-btn-primary', text: t('pm.deleted.restore') })
       btn.onclick = () => void this.restoreLatest(id)
+      const purge = row.createEl('button', { cls: 'dsh-btn dsh-btn-danger', text: t('pm.deleted.purge') })
+      purge.onclick = () => void this.purge(id, backups.length)
     }
   }
 
@@ -602,6 +609,32 @@ export class DeletedPluginsModal extends Modal {
     await this.ctx.pluginBackups.restore(dir, id, latest.id)
     this.ctx.notice.notice(t('pm.deleted.restored', { id }))
     this.onChanged?.()
+    void this.render()
+  }
+
+  /** 永久删除单个已删除插件的全部备份（不可恢复，需确认） */
+  private async purge(id: string, count: number): Promise<void> {
+    const ok = await new ConfirmModal(
+      this.app,
+      t('pm.deleted.purgeConfirm', { id, count }),
+      t('common.delete'),
+    ).ask()
+    if (!ok) return
+    await this.ctx.pluginBackups.removeAll(id)
+    this.ctx.notice.notice(t('pm.deleted.purged', { id }))
+    void this.render()
+  }
+
+  /** 清空全部已删除插件的备份（不可恢复，需确认） */
+  private async clearAll(ids: string[]): Promise<void> {
+    const ok = await new ConfirmModal(
+      this.app,
+      t('pm.deleted.clearConfirm', { count: ids.length }),
+      t('pm.deleted.clearAll'),
+    ).ask()
+    if (!ok) return
+    for (const id of ids) await this.ctx.pluginBackups.removeAll(id)
+    this.ctx.notice.notice(t('pm.deleted.cleared', { count: ids.length }))
     void this.render()
   }
 }

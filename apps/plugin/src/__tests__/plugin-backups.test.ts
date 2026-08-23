@@ -175,4 +175,25 @@ describe('备份版本号与删除（0.35.2）', () => {
     // 非法 id 抛错
     await expect(backups.remove('demo', '../evil')).rejects.toThrow()
   })
+
+  it('removeAll 删除插件全部备份；目录不存在时静默成功（已删除插件永久删除）', async () => {
+    const root = await tmpRoot()
+    const plugins = path.join(root, 'plugins')
+    await fs.mkdir(plugins, { recursive: true })
+    const backups = new PluginBackups(path.join(root, 'plugin-backups'))
+    const dir = path.join(plugins, 'demo')
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(path.join(dir, 'main.js'), 'v1')
+    await backups.snapshot(dir, 'demo', 'overwrite')
+    await sleep(5)
+    await backups.snapshot(dir, 'demo', 'delete')
+    expect((await backups.list('demo')).length).toBe(2)
+
+    await backups.removeAll('demo')
+    expect(await backups.list('demo')).toEqual([])
+    await expect(fs.access(path.join(root, 'plugin-backups', 'demo'))).rejects.toThrow()
+
+    // 不存在的插件：静默成功不抛错
+    await backups.removeAll('never-existed')
+  })
 })
