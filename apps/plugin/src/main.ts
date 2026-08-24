@@ -31,6 +31,7 @@ import { PluginBackups } from './plugin-backups'
 import { PluginFilesSelfHeal, fetchTextWithTimeout } from './plugin-files'
 import { userSettingsTabPlugin } from './user-settings-tab'
 import { protocolServicePlugin } from './protocol-service'
+import { blockServicePlugin, type BlockRenderContext } from './block-service'
 import { getLanguage, registerLocale, resolveLanguage, setLanguage, t } from './i18n'
 import { WriteApprovalModal, GrantModal, ConfirmModal, CommandApprovalModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
@@ -217,6 +218,42 @@ export default class HarnessLikePlugin extends Plugin {
                 ? t('protocol.missingParams')
                 : t('protocol.notFound', { plugin: detail.plugin ?? '', cmd: detail.cmd ?? '' })
             new Notice(msg)
+          },
+        }),
+      ),
+    )
+
+    // 块定义扩展点（ctx.blocks）：```hl:<子插件id>:<type> 或 ```hl:<别名>
+    // 宿主按语言串懒注册一次原生 code block 处理器（无单个注销 API——
+    // 子插件注册/卸载只是内存路由表增删；宿主 unload 由 Obsidian 统一清理）
+    this.fibers.push(
+      ctx.plugin(
+        blockServicePlugin({
+          registerNative: (lang, dispatch) =>
+            apiLike.codeBlockProcessor.registerProcessor(lang, (source, el, ctx) =>
+              dispatch(source, el, ctx as BlockRenderContext),
+            ),
+          getAlias: (pid, type) => this.settings.blockAliases[`${pid}:${type}`],
+          setAlias: (pid, type, alias) => {
+            if (alias) this.settings.blockAliases[`${pid}:${type}`] = alias
+            else delete this.settings.blockAliases[`${pid}:${type}`]
+            void this.saveSettings()
+          },
+          notify: (kind, detail) => {
+            const msg =
+              kind === 'conflict'
+                ? t('blocks.conflict', { lang: detail.lang ?? '', owner: detail.owner ?? '' })
+                : t('blocks.invalid', { lang: detail.lang ?? '' })
+            new Notice(msg)
+          },
+          renderPlaceholder: (el, kind, detail) => {
+            el.createDiv({
+              cls: 'dsh-block-placeholder',
+              text:
+                kind === 'renamed'
+                  ? t('blocks.placeholderRenamed', { lang: detail.lang })
+                  : t('blocks.placeholderNotRunning', { lang: detail.lang }),
+            })
           },
         }),
       ),

@@ -36,7 +36,7 @@ function polyfillObsidianDom(): void {
 }
 
 import { PluginManagerView } from '../views/PluginManagerView'
-import { DeletedPluginsModal } from '../modals'
+import { DeletedPluginsModal, PluginDetailModal } from '../modals'
 import { setLanguage } from '../i18n'
 
 type Rec = Record<string, unknown>
@@ -224,6 +224,78 @@ describe('已删除插件弹窗：清空全部 + 单项永久删除', () => {
     await (modal as unknown as { render(): Promise<void> }).render()
     expect(modal.contentEl.querySelector('.dsh-modal-empty')).toBeTruthy()
     expect(modal.contentEl.querySelector('.dsh-deleted-head')).toBeFalsy()
+  })
+})
+
+describe('插件详情弹窗：块语言名分区与改名', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+    polyfillObsidianDom()
+    setLanguage('zh')
+  })
+
+  function makeDetailModal(opts: {
+    blocks: Array<{ pluginId: string; type: string; lang: string; status: string }>
+    rename?: (pluginId: string, type: string, alias: string) => boolean
+  }) {
+    const notices: string[] = []
+    const ctx = {
+      pluginRuntime: {
+        get: () => ({
+          id: 'demo',
+          status: 'running',
+          manifest: { id: 'demo', version: '0.1.0' },
+          capabilities: ['block'],
+        }),
+        inspect: () => ({ id: 'demo', status: 'stopped' }),
+      },
+      blocks: { list: vi.fn(() => opts.blocks), rename: opts.rename ?? (() => true) },
+      notice: { notice: (m: string) => notices.push(m) },
+      pluginBackups: { list: async () => [] },
+    }
+    return { modal: new PluginDetailModal({} as never, ctx as never, 'demo'), notices }
+  }
+
+  it('渲染块行（类型/语言串/冲突徽章），输入框预填当前语言串', async () => {
+    const { modal } = makeDetailModal({
+      blocks: [
+        { pluginId: 'demo', type: 'chart', lang: 'hl:demo:chart', status: 'active' },
+        { pluginId: 'demo', type: 'table', lang: 'hl:x', status: 'conflict' },
+      ],
+    })
+    await (modal as unknown as { render(): Promise<void> }).render()
+    expect(modal.contentEl.querySelector('h4.dsh-pm-section')?.textContent).toBeTruthy()
+    const rows = modal.contentEl.querySelectorAll('.dsh-block-row')
+    expect(rows.length).toBe(2)
+    expect(rows[0]!.querySelector('.dsh-pm-backup-sub')?.textContent).toBe('```hl:demo:chart')
+    expect((rows[1]!.querySelector('input') as HTMLInputElement).value).toBe('hl:x')
+    expect(rows[1]!.textContent).toContain('冲突')
+    // 无块注册的其他插件不渲染该分区——由 filter 保证，此处验证空列表情形
+    const { modal: empty } = makeDetailModal({ blocks: [] })
+    await (empty as unknown as { render(): Promise<void> }).render()
+    expect(empty.contentEl.querySelectorAll('.dsh-block-row').length).toBe(0)
+  })
+
+  it('保存非法值提示且不调用 rename；合法值调用 rename 并刷新', async () => {
+    const rename = vi.fn(() => true)
+    const { modal, notices } = makeDetailModal({
+      blocks: [{ pluginId: 'demo', type: 'chart', lang: 'hl:demo:chart', status: 'active' }],
+      rename,
+    })
+    await (modal as unknown as { render(): Promise<void> }).render()
+    const row = modal.contentEl.querySelector('.dsh-block-row')!
+    const input = row.querySelector('input') as HTMLInputElement
+    const save = [...row.querySelectorAll('button')].find((b) => b.textContent === '保存') as HTMLButtonElement
+
+    input.value = 'no-prefix'
+    save.click()
+    expect(rename).not.toHaveBeenCalled()
+    expect(notices.some((n) => n.includes('非法'))).toBe(true)
+
+    input.value = 'HL:NC'
+    save.click()
+    expect(rename).toHaveBeenCalledWith('demo', 'chart', 'HL:NC')
+    expect(notices.some((n) => n.includes('hl:nc'))).toBe(true)
   })
 })
 

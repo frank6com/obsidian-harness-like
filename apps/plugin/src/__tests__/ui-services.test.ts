@@ -29,6 +29,7 @@ function stubApi(overrides: Record<string, unknown> = {}) {
     settingsUi: { addSettingTab: () => {} },
     notice: { notice: () => {} },
     protocol: { registerObsidianProtocolHandler: () => {} },
+    codeBlockProcessor: { registerProcessor: () => {} },
     openTarget: async () => {},
     ...overrides,
   }

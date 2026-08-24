@@ -16,6 +16,7 @@ Call these exact signatures — do not guess method names.
 - **toolsCompat**: `register({ name, description, input, execute })` (execute returns JSON-serializable)
 - **settings**: `get(key, fallback)` / `set(key, value)`; `registerSettingTab(tab)`
 - **protocol**: `register(cmd, handler(params))` — register an `obsidian://` deep-link action; returns a disposer. Entry URL: `obsidian://harness-like?plugin=<your-plugin-id>&cmd=<action>&key=value` (the loader injects your plugin id automatically; `params` receives the remaining query values as strings, with `plugin`/`cmd` stripped; valueless params arrive as `"true"`). The route parameter is `cmd`, **not** `action` — Obsidian reserves `action` and always overwrites it with the entry name
+- **blocks**: `register(type, handler(source, el))` — register a custom fenced-code-block renderer; returns a disposer. The effective language is `hl:<your-plugin-id>:<type>` (the loader injects your plugin id; the `hl:` namespace belongs to the host, so you never clash with native languages or other plugins). Once a user writes ```` ```hl:my-plugin:chart ```` in a note, your handler receives the block text and an empty container div — fill it with DOM to render. Language collisions do not throw: the block is marked conflicted and can be renamed to `hl:<alias>` in the plugin details dialog
 - **sandbox / approval / sessionLog / llmCaller / dshI18n**: see the respective chapters
 
 ## Events (ctx.on)

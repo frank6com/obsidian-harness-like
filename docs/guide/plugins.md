@@ -29,6 +29,22 @@ obsidian://harness-like?plugin=<sub-plugin-id>&cmd=<action>&param=value
 
 For example, if a sub-plugin offers an `add-task` action, then `obsidian://harness-like?plugin=tasks&cmd=add-task&text=Buy%20milk` runs it inside the vault. If the action doesn't exist or the plugin isn't running, a notice explains why.
 
+## Using sub-plugin blocks in notes (```hl:...)
+
+Sub-plugins that register block renderers can turn fenced code blocks into rich UI:
+
+````md
+```hl:<sub-plugin-id>:<type>
+data...
+```
+````
+
+For example ```` ```hl:tasks:board ```` is handed to the tasks sub-plugin to render as a board. Rules:
+
+- The language starts with `hl:` (the Harness Like namespace — it never clashes with native languages like mermaid or with other plugins);
+- While the plugin isn't running the block shows a placeholder; reloading restores it;
+- In Plugin Manager → Details you can rename a block to `hl:<short-alias>` (e.g. `hl:board`); old spellings keep showing a rename hint in notes.
+
 ## Backup & migration
 
 A sub-plugin is just the files under `.obsidian/harness-like-plugins/<id>/` (package.json + main.js). **Backup/migrate = copy the folder**:

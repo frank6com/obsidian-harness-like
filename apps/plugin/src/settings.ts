@@ -95,6 +95,8 @@ export interface HarnessLikeSettings {
   grants: Record<string, GrantRecord>
   /** 插件开关状态（用户显式停用 = false；缺省视为启用），key = 插件 id */
   pluginEnabled: Record<string, boolean>
+  /** 块语言别名表，key = `<插件id>:<type>`，value = `hl:<alias>`（缺省用默认形态 hl:<插件id>:<type>） */
+  blockAliases: Record<string, string>
 }
 
 /** 授权记录的展示状态（管理器与设置页共用）：
@@ -147,6 +149,7 @@ export function defaultSettings(): HarnessLikeSettings {
     uiLanguage: 'auto',
     grants: {},
     pluginEnabled: {},
+    blockAliases: {},
   }
 }
 
@@ -271,6 +274,15 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
     r.pluginEnabled && typeof r.pluginEnabled === 'object'
       ? { ...(r.pluginEnabled as Record<string, boolean>) }
       : {}
+  base.blockAliases = (() => {
+    const raw = r.blockAliases
+    if (!raw || typeof raw !== 'object') return {}
+    const out: Record<string, string> = {}
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (typeof k === 'string' && k.includes(':') && typeof v === 'string') out[k] = v
+    }
+    return out
+  })()
   return base
 }
 

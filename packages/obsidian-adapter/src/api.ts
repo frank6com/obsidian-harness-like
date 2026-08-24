@@ -73,6 +73,14 @@ export interface ProtocolLike {
   registerObsidianProtocolHandler(action: string, handler: (params: Record<string, string>) => unknown): void
 }
 
+/** 围栏代码块处理器注册（Plugin.registerMarkdownCodeBlockProcessor 的结构描述，无单个语言注销 API） */
+export interface CodeBlockProcessorLike {
+  registerProcessor(
+    language: string,
+    handler: (source: string, el: HTMLElement, ctx: unknown) => void,
+  ): void
+}
+
 export interface NoticeLike {
   notice(message: string, timeout?: number): void
 }
@@ -88,6 +96,8 @@ export interface ObsidianApiLike {
   notice: NoticeLike
   /** obsidian:// 协议处理器注册（宿主 Plugin 实例转发） */
   protocol: ProtocolLike
+  /** 围栏代码块处理器注册（宿主 Plugin 实例转发） */
+  codeBlockProcessor: CodeBlockProcessorLike
   /** 打开外部目标：http(s) 走系统浏览器，本地路径走默认应用（由桥接层实现） */
   openTarget(target: string): Promise<void>
 }

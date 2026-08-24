@@ -775,6 +775,45 @@
   text-align: left;
 }
 
+/* 块定义（ctx.blocks）：详情弹窗改名行 + 笔记占位符 */
+.dsh-block-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.dsh-block-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dsh-block-row:last-child {
+  border-bottom: none;
+}
+
+.dsh-block-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.dsh-block-input input,
+input.dsh-block-input {
+  width: 100%;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+.dsh-block-placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+}
+
 .dsh-pm-empty {
   color: var(--text-muted);
   font-size: 13px;

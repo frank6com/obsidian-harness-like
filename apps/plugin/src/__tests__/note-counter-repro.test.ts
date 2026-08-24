@@ -54,6 +54,7 @@ function stubApi(records: {
     settingsUi: { addSettingTab: () => {} },
     notice: { notice: () => {} },
     protocol: { registerObsidianProtocolHandler: () => {} },
+    codeBlockProcessor: { registerProcessor: () => {} },
     openTarget: async () => {},
   }
 }

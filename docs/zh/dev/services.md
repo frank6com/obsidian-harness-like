@@ -15,6 +15,7 @@
 - **toolsCompat**：`register({ name, description, input, execute })`（execute 返回 JSON 可序列化对象）
 - **settings**：`get(key, fallback)` / `set(key, value)`；`registerSettingTab(tab)`
 - **protocol**：`register(cmd, handler(params))` —— 注册 obsidian:// 深链动作，返回 disposer。入口 URL：`obsidian://harness-like?plugin=<你的插件id>&cmd=<动作名>&key=value`（loader 自动携带插件 id；params 为其余 query 透传，字符串值，已剥离 plugin/cmd；无值参数为 `"true"`）。动作参数是 `cmd` 不是 `action`——Obsidian 保留 action 且恒覆盖为入口名
+- **blocks**：`register(type, handler(source, el))` —— 注册自定义围栏代码块渲染器，返回 disposer。实际语言串为 `hl:<你的插件id>:<type>`（loader 自动携带插件 id；`hl:` 命名空间归宿主独占，不与原生语言或其他插件冲突）。用户在笔记中写 ```` ```hl:my-plugin:chart ```` 后，handler 收到块内文本与空容器 div，填充 DOM 即完成渲染。语言串撞车不报错——该块标记冲突，可在插件详情弹窗改名为 `hl:<别名>` 解除
 - **sandbox / approval / sessionLog / llmCaller / dshI18n**：见对应章节
 
 ## 事件（ctx.on）

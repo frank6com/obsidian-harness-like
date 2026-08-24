@@ -50,6 +50,7 @@ function stubApi(): ObsidianApiLike {
     },
     notice: { notice: () => {} },
     protocol: { registerObsidianProtocolHandler: () => {} },
+    codeBlockProcessor: { registerProcessor: () => {} },
     openTarget: async () => {},
   }
 }

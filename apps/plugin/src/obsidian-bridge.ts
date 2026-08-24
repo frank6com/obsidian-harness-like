@@ -164,6 +164,14 @@ export function toApiLike(app: App, plugin?: Plugin): ObsidianApiLike {
         plugin.registerObsidianProtocolHandler(action, handler)
       },
     },
+    codeBlockProcessor: {
+      registerProcessor(language, handler) {
+        // 懒注册入口：宿主 Plugin 实例的 registerMarkdownCodeBlockProcessor
+        // （单个语言无公开注销 API——子插件卸载只删路由表，宿主 unload 时 Obsidian 统一清理）
+        if (!plugin) throw new Error('codeBlockProcessor 服务需要宿主插件实例')
+        plugin.registerMarkdownCodeBlockProcessor(language, (source, el, ctx) => handler(source, el, ctx))
+      },
+    },
     openTarget: async (target) => {
       const { shell } = require('electron') as {
         shell: {

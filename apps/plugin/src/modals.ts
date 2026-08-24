@@ -7,6 +7,7 @@ import * as path from 'path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { AgentMode, AgentPreset } from './settings'
 import type { GrantMode } from '@harness-like/harness-base'
+import { isValidBlockAlias, normalizeBlockLang, BLOCK_LANG_PREFIX, BlockService } from './block-service'
 import { t } from './i18n'
 
 export type GrantChoice = { mode: GrantMode } | { cancel: true }
@@ -784,12 +785,50 @@ export class PluginDetailModal extends Modal {
       tools: t('pm.cap.tools'),
       statusbar: t('pm.cap.statusbar'),
       settings: t('pm.cap.settings'),
+      block: t('pm.cap.block'),
     }
     const capRow = contentEl.createDiv({ cls: 'dsh-pm-caps' })
     if (caps.length) {
       for (const c of caps) capRow.createSpan({ cls: 'dsh-pm-cap', text: LABELS[c] ?? c })
     } else {
       capRow.createSpan({ cls: 'dsh-pm-cap', text: t('pm.detail.noCaps') })
+    }
+    // 块语言名（ctx.blocks 注册项：展示 + 改名，别名收归宿主统一校验唯一性；
+    // renamed 为旧名历史提示，笔记占位符已说明，不在改名列表重复出现）
+    const blockSvc = this.ctx.blocks as unknown as BlockService
+    const blocks =
+      typeof blockSvc.list === 'function'
+        ? blockSvc.list().filter((b) => b.pluginId === this.pluginId && b.status !== 'renamed')
+        : []
+    if (blocks.length) {
+      contentEl.createEl('h4', { cls: 'dsh-pm-section', text: t('pm.detail.blocksTitle') })
+      contentEl.createDiv({ cls: 'setting-item-description', text: t('pm.detail.blockHint') })
+      const list = contentEl.createDiv({ cls: 'dsh-block-list' })
+      for (const b of blocks) {
+        const row = list.createDiv({ cls: 'dsh-block-row' })
+        const info = row.createDiv({ cls: 'dsh-pm-backup-info' })
+        const nameEl = info.createDiv({ cls: 'dsh-pm-backup-time' })
+        nameEl.createSpan({ text: b.type })
+        if (b.status === 'conflict') {
+          nameEl.createSpan({ cls: 'dsh-pm-cap', text: t('pm.detail.blockConflict') })
+        }
+        info.createDiv({ cls: 'dsh-pm-backup-sub', text: `\`\`\`${b.lang}` })
+        const input = new TextComponent(row)
+        input.inputEl.addClass('dsh-block-input')
+        input.setValue(b.lang)
+        const save = row.createEl('button', { cls: 'dsh-btn', text: t('pm.detail.blockRename') })
+        save.onclick = () => {
+          const v = input.getValue().trim()
+          if (!isValidBlockAlias(v)) {
+            this.ctx.notice.notice(t('blocks.invalid', { lang: v }))
+            return
+          }
+          if (blockSvc.rename(this.pluginId, b.type, v)) {
+            this.ctx.notice.notice(t('pm.detail.blockSaved', { type: b.type, lang: normalizeBlockLang(v) }))
+            void this.render()
+          }
+        }
+      }
     }
     // 操作（可调用能力，仅运行中）
     contentEl.createEl('h4', { cls: 'dsh-pm-section', text: t('pm.detail.actions') })

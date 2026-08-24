@@ -12,6 +12,7 @@ For **developers**: how Harness Like (the host plugin) maps Obsidian's extension
 | Ribbon icons | Host bot icon (opens Chat); sub-plugins can register their own |
 | Status bar | Sub-plugins can add status bar items |
 | `obsidian://` protocol handlers | Single entry `obsidian://harness-like?plugin=<id>&cmd=<name>` routed to sub-plugin handlers (`ctx.protocol.register`) |
+| Custom code blocks | Language `hl:<id>:<type>` (alias-able) routed to sub-plugin renderers (`ctx.blocks.register`); the `hl:` namespace belongs to the host |
 | Editor bridge | `ctx.editor` (selection / insert / replace) |
 | Filesystem | `ctx.vault` (read/write/folders/events `vault/create|modify|delete|rename`) |
 | Workspace | `ctx.workspace` (active file, file-open event) |
@@ -43,4 +44,4 @@ For **developers**: how Harness Like (the host plugin) maps Obsidian's extension
 
 ## What sub-plugins can register
 
-Tools (`ctx.toolsCompat.register`), commands (+ `ctx.commands.execute(id)` to run any registered command, incl. Obsidian core plugin commands), ItemView panels (`ctx.views`), ribbon icons, status bar items, **settings tabs (`ctx.settingsTab.register`)**, **deep links (`ctx.protocol.register`)** — signatures in the [Services Reference](/dev/services). Full walkthrough: [Your First Plugin](/dev/hello-world).
+Tools (`ctx.toolsCompat.register`), commands (+ `ctx.commands.execute(id)` to run any registered command, incl. Obsidian core plugin commands), ItemView panels (`ctx.views`), ribbon icons, status bar items, **settings tabs (`ctx.settingsTab.register`)**, **deep links (`ctx.protocol.register`)**, **custom code blocks (`ctx.blocks.register`)** — signatures in the [Services Reference](/dev/services). Full walkthrough: [Your First Plugin](/dev/hello-world).

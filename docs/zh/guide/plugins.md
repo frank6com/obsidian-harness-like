@@ -29,6 +29,22 @@ obsidian://harness-like?plugin=<子插件id>&cmd=<动作名>&参数=值
 
 例如某子插件提供 `add-task` 动作，则 `obsidian://harness-like?plugin=tasks&cmd=add-task&text=买牛奶` 会在库内执行对应功能。动作不存在或插件未运行时会弹提示说明原因。
 
+## 在笔记中使用子插件的块（```hl:...）
+
+注册了块渲染器的子插件可以把围栏代码块变成富界面：
+
+````md
+```hl:<子插件id>:<类型>
+数据…
+```
+````
+
+例如 ```` ```hl:tasks:board ```` 会交给 tasks 子插件渲染成任务面板。规则：
+
+- 语言串以 `hl:` 开头（Harness Like 命名空间，不会与 mermaid 等原生语言或其他插件冲突）；
+- 插件未运行时块显示占位提示，重新加载即恢复；
+- 在插件管理器 → 详情中可为块改名为 `hl:<短别名>`（如 `hl:board`），改名后旧写法在笔记中显示改名提示。
+
 ## 备份与迁移
 
 子插件 = `.obsidian/harness-like-plugins/<id>/` 下的文件（package.json + main.js）。**备份/迁移 = 复制该目录**：

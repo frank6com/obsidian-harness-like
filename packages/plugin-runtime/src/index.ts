@@ -73,6 +73,7 @@ export function detectCapabilities(code: string): PluginCapabilities {
   if (/addStatusBarItem\s*\(/.test(code)) capabilities.push('statusbar')
   if (/registerSettingTab/.test(code)) capabilities.push('settings')
   if (/protocol\.register\s*\(/.test(code)) capabilities.push('protocol')
+  if (/blocks\.register\s*\(/.test(code)) capabilities.push('block')
   // 视图类型：优先匹配字面量；否则尝试解析常量声明
   // （const VIEW_TYPE = 'xxx' 后 registerView(VIEW_TYPE, …)，打包重命名后仍可按名回溯）
   let viewType = code.match(/registerView\s*\(\s*['"]([^'"]+)['"]/)?.[1]
@@ -149,8 +150,15 @@ export async function loadUserPlugin(
   const baseViews = ctx.get('views') as
     | { registerView(type: string, creator: unknown): () => void }
     | undefined
+  // 块定义强制携带来源插件 id（API 层，不依赖插件作者自觉）：
+  // 子插件 ctx.blocks.register(type, handler) 经此包裹为
+  // register(插件id, type, handler)——实际语言串为 hl:<插件id>:<type> 或别名，
+  // 防止冒充他人命名空间（与命令前缀/协议动作机制同构）。
+  const baseBlocks = ctx.get('blocks') as
+    | { register(pluginId: string, type: string, handler: unknown): () => void }
+    | undefined
   const viewTypes: string[] = []
-  const hasWraps = Boolean(baseCommands || baseProtocol || baseViews)
+  const hasWraps = Boolean(baseCommands || baseProtocol || baseViews || baseBlocks)
   const pluginCtx =
     hasWraps
       ? ctx.extend({
@@ -187,6 +195,13 @@ export async function loadUserPlugin(
                     if (!viewTypes.includes(type)) viewTypes.push(type)
                     return baseViews.registerView(type, creator)
                   },
+                },
+              }
+            : {}),
+          ...(baseBlocks
+            ? {
+                blocks: {
+                  register: (type: string, handler: unknown) => baseBlocks.register(manifest.id, type, handler),
                 },
               }
             : {}),

@@ -55,6 +55,30 @@ export class Setting {
   addSlider() { return this }
 }
 
+/** 单行文本输入组件最小替身（inputEl 带 Obsidian 风格 addClass，并挂载到容器） */
+export class TextComponent {
+  inputEl = (() => {
+    const el = document.createElement('input')
+    ;(el as unknown as { addClass(c: string): void }).addClass = (c: string) => el.classList.add(c)
+    return el
+  })()
+  constructor(public containerEl?: unknown) {
+    if (containerEl && typeof (containerEl as HTMLElement).appendChild === 'function') {
+      ;(containerEl as HTMLElement).appendChild(this.inputEl)
+    }
+  }
+  setValue(v: string): this {
+    this.inputEl.value = v
+    return this
+  }
+  getValue(): string {
+    return this.inputEl.value
+  }
+  onChange(): this {
+    return this
+  }
+}
+
 export class WorkspaceLeaf {}
 export class App {}
 

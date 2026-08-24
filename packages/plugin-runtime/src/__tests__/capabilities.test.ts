@@ -20,9 +20,10 @@ describe('detectCapabilities', () => {
       ctx.statusbar.addStatusBarItem()
       ctx.settings.registerSettingTab(tab)
       ctx.protocol.register('open', (p) => p)
+      ctx.blocks.register('chart', (s, el) => {})
     `
     const d = detectCapabilities(code)
-    expect(d.capabilities).toEqual(expect.arrayContaining(['panel', 'ribbon', 'commands', 'tools', 'statusbar', 'settings', 'protocol']))
+    expect(d.capabilities).toEqual(expect.arrayContaining(['panel', 'ribbon', 'commands', 'tools', 'statusbar', 'settings', 'protocol', 'block']))
     expect(d.viewType).toBe('my-view')
   })
 
@@ -168,5 +169,43 @@ describe('命令前缀强制', () => {
     expect(loaded.viewTypes).toEqual(['runtime-view'])
     await loaded.fiber.dispose()
     expect(unregistered).toEqual(['runtime-view'])
+  })
+
+  it('用户插件块注册自动携带插件 id（loader 注入，防冒充命名空间）', async () => {
+    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'dsh-cap-'))
+    const dir = path.join(root, 'demo-plugin')
+    await fs.promises.mkdir(dir, { recursive: true })
+    await fs.promises.writeFile(
+      path.join(dir, 'package.json'),
+      JSON.stringify({ dsh: { id: 'demo-plugin', version: '0.0.1', entry: 'main.js' } }),
+    )
+    await fs.promises.writeFile(
+      path.join(dir, 'main.js'),
+      [
+        `module.exports = {`,
+        `  inject: ['blocks'],`,
+        `  apply(ctx) {`,
+        `    ctx.effect(() => ctx.blocks.register('chart', () => ({})))`,
+        `  },`,
+        `}`,
+      ].join('\n'),
+    )
+
+    const ctx = new Context()
+    const registered: Array<{ pluginId: string; type: string }> = []
+    ctx.reflect.provide('blocks', {
+      register: (pluginId: string, type: string) => {
+        registered.push({ pluginId, type })
+        return () => {}
+      },
+    })
+
+    const loaded = await loadUserPlugin(ctx, dir, {
+      require: (id) => (id === '@deepseek-ai/cordis' ? cordis : undefined),
+      hostId: 'harness-like',
+    })
+    // 子插件一元签名 register(type, handler) 被包裹为自动携带插件 id 的三元调用
+    expect(registered).toEqual([{ pluginId: 'demo-plugin', type: 'chart' }])
+    await loaded.fiber.dispose()
   })
 })

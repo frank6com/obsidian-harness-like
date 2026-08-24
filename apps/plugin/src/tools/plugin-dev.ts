@@ -114,7 +114,7 @@ module.exports = {
 
 ## 服务与方法速查（唯一权威来源；调用前核对此处，禁止臆测方法名）
 inject 可声明的服务：toolsCompat / commands / views / vault / editor / workspace /
-notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / llmCaller / dshI18n / protocol
+notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / llmCaller / dshI18n / protocol / blocks
 
 - ctx.vault：getMarkdownPaths() -> string[]（vault 相对路径列表）；read(path) -> string；write(path, content)；
   create(path, content)；createFolder(path)（逐层创建）；delete(path)；rename(oldPath, newPath)；
@@ -137,6 +137,14 @@ notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / ll
   前缀（loader 自动注入）。示例：
   ctx.protocol.register('add-task', (p) => ctx.notice.notice(\`收到: \${p.text}\`))
   对应 obsidian://harness-like?plugin=my-plugin&cmd=add-task&text=hello
+- ctx.blocks：register(type, handler(source, el))（注册自定义围栏代码块渲染器，返回 disposer）。
+  实际语言串为 \`hl:<你的插件id>:<type>\`（loader 自动携带插件 id，type 无需前缀；hl: 命名空间
+  归宿主独占，不会与原生语言或其他插件冲突）。用户在笔记中写：
+  \`\`\`hl:my-plugin:chart
+  data...
+  \`\`\`
+  handler 的 el 为空容器 div，向其中填充 DOM 即完成渲染。语言串撞车不报错——该块标记冲突，
+  用户可在插件详情中改名为 hl:<别名> 解除。
 
 ## 可用事件（ctx.on）
 dsh/session/event（会话事件）、dsh/waiting-approval（审批弹窗打开）、workspace/file-open、
@@ -161,6 +169,10 @@ protocol.register 的动作统一走宿主单一入口 obsidian://harness-like�
 以 query 参数 plugin=<插件id>&cmd=<动作名> 路由到对应 handler（loader 自动携带你的插件 id）。
 动作名参数是 cmd 不是 action（action 为 Obsidian 保留字，会被覆盖为入口名）。
 插件停止后深链自动失效（提示"未运行"），重新加载即恢复。
+
+## 块（\`\`\`hl:...）渲染
+blocks.register 的语言串统一为 hl:<你的插件id>:<type>（loader 自动携带插件 id）。
+插件停止后块显示"未运行"占位；改名（详情弹窗）后旧写法显示改名提示。
 
 ## 翻译插件模板（覆盖主插件界面文案，键级覆盖 zh/en，插件停止自动还原）
 

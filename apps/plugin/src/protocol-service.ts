@@ -66,6 +66,15 @@ export class ProtocolService {
     }
   }
 
+  /** 枚举全部已注册动作（管理器详情展示）：[{pluginId, cmd}] */
+  list(): Array<{ pluginId: string; cmd: string }> {
+    const out: Array<{ pluginId: string; cmd: string }> = []
+    for (const [pluginId, cmds] of this.routes) {
+      for (const cmd of cmds.keys()) out.push({ pluginId, cmd })
+    }
+    return out
+  }
+
   /** 统一入口分发：解析路由参数 → 定位 handler → 剥离路由参数后调用 */
   dispatch(raw: Record<string, string>): void {
     const pluginId = typeof raw.plugin === 'string' ? raw.plugin : ''
