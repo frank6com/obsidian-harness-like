@@ -326,6 +326,9 @@ const dict: Record<string, string> = {
   'modal.agentEdit.caps': 'Allowed capabilities',
   'modal.agentEdit.capsDesc': 'Checked = whitelist (only these tools); none checked = base mode default',
   'modal.agentEdit.search': 'Search capabilities…',
+  'modal.agentEdit.persona': 'System prompt (persona)',
+  'modal.agentEdit.personaDesc': "A custom persona written in English. When non-empty it shadows the mode's default prompt; leave empty to use the built-in default.",
+  'settings.agent.fork': 'Fork as template',
 
   'export.defaultTitle': 'Chat Export',
   'export.exportedAt': 'Exported at',

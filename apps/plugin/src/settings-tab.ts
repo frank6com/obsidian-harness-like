@@ -9,6 +9,7 @@ import type HarnessLikePlugin from './main'
 import { AgentEditModal, ConfirmModal, ModelPickModal } from './modals'
 import { buildFilesOverlay } from './plugin-files'
 import { BUILTIN_AGENTS, type AgentPreset } from './settings'
+import { forkAgentDraft } from './agents'
 import { agentDisplayDesc, agentDisplayName, resolveLanguage, setLanguage, t, type LanguagePreference } from './i18n'
 
 export type TabId = 'model' | 'agent' | 'approval' | 'session' | 'data' | 'ui' | 'log' | 'grants'
@@ -406,6 +407,17 @@ export class HarnessLikeSettingsTab extends PluginSettingTab {
         .setDesc(
           `${agentDisplayDesc(a) ?? ''}${a.id === settings.activeAgentId ? t('settings.agent.currentMark') : ''}`,
         )
+      // fork-on-edit：内置不可变——以模板复制出可编辑自定义副本（含当前生效 persona 文本起步）
+      s.addButton((b) =>
+        b.setButtonText(t('settings.agent.fork')).onClick(async () => {
+          const draft = forkAgentDraft(a)
+          await new AgentEditModal(this.app, draft, allTools, (saved) => {
+            settings.agents.push(saved)
+          }).ask()
+          await this.plugin.saveSettings()
+          this.display()
+        }),
+      )
       s.addToggle((t) =>
         t.setValue(a.enabled !== false).onChange(async (v) => {
           a.enabled = v

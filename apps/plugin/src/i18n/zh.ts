@@ -341,6 +341,9 @@ const dict: Record<string, string> = {
   'modal.agentEdit.caps': '可调用的能力',
   'modal.agentEdit.capsDesc': '勾选 = 白名单（仅这些工具可用）；不勾选任何项 = 按基础模式默认',
   'modal.agentEdit.search': '搜索能力…',
+  'modal.agentEdit.persona': '系统提示词（persona）',
+  'modal.agentEdit.personaDesc': '英文撰写的自定义人格，非空时遮蔽该模式默认提示词；留空使用内置默认。',
+  'settings.agent.fork': '以此为模板创建',
 
   // ---------- 导出 ----------
   'export.defaultTitle': '会话导出',

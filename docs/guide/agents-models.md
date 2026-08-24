@@ -17,7 +17,9 @@ Three built-in modes:
 - **Create Mode**: creating/modifying sub-plugins — panels, commands, tools, icons (see [Creating Plugins in Conversation](/guide/plugin-agent)).
 
 - Switch via the agent button (upward menu) in the toolbar; disabled modes are hidden.
-- **Custom agents**: Settings → Agents → "＋ Add Custom Agent", check capability whitelists.
+- **Custom agents**: Settings → Agents → "＋ Add Custom Agent", check capability whitelists, and optionally fill a custom **system prompt (persona)** — written in English; when non-empty it shadows that mode's default prompt, leave empty to use the built-in default.
+- **Fork as template**: built-ins are immutable; click "Fork as template" on a built-in row to copy it into an editable custom agent (starting from its current effective persona text). The original stays untouched as fallback.
+- **Prompt architecture**: the system prompt is assembled in layers — shared identity & safety baseline (identical for all agents) + agent persona + response-language directive (generated dynamically from Obsidian's language) + dynamic context. Built-in personas are maintained as English markdown files and inlined at build time; your reply language is unaffected.
 - **Default agent**: Settings → Agents → Default agent dropdown (enabled ones only).
 
 ## Models

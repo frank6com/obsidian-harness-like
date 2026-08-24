@@ -814,6 +814,15 @@ input.dsh-block-input {
   background: var(--background-secondary);
 }
 
+/* 智能体编辑弹窗：persona 多行输入 */
+textarea.dsh-persona-input {
+  width: 100%;
+  min-height: 120px;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  resize: vertical;
+}
+
 .dsh-pm-empty {
   color: var(--text-muted);
   font-size: 13px;

@@ -15,6 +15,11 @@ export interface AgentPreset {
   capabilities?: string[]
   /** 是否在对话面板可选（默认 true） */
   enabled?: boolean
+  /**
+   * 自定义智能体 persona（英文撰写；非空白时遮蔽内置 md persona——scoped shadow 模型）。
+   * 内置智能体不持久化此字段（persona 以 src/agents/*.md 随构建内联，fork 时才复制为文本）。
+   */
+  systemPrompt?: string
 }
 
 export const BUILTIN_AGENTS: AgentPreset[] = [
@@ -235,10 +240,19 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
   const agents = Array.isArray(r.agents)
     ? (r.agents as AgentPreset[]).filter((a) => a && typeof a.id === 'string')
     : []
-  // 内置智能体的名称/描述/模式强制对齐 BUILTIN_AGENTS（旧数据可能存了旧名）
+  // 内置智能体的名称/描述/模式强制对齐 BUILTIN_AGENTS（旧数据可能存了旧名）；
+  // 内置不持久化 systemPrompt（persona 由 md 文件承载），自定义保留非空白文本
   base.agents = (agents.length ? agents : BUILTIN_AGENTS.map((a) => ({ ...a }))).map((a) => {
     const builtin = BUILTIN_AGENTS.find((b) => b.id === a.id)
-    return builtin ? { ...a, ...builtin, enabled: a.enabled !== false } : { ...a, enabled: a.enabled !== false }
+    if (builtin) return { ...a, ...builtin, enabled: a.enabled !== false }
+    const sp = typeof (a as { systemPrompt?: unknown }).systemPrompt === 'string'
+      ? (a as { systemPrompt: string }).systemPrompt.trim()
+      : ''
+    return {
+      ...a,
+      enabled: a.enabled !== false,
+      ...(sp ? { systemPrompt: sp } : {}),
+    }
   })
   const legacyMode = (['chat', 'edit', 'create'] as const).includes(r.agentMode as never)
     ? (r.agentMode as AgentMode)

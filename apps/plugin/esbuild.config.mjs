@@ -81,6 +81,8 @@ const options = {
   target: 'es2022',
   // obsidian 由 Obsidian 运行时提供；node 内置模块保持 external（platform: node）
   external: ['obsidian', 'electron'],
+  // 智能体提示词以 md 文件维护（src/agents/*.md），构建期内联为字符串
+  loader: { '.md': 'text' },
   sourcemap: 'inline',
   logLevel: 'info',
   plugins: [nodeShimPlugin, syncPlugin],

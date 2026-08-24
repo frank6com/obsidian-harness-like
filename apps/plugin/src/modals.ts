@@ -308,13 +308,15 @@ export class ModelPickModal extends Modal {
 }
 
 
-/** 智能体编辑弹窗（创建/编辑通用）：名称/描述/基础模式/能力勾选（checkbox） */
+/** 智能体编辑弹窗（创建/编辑通用）：名称/描述/基础模式/能力勾选（checkbox）/自定义 persona（仅自定义智能体） */
 export class AgentEditModal extends Modal {
   private name: string
   private description: string
   private mode: AgentMode
   private caps: Set<string>
   private keyword = ''
+  /** 自定义 persona 草稿（英文撰写；空 = 不遮蔽内置 md） */
+  private systemPrompt = ''
 
   constructor(
     app: App,
@@ -327,6 +329,7 @@ export class AgentEditModal extends Modal {
     this.description = agent.description ?? ''
     this.mode = agent.mode
     this.caps = new Set(agent.capabilities ?? [])
+    this.systemPrompt = agent.systemPrompt ?? ''
   }
 
   override onOpen(): void {
@@ -373,15 +376,31 @@ export class AgentEditModal extends Modal {
     this.capsEl = contentEl.createDiv({ cls: 'dsh-modal-list dsh-modal-list-tall' })
     this.renderCaps()
 
+    // 自定义 persona（仅自定义智能体；内置 persona 由 src/agents/*.md 承载，fork 时复制进来）
+    if (this.agent.id.startsWith('agent-')) {
+      new Setting(contentEl)
+        .setName(t('modal.agentEdit.persona'))
+        .setDesc(t('modal.agentEdit.personaDesc'))
+        .addTextArea((ta) => {
+          ta.setValue(this.systemPrompt).onChange((v) => {
+            this.systemPrompt = v
+          })
+          ta.inputEl.addClass('dsh-persona-input')
+          return ta
+        })
+    }
+
     new Setting(contentEl)
       .addButton((b) =>
         b.setButtonText(t('common.save')).setCta().onClick(() => {
+          const sp = this.systemPrompt.trim()
           this.onSave({
             ...this.agent,
             name: this.name.trim() || t('agent.unnamed'),
             description: this.description.trim() || undefined,
             mode: this.mode,
             capabilities: this.caps.size ? [...this.caps] : undefined,
+            ...(sp ? { systemPrompt: sp } : {}),
           })
           this.finish()
         }),

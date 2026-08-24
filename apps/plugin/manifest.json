@@ -1,7 +1,7 @@
 {
   "id": "harness-like",
   "name": "Harness Like",
-  "version": "0.44.0",
+  "version": "0.45.0",
   "minAppVersion": "1.5.0",
   "description": "DeepSeek Harness 理念的桌面端实现：内置 Cordis 插件体系与 AI agent，可带审批读写笔记，并支持在对话内创建 Cordis 插件。中英文界面。 / Desktop implementation inspired by DeepSeek Harness: Cordis plugin system, AI agent with approved note access, in-chat plugin creation. UI in Chinese & English.",
   "author": "frank6com",
