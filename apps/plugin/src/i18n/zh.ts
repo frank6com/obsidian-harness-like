@@ -336,13 +336,12 @@ const dict: Record<string, string> = {
   'modal.agentEdit.edit': '编辑智能体',
   'modal.agentEdit.name': '名称',
   'modal.agentEdit.desc': '描述',
-  'modal.agentEdit.mode': '基础模式',
-  'modal.agentEdit.modeDesc': '未勾选能力时按此模式过滤工具',
   'modal.agentEdit.caps': '可调用的能力',
-  'modal.agentEdit.capsDesc': '勾选 = 白名单（仅这些工具可用）；不勾选任何项 = 按基础模式默认',
+  'modal.agentEdit.capsDesc': '勾选 = 白名单（仅这些工具可用）；不勾选任何项 = 按来源模式默认（模板创建继承模板，从零新建为修编）',
   'modal.agentEdit.search': '搜索能力…',
   'modal.agentEdit.persona': '系统提示词（persona）',
   'modal.agentEdit.personaDesc': '英文撰写的自定义人格，非空时遮蔽该模式默认提示词；留空使用内置默认。',
+  'modal.agentEdit.personaPlaceholder': 'You are … (custom persona, written in English)',
   'settings.agent.fork': '以此为模板创建',
 
   // ---------- 导出 ----------

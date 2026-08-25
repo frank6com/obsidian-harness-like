@@ -814,12 +814,16 @@ input.dsh-block-input {
   background: var(--background-secondary);
 }
 
-/* 智能体编辑弹窗：persona 多行输入 */
+/* 智能体编辑弹窗：persona 全宽多行输入（标题行下方独占整行，便于长文本编辑） */
 textarea.dsh-persona-input {
+  display: block;
   width: 100%;
-  min-height: 120px;
+  min-height: 180px;
+  margin-top: 4px;
+  padding: 8px 10px;
   font-family: var(--font-monospace);
   font-size: 12px;
+  line-height: 1.5;
   resize: vertical;
 }
 

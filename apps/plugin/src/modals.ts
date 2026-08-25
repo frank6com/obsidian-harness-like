@@ -5,7 +5,7 @@
 import { App, Modal, Setting, TextComponent } from 'obsidian'
 import * as path from 'path'
 import type { Context } from '@deepseek-ai/cordis'
-import type { AgentMode, AgentPreset } from './settings'
+import type { AgentPreset } from './settings'
 import type { GrantMode } from '@harness-like/harness-base'
 import { isValidBlockAlias, normalizeBlockLang, BLOCK_LANG_PREFIX, BlockService } from './block-service'
 import { t } from './i18n'
@@ -308,11 +308,11 @@ export class ModelPickModal extends Modal {
 }
 
 
-/** 智能体编辑弹窗（创建/编辑通用）：名称/描述/基础模式/能力勾选（checkbox）/自定义 persona（仅自定义智能体） */
+/** 智能体编辑弹窗（创建/编辑通用）：名称/描述/能力勾选（checkbox）/自定义 persona（仅自定义智能体）。
+ * 基础模式不再在弹窗内选择——由「以此为模板创建」继承模板模式，从零新建固定为修编（能力白名单才是工具控制面）。 */
 export class AgentEditModal extends Modal {
   private name: string
   private description: string
-  private mode: AgentMode
   private caps: Set<string>
   private keyword = ''
   /** 自定义 persona 草稿（英文撰写；空 = 不遮蔽内置 md） */
@@ -327,7 +327,6 @@ export class AgentEditModal extends Modal {
     super(app)
     this.name = agent.name
     this.description = agent.description ?? ''
-    this.mode = agent.mode
     this.caps = new Set(agent.capabilities ?? [])
     this.systemPrompt = agent.systemPrompt ?? ''
   }
@@ -350,20 +349,6 @@ export class AgentEditModal extends Modal {
           this.description = v
         }),
       )
-    new Setting(contentEl)
-      .setName(t('modal.agentEdit.mode'))
-      .setDesc(t('modal.agentEdit.modeDesc'))
-      .addDropdown((d) =>
-        d
-          .addOption('chat', t('agent.mode.chat'))
-          .addOption('edit', t('agent.mode.edit'))
-          .addOption('create', t('agent.mode.create'))
-          .setValue(this.mode)
-          .onChange((v) => {
-            this.mode = v as AgentMode
-          }),
-      )
-
     new Setting(contentEl).setName(t('modal.agentEdit.caps')).setDesc(t('modal.agentEdit.capsDesc'))
     const search = contentEl.createEl('input', {
       cls: 'dsh-modal-search',
@@ -376,18 +361,19 @@ export class AgentEditModal extends Modal {
     this.capsEl = contentEl.createDiv({ cls: 'dsh-modal-list dsh-modal-list-tall' })
     this.renderCaps()
 
-    // 自定义 persona（仅自定义智能体；内置 persona 由 src/agents/*.md 承载，fork 时复制进来）
+    // 自定义 persona（仅自定义智能体；内置 persona 由 src/agents/*.md 承载，fork 时复制进来）。
+    // 标题行 + 全宽多行输入（不放 Setting 右侧——长文本编辑需要整行宽度）
     if (this.agent.id.startsWith('agent-')) {
       new Setting(contentEl)
         .setName(t('modal.agentEdit.persona'))
         .setDesc(t('modal.agentEdit.personaDesc'))
-        .addTextArea((ta) => {
-          ta.setValue(this.systemPrompt).onChange((v) => {
-            this.systemPrompt = v
-          })
-          ta.inputEl.addClass('dsh-persona-input')
-          return ta
-        })
+        .setHeading()
+      const ta = contentEl.createEl('textarea', { cls: 'dsh-persona-input' })
+      ta.value = this.systemPrompt
+      ta.placeholder = t('modal.agentEdit.personaPlaceholder')
+      ta.addEventListener('input', () => {
+        this.systemPrompt = ta.value
+      })
     }
 
     new Setting(contentEl)
@@ -398,7 +384,6 @@ export class AgentEditModal extends Modal {
             ...this.agent,
             name: this.name.trim() || t('agent.unnamed'),
             description: this.description.trim() || undefined,
-            mode: this.mode,
             capabilities: this.caps.size ? [...this.caps] : undefined,
             ...(sp ? { systemPrompt: sp } : {}),
           })
