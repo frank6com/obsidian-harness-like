@@ -792,8 +792,8 @@ export class PluginDetailModal extends Modal {
     } catch {
       const ta = document.createElement('textarea')
       ta.value = text
-      ta.style.position = 'fixed'
-      ta.style.opacity = '0'
+      // 规则要求：样式用 setCssStyles（等价 CSS 类），不直接赋值 style.*
+      ta.setCssStyles({ position: 'fixed', opacity: '0', left: '-9999px' })
       document.body.appendChild(ta)
       ta.select()
       try {

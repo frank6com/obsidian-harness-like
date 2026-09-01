@@ -1,6 +1,6 @@
 {
   "name": "harness-like-plugin",
-  "version": "0.46.0",
+  "version": "0.46.1",
   "private": true,
   "main": "dist/main.js",
   "scripts": {
