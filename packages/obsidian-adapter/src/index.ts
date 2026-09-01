@@ -83,6 +83,13 @@ export class EditorService {
     this.provider()?.insertText(text)
   }
 
+  /** 插入整块内容；provider 未实现 insertBlock 时回退到 insertText */
+  insertBlock(text: string): void {
+    const p = this.provider()
+    if (p?.insertBlock) p.insertBlock(text)
+    else p?.insertText(text)
+  }
+
   replaceSelection(text: string): void {
     this.provider()?.replaceSelection(text)
   }

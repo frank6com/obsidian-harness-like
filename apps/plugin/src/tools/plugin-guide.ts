@@ -119,14 +119,17 @@ notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / ll
   前缀（loader 自动注入）。示例：
   ctx.protocol.register('add-task', (p) => ctx.notice.notice(\`收到: \${p.text}\`))
   对应 obsidian://harness-like?plugin=my-plugin&cmd=add-task&text=hello
-- ctx.blocks：register(type, handler(source, el))（注册自定义围栏代码块渲染器，返回 disposer）。
-  实际语言串为 \`hl:<你的插件id>:<type>\`（loader 自动携带插件 id，type 无需前缀；hl: 命名空间
-  归宿主独占，不会与原生语言或其他插件冲突）。用户在笔记中写：
-  \`\`\`hl:my-plugin:chart
+- ctx.blocks：register(type, handler(source, el, ctx, meta))（注册自定义围栏代码块渲染器，返回 disposer）。
+  笔记写法（loader 自动携带插件 id，type 无需前缀）：
+  \`\`\`hl <你的插件id>[:<type>] [参数...]
   data...
   \`\`\`
-  handler 的 el 为空容器 div，向其中填充 DOM 即完成渲染。语言串撞车不报错——该块标记冲突，
-  用户可在插件详情中改名为 hl:<别名> 解除。`
+  · type 可省略：注册了名为 default 的 type，或该插件只注册了一个 type 时，可写成
+    \`\`\`hl <你的插件id>；注册多个 type 时必须显式指定，否则渲染"请指定类型"占位
+  · 参数均可选且顺序无关：k:v / k=v / k:"含 空格 的值" / --flag / --k=v / 裸词
+  · handler 的 el 为空容器 div，填充 DOM 即完成渲染；meta = { info, pluginId, type,
+    params, flags, positional, line }（flags 小写归一，params 的 key 保留原样）
+  · hl 命名空间归宿主独占，不会与原生语言（html/mermaid…）冲突；插件停止显示"未运行"占位`
 
 /** 可用事件 */
 export const CH_EVENTS = `## 可用事件（ctx.on）
@@ -156,10 +159,26 @@ protocol.register 的动作统一走宿主单一入口 obsidian://harness-like�
 动作名参数是 cmd 不是 action（action 为 Obsidian 保留字，会被覆盖为入口名）。
 插件停止后深链自动失效（提示"未运行"），重新加载即恢复。`
 
-/** 块（```hl:...）渲染 */
-export const CH_BLOCKS = `## 块（\`\`\`hl:...）渲染
-blocks.register 的语言串统一为 hl:<你的插件id>:<type>（loader 自动携带插件 id）。
-插件停止后块显示"未运行"占位；改名（详情弹窗）后旧写法显示改名提示。`
+/** 块（```hl ...）渲染 */
+export const CH_BLOCKS = `## 块（\`\`\`hl ...）渲染
+blocks.register(type, handler) 注册的块，在笔记中这样写：
+
+\`\`\`hl <你的插件id>[:<type>] [参数...]
+块内容（原样交给 handler 的 source）
+\`\`\`
+
+- type 省略规则：注册了名为 default 的 type、或该插件只注册了一个 type 时，可写成
+  \`\`\`hl <你的插件id>；注册了多个 type 时必须显式指定，否则渲染"请指定类型"占位。
+- 参数全部可选且顺序无关：
+  · k:v 或 k=v        → meta.params.k = 'v'
+  · k:"含 空格 的值"  → 单/双引号包裹，内部支持 \\" 转义
+  · --flag            → meta.flags 含 'flag'（小写归一）
+  · --k=v             → meta.params.k = 'v'
+  · 其余裸词          → 进入 meta.positional 数组
+- handler 签名：(source, el, ctx, meta)；meta = { info, pluginId, type, params, flags,
+  positional, line }。el 为空容器 div，向其中填充 DOM 即完成渲染。
+- 插件停止后显示"未运行"占位；旧写法 \`\`\`hl:<你的插件id>:<type> 已不支持，会提示新写法。
+- 用户可在插件详情里为该插件设置【插件别名】，之后 \`\`\`hl <别名>[:<type>] 同样路由到你。`
 
 /** 翻译插件模板 */
 export const CH_TRANSLATION = `## 翻译插件模板（覆盖主插件界面文案，键级覆盖 zh/en，插件停止自动还原）

@@ -9,6 +9,12 @@ export interface EditorLike {
   replaceSelection(text: string): void
   /** 当前选中文本（Obsidian Editor.getSelection 语义） */
   getSelection(): string | null
+  /**
+   * 可选增强：插入整块内容（如围栏代码块模板）时保证独占若干行——
+   * 光标不在行首且当前行非空时自动补换行，避免内容粘在行尾。
+   * 未提供时由 EditorService 回退到 insertText。
+   */
+  insertBlock?(text: string): void
 }
 
 export interface VaultLike {
@@ -73,7 +79,17 @@ export interface ProtocolLike {
   registerObsidianProtocolHandler(action: string, handler: (params: Record<string, string>) => unknown): void
 }
 
-/** 围栏代码块处理器注册（Plugin.registerMarkdownCodeBlockProcessor 的结构描述，无单个语言注销 API） */
+/**
+ * 围栏代码块处理器注册（Plugin.registerMarkdownCodeBlockProcessor 的结构描述，无单个语言注销 API）。
+ *
+ * 关键约束（2026-09-01 dev-vault 实测）：Obsidian 的查找键是
+ *     info.split(/\s+/)[0].split(':')[0]
+ * 即"首个空白 token 再砍掉第一个冒号之后的全部"。因此：
+ *   1. 只有裸 'hl' 这一个注册点会生效，'hl:x:y' 之类的注册永不触发；
+ *   2. 空格后的参数被原生剥掉，handler 入参里没有——需靠 ctx.getSectionInfo 反查；
+ *   3. 注册裸 'hl' 即独占整个 hl 命名空间（第三方重复注册会失败）。
+ * 宿主据此只注册一次详见 apps/plugin/src/block-service.ts。
+ */
 export interface CodeBlockProcessorLike {
   registerProcessor(
     language: string,

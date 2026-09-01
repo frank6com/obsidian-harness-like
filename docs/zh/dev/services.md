@@ -15,7 +15,7 @@
 - **toolsCompat**：`register({ name, description, input, execute })`（execute 返回 JSON 可序列化对象）
 - **settings**：`get(key, fallback)` / `set(key, value)`；`registerSettingTab(tab)`
 - **protocol**：`register(cmd, handler(params))` —— 注册 obsidian:// 深链动作，返回 disposer。入口 URL：`obsidian://harness-like?plugin=<你的插件id>&cmd=<动作名>&key=value`（loader 自动携带插件 id；params 为其余 query 透传，字符串值，已剥离 plugin/cmd；无值参数为 `"true"`）。动作参数是 `cmd` 不是 `action`——Obsidian 保留 action 且恒覆盖为入口名
-- **blocks**：`register(type, handler(source, el))` —— 注册自定义围栏代码块渲染器，返回 disposer。实际语言串为 `hl:<你的插件id>:<type>`（loader 自动携带插件 id；`hl:` 命名空间归宿主独占，不与原生语言或其他插件冲突）。用户在笔记中写 ```` ```hl:my-plugin:chart ```` 后，handler 收到块内文本与空容器 div，填充 DOM 即完成渲染。语言串撞车不报错——该块标记冲突，可在插件详情弹窗改名为 `hl:<别名>` 解除
+- **blocks**：`register(type, handler(source, el, ctx, meta))` —— 注册自定义围栏代码块渲染器，返回 disposer。笔记写法 ```` ```hl <插件id>[:<type>] [参数...] ````（loader 自动携带插件 id；`hl` 命名空间归宿主独占，不与 `html`/`mermaid` 等原生语言冲突）。type 可省略（注册了名为 `default` 的 type，或该插件只注册了一个 type 时）。参数可选且顺序无关：`k:v`、`k=v`、`k:"含 空格 的值"`、`--flag`、`--k=v`、裸词，分别落入 `meta.params` / `meta.flags`（小写归一）/ `meta.positional`；`meta` 另含 `info`、`pluginId`、`type`、`line`。插件停止后显示"未运行"占位；旧写法 ```` ```hl:<插件id>:<type> ```` 已不支持。用户可在插件详情设置【笔记别名】，之后 ```` ```hl <别名>[:<type>] ```` 同样路由到你的 handler
 - **sandbox / approval / sessionLog / llmCaller / dshI18n**：见对应章节
 
 ## 事件（ctx.on）

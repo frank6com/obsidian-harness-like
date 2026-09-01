@@ -151,9 +151,9 @@ export async function loadUserPlugin(
     | { registerView(type: string, creator: unknown): () => void }
     | undefined
   // 块定义强制携带来源插件 id（API 层，不依赖插件作者自觉）：
-  // 子插件 ctx.blocks.register(type, handler) 经此包裹为
-  // register(插件id, type, handler)——实际语言串为 hl:<插件id>:<type> 或别名，
-  // 防止冒充他人命名空间（与命令前缀/协议动作机制同构）。
+  // 子插件 ctx.blocks.register(type, handler) 经此包裹为 register(插件id, type, handler)，
+  // 笔记中对应 ```hl <插件id 或 别名>[:<type>] [参数...]（宿主只向原生注册一次裸 hl，
+  // 路由与参数解析全部在内存表完成），防止冒充他人命名空间（与命令前缀/协议动作机制同构）。
   const baseBlocks = ctx.get('blocks') as
     | { register(pluginId: string, type: string, handler: unknown): () => void }
     | undefined

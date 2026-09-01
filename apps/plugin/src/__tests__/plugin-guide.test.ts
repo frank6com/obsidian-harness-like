@@ -40,13 +40,15 @@ describe('PLUGIN_GUIDE 章节化（0.44.0）', () => {
     expect(CH_SERVICES).toContain('/ blocks')
     expect(CH_SERVICES).toContain('ctx.protocol.register')
     expect(CH_SERVICES).toContain('ctx.blocks：register')
-    expect(CH_SERVICES).toContain('hl:<你的插件id>:<type>')
+    expect(CH_SERVICES).toContain('```hl <你的插件id>[:<type>]')
     // 铁律五条
     for (const rule of ['1.', '2.', '3.', '4.', '5.']) {
       expect(PLUGIN_GUIDE).toMatch(new RegExp(`铁律[\\s\\S]*${rule} `))
     }
-    // 块章节：语言串形态与占位行为
-    expect(CH_BLOCKS).toContain('hl:<你的插件id>:<type>')
+    // 块章节：新语法形态、参数规范、别名与旧写法提示
+    expect(CH_BLOCKS).toContain('```hl <你的插件id>[:<type>] [参数...]')
+    expect(CH_BLOCKS).toContain('meta.params')
+    expect(CH_BLOCKS).toContain('插件别名')
     expect(CH_BLOCKS).toContain('未运行')
   })
 
