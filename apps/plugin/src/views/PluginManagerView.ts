@@ -145,6 +145,9 @@ export class PluginManagerView extends ItemView {
       // 插件名 + 复制按钮：复制 id 便于在对话中引用（agent 工具参数即 plugin_id）
       const nameEl = info.createDiv({ cls: 'dsh-pm-name' })
       nameEl.createSpan({ text: `${id}${rec.manifest ? ` v${rec.manifest.version}` : ''}` })
+      // 别名徽章：提示该插件在笔记里可用短写法 ```hl <别名>
+      const alias = this.ctx.blockAliases?.get(id)
+      if (alias) nameEl.createSpan({ cls: 'dsh-pm-alias', text: `·${alias}` })
       const copyId = nameEl.createEl('button', {
         cls: 'dsh-pm-copy-id',
         text: '⧉',

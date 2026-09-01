@@ -42,8 +42,8 @@ import { setLanguage } from '../i18n'
 type Rec = Record<string, unknown>
 
 function makeView(recs: Rec): PluginManagerView
-function makeView(recs: Rec[]): PluginManagerView
-function makeView(recs: Rec | Rec[]): PluginManagerView {
+function makeView(recs: Rec[], aliases?: Record<string, string>): PluginManagerView
+function makeView(recs: Rec | Rec[], aliases: Record<string, string> = {}): PluginManagerView {
   polyfillObsidianDom()
   const list = Array.isArray(recs) ? recs : [recs]
   const byId = new Map(list.map((r) => [r.id as string, r]))
@@ -60,6 +60,7 @@ function makeView(recs: Rec | Rec[]): PluginManagerView {
     settings: { get: (_k: string, d: unknown) => d, set: () => {} },
     views: { open: () => {} },
     commands: { execute: () => {} },
+    blockAliases: { get: (id: string) => aliases[id] },
   }
   return new PluginManagerView({} as never, ctx as never, { openFolder: () => {} })
 }
@@ -92,6 +93,24 @@ describe('插件管理器：复制插件 ID 按钮（0.39.0）', () => {
     await new Promise((r) => setTimeout(r, 0))
     expect(writeText).toHaveBeenCalledWith('demo-plugin')
     expect(btn.textContent).toBe('✓')
+  })
+})
+
+describe('插件管理器：别名徽章', () => {
+  const base = { manifest: null, capabilities: [], viewType: null, error: null }
+
+  it('设置了别名的插件在名称后显示 ·别名，未设置的没有徽章', async () => {
+    const view = makeView(
+      [
+        { ...base, id: 'demo', status: 'running' },
+        { ...base, id: 'plain', status: 'running' },
+      ],
+      { demo: 'd' },
+    )
+    await view.onOpen()
+    const names = [...view.contentEl.querySelectorAll('.dsh-pm-name')]
+    expect(names[0]!.querySelector('.dsh-pm-alias')?.textContent).toBe('·d')
+    expect(names[1]!.querySelector('.dsh-pm-alias')).toBeNull()
   })
 })
 
@@ -227,17 +246,24 @@ describe('已删除插件弹窗：清空全部 + 单项永久删除', () => {
   })
 })
 
-describe('插件详情弹窗：块语言名分区与改名', () => {
+describe('插件详情弹窗：块渲染分区（语法示例 / 复制 / 插入）', () => {
   beforeEach(() => {
     document.body.innerHTML = ''
     polyfillObsidianDom()
     setLanguage('zh')
   })
 
-  function makeDetailModal(opts: {
-    blocks: Array<{ pluginId: string; type: string; lang: string; status: string }>
-    rename?: (pluginId: string, type: string, alias: string) => boolean
-  }) {
+  /** 默认无活动编辑器（activeEditor = null）、无别名 */
+  function makeDetailModal(
+    blocks: Array<{ pluginId: string; type: string }>,
+    editor: {
+      activeEditor: unknown
+      insertText: (t: string) => void
+      insertBlock?: (t: string) => void
+      getSelection: () => string | null
+    } = { activeEditor: null, insertText: () => {}, getSelection: () => null },
+    aliases?: { current?: string; set?: (a: string) => { ok: boolean; alias?: string; reason?: string } },
+  ) {
     const notices: string[] = []
     const ctx = {
       pluginRuntime: {
@@ -249,53 +275,135 @@ describe('插件详情弹窗：块语言名分区与改名', () => {
         }),
         inspect: () => ({ id: 'demo', status: 'stopped' }),
       },
-      blocks: { list: vi.fn(() => opts.blocks), rename: opts.rename ?? (() => true) },
+      blocks: { list: vi.fn(() => blocks) },
+      editor,
+      blockAliases: {
+        get: () => aliases?.current,
+        set: aliases?.set ?? (() => ({ ok: true, alias: '' })),
+      },
       notice: { notice: (m: string) => notices.push(m) },
       pluginBackups: { list: async () => [] },
     }
     return { modal: new PluginDetailModal({} as never, ctx as never, 'demo'), notices }
   }
 
-  it('渲染块行（类型/语言串/冲突徽章），输入框预填当前语言串', async () => {
-    const { modal } = makeDetailModal({
-      blocks: [
-        { pluginId: 'demo', type: 'chart', lang: 'hl:demo:chart', status: 'active' },
-        { pluginId: 'demo', type: 'table', lang: 'hl:x', status: 'conflict' },
-      ],
-    })
-    await (modal as unknown as { render(): Promise<void> }).render()
+  const render = (modal: PluginDetailModal): Promise<void> =>
+    (modal as unknown as { render(): Promise<void> }).render()
+
+  const findBtn = (modal: PluginDetailModal, text: string): HTMLButtonElement =>
+    [...modal.contentEl.querySelectorAll('.dsh-block-actions button')].find(
+      (b) => b.textContent === text,
+    ) as HTMLButtonElement
+
+  it('每个块类型一行；默认 type 省略 :type；不再有改名输入框', async () => {
+    const { modal } = makeDetailModal([
+      { pluginId: 'demo', type: 'chart' },
+      { pluginId: 'demo', type: 'default' },
+      { pluginId: 'other', type: 'x' }, // 其它插件的块应被过滤
+    ])
+    await render(modal)
     expect(modal.contentEl.querySelector('h4.dsh-pm-section')?.textContent).toBeTruthy()
     const rows = modal.contentEl.querySelectorAll('.dsh-block-row')
     expect(rows.length).toBe(2)
-    expect(rows[0]!.querySelector('.dsh-pm-backup-sub')?.textContent).toBe('```hl:demo:chart')
-    expect((rows[1]!.querySelector('input') as HTMLInputElement).value).toBe('hl:x')
-    expect(rows[1]!.textContent).toContain('冲突')
-    // 无块注册的其他插件不渲染该分区——由 filter 保证，此处验证空列表情形
-    const { modal: empty } = makeDetailModal({ blocks: [] })
-    await (empty as unknown as { render(): Promise<void> }).render()
-    expect(empty.contentEl.querySelectorAll('.dsh-block-row').length).toBe(0)
+    expect(rows[0]!.querySelector('.dsh-pm-backup-sub')?.textContent).toBe('```hl demo:chart')
+    // default 为默认 type → 笔记里可省略
+    expect(rows[1]!.querySelector('.dsh-pm-backup-sub')?.textContent).toBe('```hl demo')
+    expect(modal.contentEl.querySelector('.dsh-block-row input')).toBeNull()
   })
 
-  it('保存非法值提示且不调用 rename；合法值调用 rename 并刷新', async () => {
-    const rename = vi.fn(() => true)
-    const { modal, notices } = makeDetailModal({
-      blocks: [{ pluginId: 'demo', type: 'chart', lang: 'hl:demo:chart', status: 'active' }],
-      rename,
+  it('唯一 type 时同样可省略 :type', async () => {
+    const { modal } = makeDetailModal([{ pluginId: 'demo', type: 'chart' }])
+    await render(modal)
+    expect(modal.contentEl.querySelector('.dsh-block-row .dsh-pm-backup-sub')?.textContent).toBe(
+      '```hl demo',
+    )
+  })
+
+  it('无块注册时不渲染该分区', async () => {
+    const { modal } = makeDetailModal([])
+    await render(modal)
+    expect(modal.contentEl.querySelectorAll('.dsh-block-row').length).toBe(0)
+  })
+
+  it('无活动编辑器时点击插入给出提示而非静默失败（按钮不禁用：编辑器状态会随切笔记/切模式变化）', async () => {
+    const { modal, notices } = makeDetailModal([{ pluginId: 'demo', type: 'chart' }])
+    await render(modal)
+    const btn = findBtn(modal, '插入')
+    expect(btn.disabled).toBe(false)
+    btn.click()
+    expect(notices.some((n) => n.includes('没有打开的笔记'))).toBe(true)
+  })
+
+  it('插入空块模板；有选中文本时把选中内容包进块里', async () => {
+    const inserted: string[] = []
+    const withEditor = (selection: string | null) =>
+      makeDetailModal([{ pluginId: 'demo', type: 'chart' }], {
+        activeEditor: { filePath: 'a.md' },
+        insertText: () => {},
+        insertBlock: (t) => inserted.push(t),
+        getSelection: () => selection,
+      })
+
+    const { modal, notices } = withEditor(null)
+    await render(modal)
+    findBtn(modal, '插入').click()
+    expect(inserted).toEqual(['```hl demo\n\n```\n\n'])
+    expect(notices.some((n) => n.includes('已插入'))).toBe(true)
+
+    const second = withEditor('hello')
+    await render(second.modal)
+    findBtn(second.modal, '插入').click()
+    expect(inserted[1]).toBe('```hl demo\nhello\n```\n\n')
+  })
+
+  it('provider 未实现 insertBlock 时回退到 insertText', async () => {
+    const inserted: string[] = []
+    const { modal } = makeDetailModal([{ pluginId: 'demo', type: 'chart' }], {
+      activeEditor: { filePath: 'a.md' },
+      insertText: (t) => inserted.push(t),
+      getSelection: () => null,
     })
-    await (modal as unknown as { render(): Promise<void> }).render()
-    const row = modal.contentEl.querySelector('.dsh-block-row')!
-    const input = row.querySelector('input') as HTMLInputElement
-    const save = [...row.querySelectorAll('button')].find((b) => b.textContent === '保存') as HTMLButtonElement
+    await render(modal)
+    findBtn(modal, '插入').click()
+    expect(inserted).toEqual(['```hl demo\n\n```\n\n'])
+  })
 
-    input.value = 'no-prefix'
-    save.click()
-    expect(rename).not.toHaveBeenCalled()
-    expect(notices.some((n) => n.includes('非法'))).toBe(true)
+  it('复制写入剪贴板', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const { modal, notices } = makeDetailModal([{ pluginId: 'demo', type: 'chart' }])
+    await render(modal)
+    findBtn(modal, '复制').click()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(writeText).toHaveBeenCalledWith('```hl demo\n\n```')
+    expect(notices.some((n) => n.includes('已复制'))).toBe(true)
+  })
 
-    input.value = 'HL:NC'
+  it('有别名时模板用别名生成最短写法，输入框回填当前别名', async () => {
+    const { modal } = makeDetailModal([{ pluginId: 'demo', type: 'chart' }], undefined, {
+      current: 'd',
+    })
+    await render(modal)
+    expect(modal.contentEl.querySelector('.dsh-block-row .dsh-pm-backup-sub')?.textContent).toBe(
+      '```hl d',
+    )
+    expect((modal.contentEl.querySelector('.dsh-block-input') as HTMLInputElement).value).toBe('d')
+  })
+
+  it('保存别名：失败时按原因提示，不静默', async () => {
+    const set = vi.fn(() => ({ ok: false, reason: 'takenById' }))
+    const { modal, notices } = makeDetailModal([{ pluginId: 'demo', type: 'chart' }], undefined, {
+      set,
+    })
+    await render(modal)
+    const input = modal.contentEl.querySelector('.dsh-block-input') as HTMLInputElement
+    input.value = 'other'
+    const save = [...modal.contentEl.querySelectorAll('.dsh-block-alias button')].find(
+      (b) => b.textContent === '保存',
+    ) as HTMLButtonElement
     save.click()
-    expect(rename).toHaveBeenCalledWith('demo', 'chart', 'HL:NC')
-    expect(notices.some((n) => n.includes('hl:nc'))).toBe(true)
+    expect(set).toHaveBeenCalledWith('demo', 'other')
+    expect(notices.some((n) => n.includes('不能与插件 id'))).toBe(true)
   })
 })
 

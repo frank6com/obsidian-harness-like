@@ -775,10 +775,64 @@
   text-align: left;
 }
 
-/* 块定义（ctx.blocks）：详情弹窗改名行 + 笔记占位符 */
+/* 块定义（ctx.blocks）：详情弹窗语法行 + 别名行 + 笔记占位符 */
 .dsh-block-list {
   display: flex;
   flex-direction: column;
+}
+
+/* 语法行右侧的复制 / 插入按钮组 */
+.dsh-block-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* 语法示例可能较长（别名/类型名长）：允许折行，不挤压按钮组 */
+.dsh-block-row .dsh-pm-backup-sub {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* 笔记别名行：缩短 ```hl <target> 的书写。
+   两段式布局——标题+提示独占一行（提示文案较长），输入框与保存按钮同行；
+   flex-wrap 兜底窄屏。 */
+.dsh-block-alias {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 4px 0 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dsh-block-alias-label {
+  flex: 1 1 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dsh-block-alias-title {
+  font-weight: 600;
+  font-size: var(--font-ui-small);
+}
+
+.dsh-block-alias-hint {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+/* 输入框占据剩余宽度（覆盖全局 input.dsh-block-input 的 width:100%） */
+.dsh-block-alias input.dsh-block-input {
+  flex: 1;
+  min-width: 160px;
+  width: auto;
 }
 
 .dsh-block-row {
@@ -812,6 +866,23 @@ input.dsh-block-input {
   border: 1px dashed var(--background-modifier-border);
   border-radius: 8px;
   background: var(--background-secondary);
+}
+
+/* badInfo 降级：块原文按代码样式显示（不吞内容） */
+.dsh-block-raw {
+  margin: 6px 12px 12px;
+  padding: 8px 10px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.dsh-block-raw code {
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-normal);
 }
 
 /* 智能体编辑弹窗：persona 全宽多行输入（标题行下方独占整行，便于长文本编辑） */
@@ -907,6 +978,14 @@ textarea.dsh-persona-input {
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 6px;
+}
+
+/* 列表行：笔记别名徽章（提示可用 ```hl <别名> 缩写） */
+.dsh-pm-alias {
+  margin-left: 6px;
+  font-family: var(--font-monospace);
+  font-size: 11px;
+  color: var(--text-accent);
 }
 
 .dsh-pm-cap {

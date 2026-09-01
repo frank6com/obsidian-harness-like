@@ -7,7 +7,7 @@ import * as path from 'path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { AgentPreset } from './settings'
 import type { GrantMode } from '@harness-like/harness-base'
-import { isValidBlockAlias, normalizeBlockLang, BLOCK_LANG_PREFIX, BlockService } from './block-service'
+import { BlockService, defaultTypeOf } from './block-service'
 import { t } from './i18n'
 
 export type GrantChoice = { mode: GrantMode } | { cancel: true }
@@ -759,6 +759,79 @@ export class PluginDetailModal extends Modal {
     this.contentEl.empty()
   }
 
+  /**
+   * 插入块模板到当前笔记光标处：有选中文本时把选中内容包进块里，否则插入空块。
+   * 无活动编辑器（activeEditor 为 null）时提示而非静默失败。
+   */
+  private insertSnippet(snippet: string): void {
+    const editor = this.ctx.editor
+    if (!editor?.activeEditor) {
+      this.ctx.notice.notice(t('pm.detail.blockNoEditor'))
+      return
+    }
+    const selected = editor.getSelection()
+    // 尾部补两个换行：连续插入时块与块之间保持空行分隔——相邻无空行的块会被
+    // Obsidian 划入同一个 section（第二次插入会占用第一个空行，故需两个）
+    const text = selected
+      ? `${snippet}\n${selected}\n\`\`\`\n\n`
+      : `${snippet}\n\n\`\`\`\n\n`
+    // insertBlock 保证整块独占若干行（EditorLike 中为可选：未实现则回退 insertText）
+    if (typeof editor.insertBlock === 'function') editor.insertBlock(text)
+    else editor.insertText(text)
+    this.ctx.notice.notice(t('pm.detail.blockInserted'))
+  }
+
+  /**
+   * 复制块模板。app:// 协议下 Clipboard API 可能不可用，
+   * 退化为临时 textarea + execCommand('copy')。
+   */
+  private async copySnippet(snippet: string): Promise<void> {
+    const text = `${snippet}\n\n\`\`\``
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      try {
+        if (!document.execCommand('copy')) throw new Error('execCommand copy failed')
+      } catch {
+        ta.remove()
+        this.ctx.notice.notice(t('pm.detail.blockCopyFailed'))
+        return
+      }
+      ta.remove()
+    }
+    this.ctx.notice.notice(t('pm.detail.blockCopied'))
+  }
+
+  /**
+   * 保存插件别名（空串 = 清除）。校验由宿主的 blockAliases.set 统一执行，
+   * 失败时按原因提示具体文案，不写盘。
+   */
+  private saveAlias(alias: string): void {
+    const res = this.ctx.blockAliases.set(this.pluginId, alias)
+    if (!res.ok) {
+      const key =
+        res.reason === 'reserved'
+          ? 'pm.detail.aliasReserved'
+          : res.reason === 'takenById'
+            ? 'pm.detail.aliasTakenById'
+            : res.reason === 'takenByAlias'
+              ? 'pm.detail.aliasTakenByAlias'
+              : 'pm.detail.aliasInvalid'
+      this.ctx.notice.notice(t(key, { alias: alias.trim() }))
+      return
+    }
+    this.ctx.notice.notice(
+      res.alias ? t('pm.detail.aliasSaved', { alias: res.alias }) : t('pm.detail.aliasCleared'),
+    )
+    void this.render()
+  }
+
   private async render(): Promise<void> {
     const { contentEl } = this
     contentEl.empty()
@@ -797,41 +870,49 @@ export class PluginDetailModal extends Modal {
     } else {
       capRow.createSpan({ cls: 'dsh-pm-cap', text: t('pm.detail.noCaps') })
     }
-    // 块语言名（ctx.blocks 注册项：展示 + 改名，别名收归宿主统一校验唯一性；
-    // renamed 为旧名历史提示，笔记占位符已说明，不在改名列表重复出现）
+    // 块渲染（ctx.blocks 注册项）：语法示例 + 复制 / 插入当前笔记。
+    // 默认 type（注册的 default 或唯一 type）可省略 :type——与路由层共用 defaultTypeOf，
+    // 避免"模板给的写法"与"实际解析的写法"漂移。
     const blockSvc = this.ctx.blocks as unknown as BlockService
     const blocks =
-      typeof blockSvc.list === 'function'
-        ? blockSvc.list().filter((b) => b.pluginId === this.pluginId && b.status !== 'renamed')
-        : []
+      typeof blockSvc.list === 'function' ? blockSvc.list().filter((b) => b.pluginId === this.pluginId) : []
     if (blocks.length) {
       contentEl.createEl('h4', { cls: 'dsh-pm-section', text: t('pm.detail.blocksTitle') })
       contentEl.createDiv({ cls: 'setting-item-description', text: t('pm.detail.blockHint') })
+      // 插件别名：缩短 target 书写（留空 = 清除）；合法性由宿主统一校验。
+      // 布局为两段式：标题+提示独占一行，输入框与保存按钮同行（提示较长，不能与输入框抢一行）
+      const aliasSvc = this.ctx.blockAliases
+      if (aliasSvc) {
+        const aliasRow = contentEl.createDiv({ cls: 'dsh-block-alias' })
+        const label = aliasRow.createDiv({ cls: 'dsh-block-alias-label' })
+        label.createSpan({ cls: 'dsh-block-alias-title', text: t('pm.detail.aliasTitle') })
+        label.createDiv({ cls: 'dsh-block-alias-hint', text: t('pm.detail.aliasHint') })
+        const input = new TextComponent(aliasRow)
+        input.inputEl.addClass('dsh-block-input')
+        input.setValue(aliasSvc.get(this.pluginId) ?? '')
+        const save = aliasRow.createEl('button', { cls: 'dsh-btn', text: t('common.save') })
+        save.onclick = () => this.saveAlias(input.getValue())
+      }
       const list = contentEl.createDiv({ cls: 'dsh-block-list' })
+      const defaultType = defaultTypeOf(blocks, this.pluginId)
+      // 模板用别名生成最短写法（```hl <别名>[:<类型>]）
+      const target = aliasSvc?.get(this.pluginId) || this.pluginId
       for (const b of blocks) {
         const row = list.createDiv({ cls: 'dsh-block-row' })
         const info = row.createDiv({ cls: 'dsh-pm-backup-info' })
-        const nameEl = info.createDiv({ cls: 'dsh-pm-backup-time' })
-        nameEl.createSpan({ text: b.type })
-        if (b.status === 'conflict') {
-          nameEl.createSpan({ cls: 'dsh-pm-cap', text: t('pm.detail.blockConflict') })
-        }
-        info.createDiv({ cls: 'dsh-pm-backup-sub', text: `\`\`\`${b.lang}` })
-        const input = new TextComponent(row)
-        input.inputEl.addClass('dsh-block-input')
-        input.setValue(b.lang)
-        const save = row.createEl('button', { cls: 'dsh-btn', text: t('pm.detail.blockRename') })
-        save.onclick = () => {
-          const v = input.getValue().trim()
-          if (!isValidBlockAlias(v)) {
-            this.ctx.notice.notice(t('blocks.invalid', { lang: v }))
-            return
-          }
-          if (blockSvc.rename(this.pluginId, b.type, v)) {
-            this.ctx.notice.notice(t('pm.detail.blockSaved', { type: b.type, lang: normalizeBlockLang(v) }))
-            void this.render()
-          }
-        }
+        info.createDiv({ cls: 'dsh-pm-backup-time', text: b.type })
+        const snippet = `\`\`\`hl ${target}${b.type === defaultType ? '' : `:${b.type}`}`
+        info.createDiv({ cls: 'dsh-pm-backup-sub', text: snippet })
+        const actions = row.createDiv({ cls: 'dsh-block-actions' })
+        const copy = actions.createEl('button', { cls: 'dsh-btn', text: t('pm.detail.blockCopy') })
+        copy.onclick = () => void this.copySnippet(snippet)
+        const insert = actions.createEl('button', {
+          cls: 'dsh-btn dsh-btn-primary',
+          text: t('pm.detail.blockInsert'),
+        })
+        // 活动编辑器在弹窗生命周期内会变化（切笔记/切模式都会变），
+        // 不做打开时禁用——点击时动态解析，拿不到再提示，避免"打开瞬间无编辑器则永远禁用"
+        insert.onclick = () => this.insertSnippet(snippet)
       }
     }
     // 操作（可调用能力，仅运行中）

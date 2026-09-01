@@ -8,7 +8,7 @@
 
 import * as fs from 'fs'
 import * as path from 'path'
-import { Plugin, Notice, type Editor, type WorkspaceLeaf } from 'obsidian'
+import { Plugin, Notice, MarkdownView, type Editor, type WorkspaceLeaf } from 'obsidian'
 import * as obsidianModule from 'obsidian'
 import * as cordis from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
@@ -31,7 +31,27 @@ import { PluginBackups } from './plugin-backups'
 import { PluginFilesSelfHeal, fetchTextWithTimeout } from './plugin-files'
 import { userSettingsTabPlugin } from './user-settings-tab'
 import { protocolServicePlugin } from './protocol-service'
-import { blockServicePlugin, type BlockRenderContext } from './block-service'
+import {
+  blockServicePlugin,
+  type BlockAliasesService,
+  type BlockPlaceholderKind,
+  type BlockRenderContext,
+  type PlaceholderDetail,
+} from './block-service'
+import { validatePluginAlias, type AliasReject } from './block-info'
+
+/** 块定位用到的 CodeMirror EditorView 最小面（posAtDOM/文档行访问） */
+interface CMLike {
+  dom?: HTMLElement
+  posAtDOM(node: Node, offset?: number): number
+  state: {
+    doc: {
+      lines: number
+      line(n: number): { text: string; number: number }
+      lineAt(pos: number): { number: number }
+    }
+  }
+}
 import { getLanguage, registerLocale, resolveLanguage, setLanguage, t } from './i18n'
 import { WriteApprovalModal, GrantModal, ConfirmModal, CommandApprovalModal } from './modals'
 import { builtinToolsPlugin } from './tools/builtin'
@@ -56,6 +76,11 @@ export default class HarnessLikePlugin extends Plugin {
   private fibers: Array<{ dispose(): Promise<void> }> = []
   /** auto 语言跟随轮询（Obsidian 切语言无事件，3s 对比 localStorage['language']） */
   private langWatch: number | null = null
+  /**
+   * 已发现的子插件 id（小写）。块 target 解析时用于判断"这是真实插件 id 还是别名"，
+   * 每次 loadUserPlugins 刷新——同步查表，避免块渲染时命中磁盘。
+   */
+  private knownPluginIds = new Set<string>()
 
   override async onload(): Promise<void> {
     await this.loadSettings()
@@ -223,47 +248,121 @@ export default class HarnessLikePlugin extends Plugin {
       ),
     )
 
-    // 块定义扩展点（ctx.blocks）：```hl:<子插件id>:<type> 或 ```hl:<别名>
-    // 宿主按语言串懒注册一次原生 code block 处理器（无单个注销 API——
-    // 子插件注册/卸载只是内存路由表增删；宿主 unload 由 Obsidian 统一清理）
+    // 块定义扩展点（ctx.blocks）：```hl <子插件id 或 别名>[:<type>] [参数...]
+    // 宿主【启动即注册一次】裸 hl 处理器（实测：Obsidian 的查找键 = 首个空白 token 再砍掉
+    // 首个冒号之后的全部，故 hl: 命名空间只需这一个注册点，注册它即等于独占该命名空间）；
+    // 子插件的注册/卸载/改名纯内存操作，零原生副作用（实测结论见 block-service.ts 文件头）。
     this.fibers.push(
       ctx.plugin(
         blockServicePlugin({
-          registerNative: (lang, dispatch) =>
-            apiLike.codeBlockProcessor.registerProcessor(lang, (source, el, ctx) =>
-              dispatch(source, el, ctx as BlockRenderContext),
-            ),
-          getAlias: (pid, type) => this.settings.blockAliases[`${pid}:${type}`],
-          setAlias: (pid, type, alias) => {
-            if (alias) this.settings.blockAliases[`${pid}:${type}`] = alias
-            else delete this.settings.blockAliases[`${pid}:${type}`]
-            void this.saveSettings()
+          registerNative: (lang, dispatch) => {
+            try {
+              apiLike.codeBlockProcessor.registerProcessor(lang, (source, el, ctx) =>
+                dispatch(source, el, ctx as BlockRenderContext),
+              )
+            } catch (err) {
+              // 被其它插件抢注：我们的块会被对方接管，只能提示用户
+              console.error('[harness-like] 块处理器注册失败（hl 命名空间可能被占用）:', err)
+              new Notice(t('blocks.registerFailed'))
+            }
           },
-          notify: (kind, detail) => {
-            const msg =
-              kind === 'conflict'
-                ? t('blocks.conflict', { lang: detail.lang ?? '', owner: detail.owner ?? '' })
-                : t('blocks.invalid', { lang: detail.lang ?? '' })
-            new Notice(msg)
+          // 真实插件 id 优先于别名——子插件无法用别名劫持他人（含未运行插件的）命名空间
+          resolveTarget: (token) => {
+            const t = token.trim().toLowerCase()
+            if (!t) return undefined
+            if (this.knownPluginIds.has(t)) return t
+            for (const [pid, alias] of Object.entries(this.settings.pluginAliases)) {
+              if (pid && alias.trim().toLowerCase() === t) return pid.trim().toLowerCase()
+            }
+            return undefined
+          },
+          // Live Preview 下解析 el 对应块的绝对行号（相邻同内容块唯一定位用）：
+          // CM 的 posAtDOM + lineAt 可把块容器 DOM 映射回文档行
+          resolveBlockLine: (el) => {
+            const wrapper = el.closest('.cm-preview-code-block')
+            const cmRoot = el.closest('.cm-editor') as HTMLElement | null
+            if (!wrapper || !cmRoot) return null
+            const cm = this.findCm(cmRoot)
+            if (!cm) return null
+            try {
+              return cm.state.doc.lineAt(cm.posAtDOM(wrapper, 0)).number - 1 // 0-based
+            } catch {
+              return null
+            }
+          },
+          // getSectionInfo 偶发为空时的兜底：直接从 el 位置向下探测 fence 开始行，
+          // 拿回整条 info（CM 文档是同步且可靠的）
+          resolveFenceInfoAt: (el) => {
+            const wrapper = el.closest('.cm-preview-code-block')
+            const cmRoot = el.closest('.cm-editor') as HTMLElement | null
+            if (!wrapper || !cmRoot) return null
+            const cm = this.findCm(cmRoot)
+            if (!cm) return null
+            try {
+              const pos = cm.posAtDOM(wrapper, 0)
+              const start = cm.state.doc.lineAt(pos).number
+              const end = Math.min(start + 4, cm.state.doc.lines)
+              for (let n = start; n <= end; n++) {
+                const m = /^\s*(?:```+|~~~+)(.*)$/.exec(cm.state.doc.line(n).text)
+                const info = m?.[1]?.trim()
+                if (info) return info
+              }
+              return null
+            } catch {
+              return null
+            }
           },
           renderPlaceholder: (el, kind, detail) => {
             el.createDiv({
               cls: 'dsh-block-placeholder',
-              text:
-                kind === 'renamed'
-                  ? t('blocks.placeholderRenamed', { lang: detail.lang })
-                  : t('blocks.placeholderNotRunning', { lang: detail.lang }),
+              text: this.blockPlaceholderText(kind, detail),
             })
+            // 定位失败时降级显示块原文（不吞内容，用户仍能看到/复制块里写了什么）
+            if (kind === 'badInfo' && detail.source) this.renderRawSource(el, detail.source)
           },
         }),
       ),
     )
 
+    // 插件 id 别名（缩短笔记里 ```hl <target> 的书写）：校验集中在宿主，
+    // 保证"真实 id 优先于别名"——子插件无法用别名劫持他人命名空间
+    ctx.reflect.provide(
+      'blockAliases',
+      {
+        get: (pluginId: string) => this.settings.pluginAliases[pluginId.trim().toLowerCase()],
+        set: (pluginId: string, alias: string) => this.setPluginAlias(pluginId, alias),
+      } satisfies BlockAliasesService,
+    )
+
     // 编辑器桥：把 Obsidian 的 activeEditor 暴露为 ctx.editor
     ctx.editor.setProvider(() => {
-      const active = (this.app.workspace as unknown as {
-        activeEditor?: { file?: { path: string } | null; editor?: Editor | null } | null
-      }).activeEditor
+      type EditorHost = { file?: { path: string } | null; editor?: Editor | null }
+      const ws = this.app.workspace
+      let active: EditorHost | null | undefined = (
+        ws as unknown as { activeEditor?: EditorHost | null }
+      ).activeEditor
+      if (!active?.editor) {
+        // workspace.activeEditor 在阅读模式 / 活动 leaf 为侧边栏（如插件管理器面板）时为
+        // null，getActiveViewOfType 同样只看活动 leaf——侧边栏聚焦时也拿不到。
+        // 逐级回退：最近活动 leaf（getMostRecentLeaf 只统计主工作区，不含侧边栏，
+        // 恰好是"用户最后编辑的笔记"）→ 其余已打开的 markdown leaf。
+        const view = ws.getActiveViewOfType(MarkdownView)
+        if (view) {
+          active = view as unknown as EditorHost
+        } else {
+          const recent = (
+            ws as unknown as { getMostRecentLeaf?: () => WorkspaceLeaf | null }
+          ).getMostRecentLeaf?.()
+          const candidates = recent ? [recent, ...ws.getLeavesOfType('markdown')] : ws.getLeavesOfType('markdown')
+          for (const leaf of candidates) {
+            const v = leaf.view as unknown as EditorHost | null
+            if (v?.editor) {
+              active = v
+              break
+            }
+          }
+        }
+      }
       const ed = active?.editor
       if (!ed) return null
       return {
@@ -271,6 +370,13 @@ export default class HarnessLikePlugin extends Plugin {
         insertText: (t: string) => ed.replaceSelection(t),
         replaceSelection: (t: string) => ed.replaceSelection(t),
         getSelection: () => ed.getSelection() || null,
+        // 插入整块内容（块模板）：光标停在非空行中间时先补换行，避免 fence 粘在行尾
+        insertBlock: (t: string) => {
+          const cur = ed.getCursor()
+          const line = ed.getLine(cur.line) ?? ''
+          const prefix = cur.ch > 0 && line.trim() !== '' ? '\n' : ''
+          ed.replaceSelection(prefix + t)
+        },
       }
     })
 
@@ -400,6 +506,70 @@ export default class HarnessLikePlugin extends Plugin {
     }
   }
 
+  /**
+   * 设置/清除插件 id 别名（空串 = 清除）。校验规则见 validatePluginAlias：
+   * 不得等于任何已发现插件的真实 id（防劫持），不得与其它插件的别名重复；
+   * 指向已删除插件的残留别名可被抢占。
+   */
+  private setPluginAlias(
+    pluginId: string,
+    alias: string,
+  ): { ok: true; alias: string } | { ok: false; reason: AliasReject } {
+    const pid = pluginId.trim().toLowerCase()
+    const raw = alias.trim()
+    if (!raw) {
+      delete this.settings.pluginAliases[pid]
+      void this.saveSettings()
+      return { ok: true, alias: '' }
+    }
+    // 占用者需仍存在（指向已删除插件的残留别名允许被抢占）
+    const taken = Object.entries(this.settings.pluginAliases)
+      .filter(([id]) => id !== pid && this.knownPluginIds.has(id))
+      .map(([, a]) => a)
+    const check = validatePluginAlias(raw, { knownIds: [...this.knownPluginIds], taken })
+    if (!check.ok) return check
+    this.settings.pluginAliases[pid] = check.alias
+    void this.saveSettings()
+    return check
+  }
+
+  /** 按编辑器 DOM 找到拥有它的 leaf 的 CM 实例（块定位/直读共用） */
+  private findCm(cmRoot: HTMLElement): CMLike | null {
+    let found: CMLike | null = null
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (found) return
+      const cand = (leaf.view as unknown as { editor?: { cm?: CMLike } }).editor?.cm
+      if (cand?.dom === cmRoot) found = cand
+    })
+    return found
+  }
+
+  /** 块占位符文案（i18n 与 DOM 由宿主渲染，服务层保持纯逻辑） */
+  private blockPlaceholderText(kind: BlockPlaceholderKind, d: PlaceholderDetail): string {
+    if (kind === 'legacy') {
+      const id = d.legacy?.pluginId ?? ''
+      const sample = d.legacy?.type ? `\`\`\`hl ${id}:${d.legacy.type}` : `\`\`\`hl ${id}`
+      return t('blocks.placeholderLegacy', { sample })
+    }
+    if (kind === 'needType') {
+      return t('blocks.placeholderNeedType', {
+        pluginId: d.pluginId ?? '',
+        types: (d.types ?? []).join(' / '),
+      })
+    }
+    if (kind === 'badInfo') {
+      return d.reason === 'nolocate' ? t('blocks.placeholderNolocate') : t('blocks.placeholderBadInfo')
+    }
+    if (kind === 'empty') return t('blocks.placeholderEmpty')
+    return t('blocks.placeholderNotRunning', { pluginId: d.pluginId ?? '' })
+  }
+
+  /** badInfo 降级：把块原文按代码样式显示出来，不吞内容 */
+  private renderRawSource(el: HTMLElement, source: string): void {
+    const pre = el.createEl('pre', { cls: 'dsh-block-raw' })
+    pre.createEl('code', { text: source })
+  }
+
   /** 按 id 取提供方（未知 id 回退默认） */
   private providerById(id: string): ProviderConfig {
     return (
@@ -426,6 +596,8 @@ export default class HarnessLikePlugin extends Plugin {
   private async loadUserPlugins(): Promise<void> {
     if (!this.ctx) return
     const ids = await this.ctx.pluginRuntime.discover()
+    // 刷新已知插件 id（块 target 解析：真实 id 优先于别名，含未授权/未运行的插件）
+    this.knownPluginIds = new Set(ids.map((id) => id.trim().toLowerCase()))
     for (const id of ids) {
       const rec = this.ctx.pluginRuntime.inspect(id)
       const manifest = rec.manifest
