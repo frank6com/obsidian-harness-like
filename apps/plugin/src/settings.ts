@@ -100,8 +100,8 @@ export interface HarnessLikeSettings {
   grants: Record<string, GrantRecord>
   /** 插件开关状态（用户显式停用 = false；缺省视为启用），key = 插件 id */
   pluginEnabled: Record<string, boolean>
-  /** 块语言别名表，key = `<插件id>:<type>`，value = `hl:<alias>`（缺省用默认形态 hl:<插件id>:<type>） */
-  blockAliases: Record<string, string>
+  /** 插件 id 别名表，key = 真实插件 id，value = 别名（缩短笔记里 ```hl <target> 的书写） */
+  pluginAliases: Record<string, string>
 }
 
 /** 授权记录的展示状态（管理器与设置页共用）：
@@ -154,7 +154,7 @@ export function defaultSettings(): HarnessLikeSettings {
     uiLanguage: 'auto',
     grants: {},
     pluginEnabled: {},
-    blockAliases: {},
+    pluginAliases: {},
   }
 }
 
@@ -288,12 +288,16 @@ export function migrateSettings(raw: Record<string, unknown> | undefined): Harne
     r.pluginEnabled && typeof r.pluginEnabled === 'object'
       ? { ...(r.pluginEnabled as Record<string, boolean>) }
       : {}
-  base.blockAliases = (() => {
-    const raw = r.blockAliases
+  // 插件 id 别名：key = 插件 id（非空、小写归一），value = 别名（小写归一）。
+  // 旧版 blockAliases（key = `id:type` → hl:<别名>）语义不同，直接丢弃不做迁移。
+  base.pluginAliases = (() => {
+    const raw = r.pluginAliases
     if (!raw || typeof raw !== 'object') return {}
     const out: Record<string, string> = {}
     for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-      if (typeof k === 'string' && k.includes(':') && typeof v === 'string') out[k] = v
+      if (typeof k === 'string' && k.trim() && typeof v === 'string' && v.trim()) {
+        out[k.trim().toLowerCase()] = v.trim().toLowerCase()
+      }
     }
     return out
   })()
