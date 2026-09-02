@@ -37,6 +37,7 @@ const enTutorial = [
     items: [
       { text: 'Creating Plugins in Conversation', link: '/guide/plugin-agent' },
       { text: 'User Plugins', link: '/guide/plugins' },
+      { text: 'Capabilities (extension mapping)', link: '/development/capabilities' },
     ],
   },
   {
@@ -68,6 +69,7 @@ const zhTutorial = [
     items: [
       { text: '通过对话创建插件', link: '/zh/guide/plugin-agent' },
       { text: '用户插件体系', link: '/zh/guide/plugins' },
+      { text: '能力清单（扩展点映射）', link: '/zh/development/capabilities' },
     ],
   },
   {

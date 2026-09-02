@@ -12,7 +12,7 @@
 | 侧边栏图标（ribbon） | 主插件机器人图标（打开 Chat 面板）；子插件可注册自己的图标 |
 | 状态栏（statusbar） | 子插件可注册状态栏条目 |
 | `obsidian://` 协议处理器 | 统一入口 `obsidian://harness-like?plugin=<id>&cmd=<动作名>` 路由到子插件 handler（`ctx.protocol.register`） |
-| 自定义代码块 | 语言串 `hl:<id>:<type>`（可别名）路由到子插件渲染器（`ctx.blocks.register`），`hl:` 命名空间归宿主独占 |
+| 自定义代码块 | 笔记写法 `` ```hl <子插件id 或 插件别名>[:<类型>] [参数...] `` ，路由到子插件渲染器（`ctx.blocks.register`）；`hl` 命名空间归宿主独占（宿主启动时注册一次，第三方无法占用） |
 | 编辑器桥 | `ctx.editor`（当前编辑器选区/插入/替换） |
 | 文件系统 | `ctx.vault`（读写/建目录/事件桥 `vault/create|modify|delete|rename`） |
 | 工作区 | `ctx.workspace`（当前活跃文件、file-open 事件） |

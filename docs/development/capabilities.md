@@ -12,7 +12,7 @@ For **developers**: how Harness Like (the host plugin) maps Obsidian's extension
 | Ribbon icons | Host bot icon (opens Chat); sub-plugins can register their own |
 | Status bar | Sub-plugins can add status bar items |
 | `obsidian://` protocol handlers | Single entry `obsidian://harness-like?plugin=<id>&cmd=<name>` routed to sub-plugin handlers (`ctx.protocol.register`) |
-| Custom code blocks | Language `hl:<id>:<type>` (alias-able) routed to sub-plugin renderers (`ctx.blocks.register`); the `hl:` namespace belongs to the host |
+| Custom code blocks | Notes write `` ```hl <sub-plugin-id or plugin alias>[:<type>] [params...] `` , routed to the sub-plugin renderer (`ctx.blocks.register`); the `hl` namespace is owned by the host (registered once at startup, cannot be taken by other plugins) |
 | Editor bridge | `ctx.editor` (selection / insert / replace) |
 | Filesystem | `ctx.vault` (read/write/folders/events `vault/create|modify|delete|rename`) |
 | Workspace | `ctx.workspace` (active file, file-open event) |
