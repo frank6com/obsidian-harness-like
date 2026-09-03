@@ -129,25 +129,6 @@ export function mergeDecorations(decos: FileDecoration[]): {
 
 const BASE_CLASS = 'dsh-ft-deco'
 const BADGE_CLASS = 'dsh-ft-badge'
-const STYLE_ID = 'dsh-file-tree-style'
-
-const STYLE_CSS = `
-.${BASE_CLASS} { position: relative; }
-.${BADGE_CLASS} {
-  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  min-width: 14px; height: 14px; padding: 0 3px; box-sizing: border-box;
-  border-radius: 7px; background: var(--text-error); color: #fff;
-  font-size: 9px; line-height: 14px; text-align: center; font-weight: 700;
-  display: inline-flex; align-items: center; justify-content: center;
-  pointer-events: none;
-}
-.${BASE_CLASS}.dsh-ft-underline .nav-folder-title-content,
-.${BASE_CLASS}.dsh-ft-underline .nav-file-title-content {
-  text-decoration: underline; text-decoration-color: var(--text-error); text-underline-offset: 2px;
-}
-.${BASE_CLASS}.dsh-ft-dim .nav-folder-title-content,
-.${BASE_CLASS}.dsh-ft-dim .nav-file-title-content { opacity: 0.6; }
-`
 
 interface DecoEntry {
   id: string
@@ -158,7 +139,6 @@ interface DecoEntry {
 
 export class FileTreeService {
   private entries: DecoEntry[] = []
-  private styleEl: HTMLStyleElement | null = null
   private observer: MutationObserver | null = null
   private rafPending = false
   /** 祖先传播缓存：文件夹路径 → 应连带应用的装饰 */
@@ -169,7 +149,6 @@ export class FileTreeService {
     private app: App,
     private ctx: Context,
   ) {
-    this.injectStyle()
     this.bindEvents()
     this.observeExplorer()
     this.scheduleRender()
@@ -364,18 +343,6 @@ export class FileTreeService {
     if (merged.tooltip) el.title = merged.tooltip
   }
 
-  // ── 样式注入与清理 ──────────────────────────────────────────
-
-  private injectStyle(): void {
-    if (typeof document === 'undefined') return
-    if (document.getElementById(STYLE_ID)) return
-    const el = document.createElement('style')
-    el.id = STYLE_ID
-    el.textContent = STYLE_CSS
-    document.head.appendChild(el)
-    this.styleEl = el
-  }
-
   /** 宿主 unload 时清理（经 ctx.effect 调用） */
   dispose(): void {
     for (const off of this.offRefs) {
@@ -387,10 +354,6 @@ export class FileTreeService {
     }
     this.observer?.disconnect()
     this.observer = null
-    if (this.styleEl) {
-      this.styleEl.remove()
-      this.styleEl = null
-    }
     // 清掉文件树上可能残留的装饰
     for (const c of this.explorerContainers()) {
       c.querySelectorAll('.nav-folder-title, .nav-file-title').forEach((el) =>
