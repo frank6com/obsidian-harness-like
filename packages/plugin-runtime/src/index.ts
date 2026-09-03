@@ -74,6 +74,7 @@ export function detectCapabilities(code: string): PluginCapabilities {
   if (/registerSettingTab/.test(code)) capabilities.push('settings')
   if (/protocol\.register\s*\(/.test(code)) capabilities.push('protocol')
   if (/blocks\.register\s*\(/.test(code)) capabilities.push('block')
+  if (/fileTree\.register\s*\(/.test(code)) capabilities.push('decorator')
   // 视图类型：优先匹配字面量；否则尝试解析常量声明
   // （const VIEW_TYPE = 'xxx' 后 registerView(VIEW_TYPE, …)，打包重命名后仍可按名回溯）
   let viewType = code.match(/registerView\s*\(\s*['"]([^'"]+)['"]/)?.[1]

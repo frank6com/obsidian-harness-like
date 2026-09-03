@@ -38,6 +38,7 @@ import {
   type BlockRenderContext,
   type PlaceholderDetail,
 } from './block-service'
+import { fileTreeServicePlugin } from './file-tree-service'
 import { validatePluginAlias, type AliasReject } from './block-info'
 
 /** 块定位用到的 CodeMirror EditorView 最小面（posAtDOM/文档行访问） */
@@ -323,6 +324,11 @@ export default class HarnessLikePlugin extends Plugin {
         }),
       ),
     )
+
+    // 文件管理器增强扩展点（ctx.fileTree）：子插件注册装饰器（纯数据），宿主独占渲染
+    // 文件树 DOM，子插件无需也无权碰 DOM——守住沙箱铁律。装饰器可加 class（如 underline）
+    // / 右侧徽标（红点/文字/颜色）/ 悬浮提示，并支持祖先传播（笔记有标记→父文件夹连带）。
+    this.fibers.push(ctx.plugin(fileTreeServicePlugin(this.app)))
 
     // 插件 id 别名（缩短笔记里 ```hl <target> 的书写）：校验集中在宿主，
     // 保证"真实 id 优先于别名"——子插件无法用别名劫持他人命名空间

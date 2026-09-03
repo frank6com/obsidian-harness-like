@@ -96,7 +96,7 @@ module.exports = {
 /** 服务与方法速查（唯一权威来源；含 protocol/blocks 扩展点签名与示例） */
 export const CH_SERVICES = `## 服务与方法速查（唯一权威来源；调用前核对此处，禁止臆测方法名）
 inject 可声明的服务：toolsCompat / commands / views / vault / editor / workspace /
-notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / llmCaller / dshI18n / protocol / blocks
+notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / llmCaller / dshI18n / protocol / blocks / fileTree
 
 - ctx.vault：getMarkdownPaths() -> string[]（vault 相对路径列表）；read(path) -> string；write(path, content)；
   create(path, content)；createFolder(path)（逐层创建）；delete(path)；rename(oldPath, newPath)；
@@ -130,6 +130,29 @@ notice / ribbon / statusbar / settingsTab / sandbox / approval / sessionLog / ll
   · handler 的 el 为空容器 div，填充 DOM 即完成渲染；meta = { info, pluginId, type,
     params, flags, positional, line }（flags 小写归一，params 的 key 保留原样）
   · hl 命名空间归宿主独占，不会与原生语言（html/mermaid…）冲突；插件停止显示"未运行"占位`
+
+/** 文件管理器增强（ctx.fileTree）：通用装饰能力，纯数据驱动 */
+export const CH_FILE_TREE = `## 文件管理器增强（ctx.fileTree）
+给左侧文件树的文件夹/笔记加标记——子插件只返回【纯数据】装饰，宿主独占渲染 DOM（子插件不碰 DOM，守住沙箱铁律）：
+- ctx.fileTree.register({ id, scope?, propagates?, decorate(path) }) -> disposer（包进 ctx.effect）
+  · scope：'folder' | 'file' | 'all'（默认 'all'）
+  · propagates：是否需要"祖先传播"（见下）；不需要传播的装饰器务必留 false/省略，避免无谓的全库扫描
+  · decorate(path) 返回 null 或 FileDecoration：
+    - classes: string[]（如 ['underline'] → 该 nav 项加 .dsh-ft-underline 下划线；宿主已内置 underline / dim 两个工具类）
+    - badge: { text?, color?, title? }（右侧徽标；text 省略则渲染纯色点，color 如 '#e5484d'）
+    - tooltip?: string（悬浮提示，与 badge.title 拼接）
+    - propagateToAncestors: true（该路径命中时，其所有父文件夹连带同一标记）
+- 示例：把"含未完成待办的笔记"所在全部父文件夹标红点：
+  ctx.fileTree.register({
+    id: 'todo-folders', scope: 'all', propagates: true,
+    decorate(path) {
+      // 用 ctx.vault.getMarkdownPaths() 预计算"含未完成待办"的笔记集合（示例 hasOpenTodo）
+      return hasOpenTodo.has(path)
+        ? { badge: { text: '●', color: '#e5484d', title: '含未完成待办' }, propagateToAncestors: true }
+        : null
+    },
+  })
+  ⚠️ decorate 在每次渲染与全库传播时都会被调用，务必内部缓存、保持廉价（不要每次重扫全部笔记）。`
 
 /** 可用事件 */
 export const CH_EVENTS = `## 可用事件（ctx.on）
@@ -209,6 +232,7 @@ export const CHAPTERS: readonly string[] = [
   CH_TEMPLATE_BASIC,
   CH_TEMPLATE_PANEL,
   CH_SERVICES,
+  CH_FILE_TREE,
   CH_EVENTS,
   CH_IRON_RULES,
   CH_COMMAND_NAMING,

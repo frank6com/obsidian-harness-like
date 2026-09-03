@@ -12,7 +12,6 @@
  */
 
 import * as path from 'path'
-import * as vm from 'vm'
 import type { Plugin } from '@deepseek-ai/cordis'
 import type { PluginRecord } from '@harness-like/plugin-runtime'
 import { autoRecoverLastGood } from '../plugin-backups'
@@ -193,8 +192,9 @@ export function pluginDevToolsPlugin(options: PluginDevToolsOptions): Plugin.Obj
           }
           if (code) {
             try {
-              // vm.Script 只编译不执行：纯 JS 插件代码的语法校验（无求值风险，报错含文件名）
-              new vm.Script(code, { filename: `${id}/${entry}` })
+              // 渲染进程无 Node vm 模块支持（Electron 会警告并可能崩溃），
+              // 改用 new Function 仅编译不执行做语法校验——等价 vm.Script 的"只编译"语义，且不依赖 vm
+              new Function(code)
             } catch (err) {
               errors.push(`JS 语法错误: ${err instanceof Error ? err.message : String(err)}`)
             }
